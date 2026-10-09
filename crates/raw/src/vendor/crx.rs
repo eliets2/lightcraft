@@ -75,47 +75,86 @@ pub(crate) fn decode(sample: &[u8], config: &Cr3Compression) -> Result<Vec<u16>>
     let count = image_size(config)?;
     let tiles = layout(sample, config)?;
     validate_planes(&tiles, config)?;
-    // Allocated once the first plane decodes: a tiny crafted file can claim a huge image.
-    let mut output = Vec::new();
     let midpoint = 1i32 << (config.bit_depth - 1);
     let maximum = (1i32 << config.bit_depth) - 1;
-    for tile in tiles {
-        let qp = tile_qp(sample, &tile)?;
-        // Each plane is its own entropy stream: decode a tile's planes in parallel.
-        let planes: Vec<Result<Vec<i32>>> = tile
-            .planes
-            .par_iter()
-            .enumerate()
-            .map(|(p, plane)| {
-                if config.levels == 0 {
-                    let band = plane.bands.first().ok_or_else(|| corrupt("missing lossless band"))?;
-                    lossless_plane(band_bytes(sample, band)?, tile.width / 2, tile.height / 2)
-                } else {
-                    let edges = TileEdges { left: tile.x > 0, right: tile.x + tile.width < width, top: false, bottom: false };
-                    wavelet_plane(sample, plane, tile.width / 2, tile.height / 2, edges, qp.as_ref())
-                }
-                .map_err(|error| RawError::Corrupt(format!("Canon CRX tile ({}, {}), plane {p}: {error}", tile.x, tile.y)))
-            })
-            .collect();
-        for (p, decoded) in planes.into_iter().enumerate() {
-            let decoded = decoded?;
-            if output.is_empty() {
-                output.try_reserve_exact(count).map_err(|_| RawError::Limit("CRX sample allocation"))?;
-                output.resize(count, 0);
+    // QP maps decode sequentially in tile order; a failing map skips only its own
+    // tile's planes, so the first reported error is the same tile-by-tile one as
+    // a per-tile walk would give.
+    let qps: Vec<Result<Option<QpMap>>> = tiles.iter().map(|tile| tile_qp(sample, tile)).collect();
+    // Each (tile, plane) pair is an independent entropy stream: decode them all
+    // in one parallel collection, then interleave tile by tile as before.
+    let jobs: Vec<(usize, usize)> =
+        tiles.iter().enumerate().flat_map(|(t, tile)| (0..tile.planes.len()).map(move |p| (t, p))).filter(|(t, _)| qps[*t].is_ok()).collect();
+    let decoded: Vec<Result<Vec<i32>>> = jobs
+        .par_iter()
+        .map(|&(t, p)| {
+            let tile = &tiles[t];
+            let plane = &tile.planes[p];
+            // The map was checked when filtering the jobs; its error surfaces
+            // in the sequential interleave below, in tile order.
+            let qp = qps[t].as_ref().ok().and_then(|qp| qp.as_ref());
+            if config.levels == 0 {
+                let band = plane.bands.first().ok_or_else(|| corrupt("missing lossless band"))?;
+                lossless_plane(band_bytes(sample, band)?, tile.width / 2, tile.height / 2)
+            } else {
+                let edges = TileEdges { left: tile.x > 0, right: tile.x + tile.width < width, top: false, bottom: false };
+                wavelet_plane(sample, plane, tile.width / 2, tile.height / 2, edges, qp)
             }
-            for (i, &value) in decoded.iter().enumerate() {
-                let sensor_value = sensor_sample(value, midpoint, maximum, config.levels != 0)?;
-                let (x, y) = (tile.x + 2 * (i % (tile.width / 2)) + p % 2, tile.y + 2 * (i / (tile.width / 2)) + p / 2);
-                let slot = y
-                    .checked_mul(width)
-                    .and_then(|n| n.checked_add(x))
-                    .and_then(|n| output.get_mut(n))
-                    .ok_or_else(|| corrupt("tile writes outside image"))?;
-                *slot = sensor_value;
-            }
+            .map_err(|error| RawError::Corrupt(format!("Canon CRX tile ({}, {}), plane {p}: {error}", tile.x, tile.y)))
+        })
+        .collect();
+    // Allocated once the first plane decodes: a tiny crafted file can claim a huge image.
+    let mut output = Vec::new();
+    let mut decoded = decoded.into_iter();
+    for (tile, qp) in tiles.iter().zip(qps) {
+        // The map error surfaces here, in tile order, exactly as a per-tile walk.
+        qp?;
+        let mut planes = Vec::new();
+        for _ in 0..tile.planes.len() {
+            planes.push(decoded.next().ok_or_else(|| corrupt("missing decoded plane"))??);
         }
+        if output.is_empty() {
+            output.try_reserve_exact(count).map_err(|_| RawError::Limit("CRX sample allocation"))?;
+            output.resize(count, 0);
+        }
+        interleave_tile(&mut output, width, tile, &planes, midpoint, maximum, config.levels != 0)?;
     }
     Ok(output)
+}
+
+/// Write a tile's decoded planes into their Bayer mosaic phase: planes 2k and
+/// 2k+1 cover row parity k and alternate columns, so each output row is
+/// assembled densely and copied once instead of writing sample by sample.
+fn interleave_tile(output: &mut [u16], width: usize, tile: &Tile, planes: &[Vec<i32>], midpoint: i32, maximum: i32, quantized: bool) -> Result<()> {
+    let half = tile.width / 2;
+    let rows = tile.height / 2;
+    let plane_len = half.checked_mul(rows).ok_or(RawError::Limit("CRX tile plane size"))?;
+    for plane in planes {
+        if plane.len() != plane_len {
+            return Err(corrupt("decoded plane outside tile"));
+        }
+    }
+    let mut row = Vec::new();
+    row.try_reserve_exact(tile.width).map_err(|_| RawError::Limit("CRX mosaic row allocation"))?;
+    row.resize(tile.width, 0);
+    for (parity, pair) in planes.chunks(2).enumerate() {
+        let top = pair.first().ok_or_else(|| corrupt("missing mosaic plane"))?;
+        for (r, values) in top.chunks_exact(half).enumerate() {
+            for (c, slot) in row.as_chunks_mut::<2>().0.iter_mut().enumerate() {
+                let value = values.get(c).copied().ok_or_else(|| corrupt("decoded sample outside row"))?;
+                slot[0] = sensor_sample(value, midpoint, maximum, quantized)?;
+                if let Some(bottom) = pair.get(1) {
+                    let index = r.checked_mul(half).and_then(|n| n.checked_add(c)).ok_or_else(|| corrupt("decoded sample outside row"))?;
+                    let value = bottom.get(index).copied().ok_or_else(|| corrupt("decoded sample outside row"))?;
+                    slot[1] = sensor_sample(value, midpoint, maximum, quantized)?;
+                }
+            }
+            let y = tile.y.checked_add(2 * r + parity).ok_or_else(|| corrupt("tile writes outside image"))?;
+            let start = y.checked_mul(width).and_then(|n| n.checked_add(tile.x)).ok_or_else(|| corrupt("tile writes outside image"))?;
+            output.get_mut(start..start + tile.width).ok_or_else(|| corrupt("tile writes outside image"))?.copy_from_slice(&row);
+        }
+    }
+    Ok(())
 }
 
 /// A decoded plane value as a sensor sample of the CMP1 bit depth.
