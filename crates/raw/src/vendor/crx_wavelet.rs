@@ -335,4 +335,71 @@ mod tests {
             assert!(reconstruct(&bands, 20, 9, 3, TileEdges::default()).is_err());
         }
     }
+
+    /// Shape-correct subbands in CRX order (LLn, HLn, LHn, HHn, …) filled with a
+    /// deterministic pseudo-random pattern in ±30000, small enough that no lifting
+    /// step can overflow. Values do not affect timing; shapes must satisfy every
+    /// geometry check so the whole reconstruct path runs.
+    fn pseudo_bands(width: usize, height: usize, levels: u8, edges: TileEdges, seed: u64) -> Vec<Band> {
+        let mut state = seed | 1;
+        let mut next = move || {
+            state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            ((state >> 33) % 60001) as i32 - 30000
+        };
+        let band =
+            |width: usize, height: usize, next: &mut dyn FnMut() -> i32| Band { width, height, data: (0..width * height).map(|_| next()).collect() };
+        let mut dimensions = vec![(width, height)];
+        for _ in 0..levels {
+            let &(w, h) = dimensions.last().expect("dimensions seeded with one entry");
+            dimensions.push((sizes(w, edges.left, edges.right).0, sizes(h, edges.top, edges.bottom).0));
+        }
+        let mut bands = Vec::with_capacity(1 + usize::from(levels) * 3);
+        let &(low_width, low_height) = dimensions.last().expect("levels > 0 pushed");
+        bands.push(band(low_width, low_height, &mut next));
+        for step in 0..usize::from(levels) {
+            let &(w, h) = dimensions.get(usize::from(levels) - step - 1).expect("dimension per level");
+            let (lw, hw) = sizes(w, edges.left, edges.right);
+            let (lhgt, hhgt) = sizes(h, edges.top, edges.bottom);
+            bands.push(band(hw, lhgt, &mut next));
+            bands.push(band(lw, hhgt, &mut next));
+            bands.push(band(hw, hhgt, &mut next));
+        }
+        bands
+    }
+
+    /// Ms per full 3-level reconstruct over representative plane sizes:
+    /// full-frame, both odd parities, and single-tile halves with internal halos.
+    /// Run with: cargo test -p lightcraft-raw --release wavelet_timing -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn wavelet_timing_representative_planes() {
+        let cases = [
+            ("4000x3000 frame", 4000, 3000, TileEdges::default()),
+            ("3999x2999 odd", 3999, 2999, TileEdges::default()),
+            ("4001x3001 odd", 4001, 3001, TileEdges::default()),
+            ("2000x3000 left halo", 2000, 3000, TileEdges { left: true, ..Default::default() }),
+            ("2000x3000 right halo", 2000, 3000, TileEdges { right: true, ..Default::default() }),
+            ("2000x3000 middle halo", 2000, 3000, TileEdges { left: true, right: true, ..Default::default() }),
+        ];
+        for (label, width, height, edges) in cases {
+            let bands = pseudo_bands(width, height, 3, edges, 0x5eed_c0de_1234_5678);
+            let mut samples = [0f64; 3];
+            for attempt in 0..3 {
+                let start = std::time::Instant::now();
+                let out = reconstruct(&bands, width, height, 3, edges).expect("pseudo bands are shape-valid");
+                std::hint::black_box(&out);
+                samples[attempt] = start.elapsed().as_secs_f64() * 1e3;
+            }
+            samples.sort_by(|a, b| a.total_cmp(b));
+            let median = samples[1];
+            let mp = (width * height) as f64 / 1e6;
+            println!(
+                "{label:24} median {median:7.2} ms ({:5.1} MP/s)  runs {:.2}/{:.2}/{:.2}",
+                mp / (median / 1e3),
+                samples[0],
+                samples[1],
+                samples[2]
+            );
+        }
+    }
 }
