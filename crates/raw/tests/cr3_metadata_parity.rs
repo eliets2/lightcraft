@@ -11,8 +11,9 @@
 //! Field map follows `docs/cr3-metadata-parity.md` (E-corpus-verification §6 priority order):
 //! as-shot white balance, per-body black/white levels, crop/active area, developed size (aspect),
 //! dual-pixel handling and the lens string. Known-absent fields are asserted absent so the table
-//! documents reality instead of hiding it (today: the EOS R6 Mark III ColorData version and the
-//! camera `AspectInfo` crop), and [`KNOWN_DECODE_GAPS`] / [`KNOWN_DEVELOPED_GAPS`] pin the places
+//! documents reality instead of hiding it (today: the camera `AspectInfo` crop — the EOS R6 Mark
+//! III ColorData v66 was parsed since cr3/p4-color-matrices), and [`KNOWN_DECODE_GAPS`] /
+//! [`KNOWN_DEVELOPED_GAPS`] pin the places
 //! where decoding still deviates — when one heals, the assert says what to regenerate.
 
 use lightcraft_raw::{RawData, RawFormat, RawImage, RawInfo, decode, probe_info};
@@ -70,7 +71,7 @@ const ENTRIES: &[Entry] = &[
     Entry { file: "cr3-canon-eos-r50-v-img-0034.cr3", model: "Canon EOS R50 V", color_data: 65, dpr: false, wb: Some([1.7900390625, 1.6435546875]), black: Some([512.0, 512.0, 512.0, 512.0]), white: Some(11708.0), sensor: (6192, 4060), developed: (6000, 4000), aspect: (0, 0), lens: "RF28mm F2.8 STM", model_id: 2147484950 },
     Entry { file: "cr3-canon-eos-r5m2-aps-c-raw.cr3", model: "Canon EOS R5m2", color_data: 64, dpr: false, wb: Some([1.73828125, 1.9248046875]), black: Some([512.0, 512.0, 512.0, 512.0]), white: Some(14888.0), sensor: (5376, 3574), developed: (5088, 3392), aspect: (5088, 3392), lens: "RF135mm F1.8 L IS USM", model_id: 2147484822 },
     Entry { file: "cr3-canon-eos-r5m2-raw.cr3", model: "Canon EOS R5m2", color_data: 64, dpr: false, wb: Some([1.8349609375, 1.7626953125]), black: Some([512.0, 512.0, 512.0, 512.0]), white: Some(14888.0), sensor: (8480, 5650), developed: (8192, 5464), aspect: (0, 0), lens: "RF135mm F1.8 L IS USM", model_id: 2147484822 },
-    Entry { file: "cr3-canon-eos-r6-mark-iii-img-4241.cr3", model: "Canon EOS R6 Mark III", color_data: 66, dpr: false, wb: None, black: None, white: None, sensor: (7144, 4760), developed: (6960, 4640), aspect: (0, 0), lens: "RF50mm F1.4 L VCM", model_id: 2147484952 },
+    Entry { file: "cr3-canon-eos-r6-mark-iii-img-4241.cr3", model: "Canon EOS R6 Mark III", color_data: 66, dpr: false, wb: Some([2.2753906, 1.4199219]), black: Some([512.0, 512.0, 512.0, 512.0]), white: Some(13995.0), sensor: (7144, 4760), developed: (6960, 4640), aspect: (0, 0), lens: "RF50mm F1.4 L VCM", model_id: 2147484952 },
     Entry { file: "cr3-canon-m50-raw.cr3", model: "Canon EOS M50", color_data: 16, dpr: false, wb: Some([1.0771484375, 1.8994140625]), black: Some([510.0, 511.0, 511.0, 511.0]), white: Some(11892.0), sensor: (6288, 4056), developed: (6000, 4000), aspect: (0, 0), lens: "EF-M18-150mm f/3.5-6.3 IS STM", model_id: 1042 },
     Entry { file: "cr3-canon-powershot-v1-img-1225.cr3", model: "Canon PowerShot V1", color_data: 65, dpr: false, wb: Some([1.8896484375, 1.4990234375]), black: Some([512.0, 512.0, 512.0, 512.0]), white: Some(13036.0), sensor: (5928, 3944), developed: (5760, 3840), aspect: (0, 0), lens: "", model_id: 2147484823 },
     Entry { file: "cr3-canon-r100-raw.cr3", model: "Canon EOS R100", color_data: 19, dpr: false, wb: Some([1.79296875, 1.744140625]), black: Some([2048.0, 2048.0, 2048.0, 2048.0]), white: Some(10439.0), sensor: (6288, 4056), developed: (6000, 4000), aspect: (0, 0), lens: "RF-S18-45mm F4.5-6.3 IS STM", model_id: 2147484824 },
@@ -251,7 +252,7 @@ fn metadata_matches_exiftool_ground_truth_per_body() {
                 assert_eq!(actual, expected, "{file}: per-channel black levels");
                 assert_eq!(image.white[0], white, "{file}: white level");
             } else {
-                assert_eq!(entry.color_data, 66, "{file}: sample-derived levels are only expected for the unparsed ColorData version");
+                panic!("{file}: sample-derived levels are no longer expected — every corpus ColorData version (v16–v66) is parsed");
             }
         }
         let _ = entry.dpr; // documented per row; the sensor-dims assert above pins the main track

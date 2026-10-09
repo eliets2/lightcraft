@@ -86,9 +86,7 @@ fn inverse_line(low: &[i32], high: &[i32], out: &mut [i32], before: bool, after:
     let highs = high.get(neighbour..neighbour + odds_interior).ok_or_else(corrupt)?;
     let followers = synthesis.get(1..).ok_or_else(corrupt)?;
     let (pairs, _) = out.as_chunks_mut::<2>();
-    for (((pair, &even_value), &next_even), &high_value) in
-        pairs.iter_mut().zip(synthesis.iter()).zip(followers.iter()).zip(highs)
-    {
+    for (((pair, &even_value), &next_even), &high_value) in pairs.iter_mut().zip(synthesis.iter()).zip(followers.iter()).zip(highs) {
         let prediction = (i64::from(even_value) + i64::from(next_even)).div_euclid(2);
         pair[0] = even_value;
         pair[1] = checked_sample(i64::from(high_value) + prediction)?;
