@@ -525,11 +525,10 @@ struct Bits<'a> {
 }
 
 impl Bits<'_> {
-    /// The next 32 bits, MSB first, when at least that many remain before the end of the stream.
-    fn peek32(&self) -> Option<u32> {
-        let bytes = self.src.get(self.at / 8..self.at / 8 + 5)?;
-        let word = u64::from_be_bytes([0, 0, 0, bytes[0], bytes[1], bytes[2], bytes[3], bytes[4]]);
-        Some((word >> (8 - self.at % 8)) as u32)
+    /// The next 56 bits, MSB first, when a full 8-byte window lies within the stream.
+    fn peek56(&self) -> Option<u64> {
+        let bytes = <[u8; 8]>::try_from(self.src.get(self.at / 8..self.at / 8 + 8)?).ok()?;
+        Some(u64::from_be_bytes(bytes) << (self.at % 8))
     }
 
     fn take(&mut self, count: u32) -> Result<u32> {
@@ -539,9 +538,9 @@ impl Bits<'_> {
         if count == 0 {
             return Ok(0);
         }
-        if let Some(window) = self.peek32() {
+        if let Some(window) = self.peek56() {
             self.at += count as usize;
-            return Ok(window >> (32 - count));
+            return Ok((window >> (64 - count)) as u32);
         }
         // Near the end of the stream: bit by bit, so truncation is reported exactly.
         let mut value = 0;
@@ -554,11 +553,22 @@ impl Bits<'_> {
     }
 
     fn rice(&mut self, k: u32) -> Result<u32> {
-        // Common case: the unary prefix and its terminating 1 lie within the next 32 bits.
-        if let Some(window) = self.peek32().filter(|&w| w != 0) {
+        // Common case: the unary prefix and its terminating 1 lie within the next
+        // 56 bits, so runs of up to 55 zeros are decided from one window load.
+        if let Some(window) = self.peek56().filter(|&w| w != 0) {
             let zeros = window.leading_zeros();
+            if zeros > 41 {
+                return Err(corrupt("Rice escape prefix exceeds 41 bits"));
+            }
             self.at += zeros as usize + 1;
-            return if k <= 20 { Ok((zeros << k) | self.take(k)?) } else { Err(corrupt("Rice parameter exceeds sample precision")) };
+            return if zeros == 41 {
+                // The escape encodes a raw 21-bit literal and ignores the Rice parameter.
+                self.take(21)
+            } else if k <= 20 {
+                Ok((zeros << k) | self.take(k)?)
+            } else {
+                Err(corrupt("Rice parameter exceeds sample precision"))
+            };
         }
         let mut zeros = 0;
         while self.take(1)? == 0 {
