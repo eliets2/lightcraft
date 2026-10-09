@@ -9,10 +9,11 @@
 //! CC0 raw.pixls.us files against an external decoder used only as a black-box oracle.
 //!
 //! Current support: version 0x100 lossless Bayer RAW and horizontal-tile C-RAW,
-//! plus version 0x200 single-tile 14-bit C-RAW with adaptive QP quantization.
+//! plus version 0x200 single-tile 14-bit C-RAW with adaptive QP quantization,
+//! including odd QP-map heights (the unpaired last row is averaged with itself).
 //! Both ff01/ff02/ff03 and ff11/ff12/ff13 marker families are supported.
-//! Six full M50/R100/R8 sensor fixtures match an external decoder sample for sample.
-//! Unverified coding variants return explicit unsupported errors.
+//! Nineteen full sensor fixtures across eleven bodies match an external decoder
+//! sample for sample. Unverified coding variants return explicit unsupported errors.
 
 use super::crx_wavelet::{self, Band as WaveletBand, TileEdges};
 use crate::{MAX_SAMPLES, RawError, Result};
@@ -173,9 +174,6 @@ fn supports(config: &Cr3Compression) -> Result<()> {
     if config.version == 0x200 && (config.levels != 3 || config.bit_depth != 14 || config.tile_width != config.width) {
         return Err(RawError::Unsupported("Canon CRX version 0x200 requires a single-tile 14-bit Bayer C-RAW image".into()));
     }
-    if config.version == 0x200 && !config.height.div_ceil(4).is_multiple_of(2) {
-        return Err(RawError::Unsupported("Canon CRX adaptive QP map with an odd height".into()));
-    }
     if config.median_bit_depth.is_some() {
         return Err(RawError::Unsupported("Canon CRX extended median-bit-depth header".into()));
     }
@@ -333,7 +331,10 @@ fn tile_qp(sample: &[u8], tile: &Tile) -> Result<Option<QpMap>> {
 fn quant_step(value: u8) -> Result<i32> {
     // Measured independently with an external decoder after modifying only the
     // quantValue field: all forty values 4..43 follow this integer sequence.
-    if !(4..=43).contains(&value) {
+    // Value 44 (adaptive QP 168, which occurs across the R50 C-RAW corpus
+    // files) was then confirmed against the same decoder; 45 and beyond are
+    // unmeasured and rejected.
+    if !(4..=44).contains(&value) {
         return Err(RawError::Unsupported(format!("Canon CRX quantization value {value}")));
     }
     let scale = [40i32, 45, 51, 57, 64, 72].get(usize::from(value % 6)).copied().ok_or_else(|| corrupt("quantization table index"))?;
@@ -418,7 +419,7 @@ fn adaptive_step(map: &QpMap, band: usize, x: usize, y: usize, base: u32, gain: 
         let index = row.checked_mul(map.width).and_then(|n| n.checked_add(column)).ok_or(RawError::Limit("CRX QP map index"))?;
         let first = *map.data.get(index).ok_or_else(|| corrupt("QP coordinate outside map"))?;
         let value = if band < 7 {
-            let second_row = row + 1;
+            let second_row = (row + 1).min(map.height - 1);
             let second = *map.data.get(second_row * map.width + column).ok_or_else(|| corrupt("QP average outside map"))?;
             (first + second) / 2
         } else {
@@ -734,9 +735,6 @@ fn high_frequency_band(src: &[u8], width: usize, height: usize) -> Result<Vec<i3
 }
 
 fn qp_map(src: &[u8], width: usize, height: usize) -> Result<QpMap> {
-    if !height.is_multiple_of(2) {
-        return Err(RawError::Unsupported("Canon CRX adaptive QP map with an odd height".into()));
-    }
     let count = width.checked_mul(height).filter(|&n| width > 0 && n > 0 && n <= MAX_CRX_SAMPLES / 32).ok_or(RawError::Limit("CRX QP map size"))?;
     let mut data = Vec::new();
     data.try_reserve_exact(count).map_err(|_| RawError::Limit("CRX QP allocation"))?;
@@ -757,7 +755,7 @@ fn qp_map(src: &[u8], width: usize, height: usize) -> Result<QpMap> {
             let right = previous.get(x + 1).copied().unwrap_or(above);
             let symbol = bits.qp_rice(k)?;
             let value = median(left, above, corner).checked_add(signed(symbol)).ok_or_else(|| corrupt("QP prediction overflow"))?;
-            if !(131..=167).contains(&value) {
+            if !(131..=168).contains(&value) {
                 return Err(RawError::Unsupported(format!("Canon CRX adaptive QP value {value}")));
             }
             *current.get_mut(x).ok_or_else(|| corrupt("QP outside row"))? = value;
@@ -971,11 +969,11 @@ mod tests {
 
     #[test]
     fn measured_quantization_and_allocation_limits() {
-        for (quant, expected) in [(4, 1), (9, 1), (10, 2), (16, 4), (22, 8), (26, 12), (32, 25), (36, 40), (41, 72), (42, 80), (43, 90)] {
+        for (quant, expected) in [(4, 1), (9, 1), (10, 2), (16, 4), (22, 8), (26, 12), (32, 25), (36, 40), (41, 72), (42, 80), (43, 90), (44, 102)] {
             assert_eq!(quant_step(quant).unwrap(), expected);
         }
         assert!(matches!(quant_step(3), Err(RawError::Unsupported(_))));
-        assert!(matches!(quant_step(44), Err(RawError::Unsupported(_))));
+        assert!(matches!(quant_step(45), Err(RawError::Unsupported(_))));
         for (width, height) in [(20_000, 20_000), (65_538, 2), (2, 65_538)] {
             let mut config = coding();
             config.width = width;
@@ -1004,6 +1002,35 @@ mod tests {
         assert_eq!(adaptive_step(&low, 4, 0, 0, 0, 1).unwrap(), 1);
         assert_eq!(adaptive_step(&low, 0, 0, 0, 0, 0).unwrap(), 1);
         assert!(matches!(qp_map(&[0, 0, 1, 4, 0x94], 1, 4), Err(RawError::Unsupported(_))));
+    }
+
+    #[test]
+    fn odd_qp_map_height_pairs_the_last_row_with_itself() {
+        // R50/R5m2/R7-class C-RAW files store ceil(height/4) QP rows, which is odd
+        // whenever the sensor height is divisible by 4 but not by 8 (measured on 13
+        // CC0 files). The final row has no partner: it is averaged with itself,
+        // which keeps its own value ((v+v)/2 == v), as the oracle confirms.
+        let map = qp_map(&[0, 0, 1, 0x2c, 0x90], 1, 3).unwrap();
+        assert_eq!((map.width, map.height), (1, 3));
+        assert_eq!(map.data, [150; 3]);
+        let odd = QpMap { width: 1, height: 3, data: vec![150, 152, 167] };
+        // Band 4: QP row pair (0, 1) → floor((150+152)/2) = 151, step 14, gain 4/8 → 7.
+        assert_eq!(adaptive_step(&odd, 4, 0, 0, 0, 4).unwrap(), 7);
+        // The unpaired last row pairs with itself: (167+167)/2 = 167, step 90, gain 4/8 → 45.
+        assert_eq!(adaptive_step(&odd, 4, 0, 1, 0, 4).unwrap(), 45);
+        // A band row at or beyond the map height is corrupt, as before.
+        assert!(matches!(adaptive_step(&odd, 4, 0, 2, 0, 4), Err(RawError::Corrupt(_))));
+        let mut config = coding();
+        config.version = 0x200;
+        config.levels = 3;
+        config.width = 6192;
+        config.height = 4060; // ceil(4060/4) = 1015 QP rows: odd, now accepted.
+        config.tile_width = 6192;
+        config.tile_height = 4060;
+        assert!(supports(&config).is_ok());
+        config.height = 4056; // ceil(4056/4) = 1014: even, as in the earlier fixtures.
+        config.tile_height = 4056;
+        assert!(supports(&config).is_ok());
     }
 
     #[test]
