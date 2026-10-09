@@ -388,18 +388,33 @@ fn wavelet_plane(sample: &[u8], plane: &Plane, width: usize, height: usize, edge
             }
             decoded.ok_or_else(|| RawError::Corrupt(format!("Canon CRX band {i}: unsupported geometry or corrupt entropy")))?
         };
-        for (position, value) in data.iter_mut().enumerate() {
-            let step = match band.quant {
-                Quantization::Uniform(value) => quant_step(value)?,
-                Quantization::Adaptive { base, gain } => {
-                    adaptive_step(qp.ok_or_else(|| corrupt("missing QP map"))?, i, position % w, position / w, base, gain)?
-                }
-            };
-            *value = value.checked_mul(step).ok_or_else(|| corrupt("dequantized coefficient overflow"))?;
-        }
+        dequantize_band(&mut data, w, h, i, &band.quant, qp)?;
         bands.push(WaveletBand { width: w, height: h, data });
     }
     crx_wavelet::reconstruct(&bands, width, height, 3, edges)
+}
+
+/// Multiply each decoded coefficient by its quantization step. The Uniform step is
+/// band-constant and hoisted out of the loop; the adaptive step is computed per
+/// coefficient (see `adaptive_step`).
+fn dequantize_band(data: &mut [i32], width: usize, height: usize, band: usize, quant: &Quantization, qp: Option<&QpMap>) -> Result<()> {
+    debug_assert_eq!(Some(data.len()), width.checked_mul(height));
+    let (base, gain) = match quant {
+        Quantization::Uniform(value) => {
+            let step = quant_step(*value)?;
+            for value in data.iter_mut() {
+                *value = value.checked_mul(step).ok_or_else(|| corrupt("dequantized coefficient overflow"))?;
+            }
+            return Ok(());
+        }
+        Quantization::Adaptive { base, gain } => (*base, *gain),
+    };
+    let map = qp.ok_or_else(|| corrupt("missing QP map"))?;
+    for (position, value) in data.iter_mut().enumerate() {
+        let step = adaptive_step(map, band, position % width, position / width, base, gain)?;
+        *value = value.checked_mul(step).ok_or_else(|| corrupt("dequantized coefficient overflow"))?;
+    }
+    Ok(())
 }
 
 fn adaptive_step(map: &QpMap, band: usize, x: usize, y: usize, base: u32, gain: u32) -> Result<i32> {
