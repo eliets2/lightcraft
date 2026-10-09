@@ -1,0 +1,57 @@
+[package]
+name = "lightcraft-fuzz"
+version = "0.0.0"
+publish = false
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "cargo-fuzz targets for the CR3/CRX parsers (see fuzz/README.md)"
+
+[package.metadata]
+cargo-fuzz = true
+
+[features]
+default = []
+# Links libFuzzer and turns the four fuzz_targets bins into real fuzzers.
+# Requires nightly and a Unix target (cargo fuzz does not run on windows-gnu),
+# so it is off by default: `cargo build/test/clippy --workspace` on every
+# platform builds only the stub binaries. Linux CI passes `--features libfuzzer`
+# (cargo fuzz forwards it); see fuzz/README.md for the exact commands.
+libfuzzer = ["dep:libfuzzer-sys"]
+
+[dependencies]
+lightcraft-meta = { workspace = true }
+lightcraft-raw = { workspace = true }
+arbitrary = "1"
+libfuzzer-sys = { version = "0.4", optional = true }
+
+# One bin per fuzz target, exactly as `cargo fuzz add` writes them. The bins are
+# always compiled: without the `libfuzzer` feature each one has a stub `main`
+# that explains how to run it for real (and keeps stable/Windows builds green).
+[[bin]]
+name = "cr3_container"
+path = "fuzz_targets/cr3_container.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "crx_bitstream"
+path = "fuzz_targets/crx_bitstream.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "cr3_whole_file"
+path = "fuzz_targets/cr3_whole_file.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "iso_bmff_boxes"
+path = "fuzz_targets/iso_bmff_boxes.rs"
+test = false
+doc = false
+bench = false
