@@ -101,7 +101,7 @@ fn canon_r5_mark_ii_craw_odd_qp_map_is_exact() {
 fn canon_r6_mark_iii_craw_odd_qp_map_is_exact() {
     // raw.pixls.us/data/Canon/Canon%20EOS%20R6%20Mark%20III/IMG_4244.CR3; SHA256
     // 7e1a5d84297a52853b0bbe5a5c03a5d4f5b93e00b7020271523240f9cabfe50e
-    check("cr3-canon-eos-r6-mark-iii-img-4244.cr3", 0xffd4_bbb5_52ed_0b47, (4512, 2994), (4320, 2880), false);
+    check("cr3-canon-eos-r6-mark-iii-img-4244.cr3", 0xffd4_bbb5_52ed_0b47, (4512, 2994), (4320, 2880), true);
 }
 
 #[test]
