@@ -394,9 +394,10 @@ fn wavelet_plane(sample: &[u8], plane: &Plane, width: usize, height: usize, edge
     crx_wavelet::reconstruct(&bands, width, height, 3, edges)
 }
 
-/// Multiply each decoded coefficient by its quantization step. The Uniform step is
-/// band-constant and hoisted out of the loop; the adaptive step is computed per
-/// coefficient (see `adaptive_step`).
+/// Multiply each decoded coefficient by its quantization step. Both quantization
+/// kinds precompute their steps per band row first — one constant step, or one
+/// adaptive step per QP row block and column group — so the per-coefficient loop
+/// is a straight multiply in row-major coefficient order.
 fn dequantize_band(data: &mut [i32], width: usize, height: usize, band: usize, quant: &Quantization, qp: Option<&QpMap>) -> Result<()> {
     debug_assert_eq!(Some(data.len()), width.checked_mul(height));
     let (base, gain) = match quant {
@@ -410,9 +411,41 @@ fn dequantize_band(data: &mut [i32], width: usize, height: usize, band: usize, q
         Quantization::Adaptive { base, gain } => (*base, *gain),
     };
     let map = qp.ok_or_else(|| corrupt("missing QP map"))?;
-    for (position, value) in data.iter_mut().enumerate() {
-        let step = adaptive_step(map, band, position % width, position / width, base, gain)?;
-        *value = value.checked_mul(step).ok_or_else(|| corrupt("dequantized coefficient overflow"))?;
+    if gain == 0 {
+        // A zero gain makes every step the same base-derived constant; no map or
+        // band-position access at all, as in the per-coefficient computation.
+        let step = adaptive_step(map, band, 0, 0, base, gain)?;
+        for value in data.iter_mut() {
+            *value = value.checked_mul(step).ok_or_else(|| corrupt("dequantized coefficient overflow"))?;
+        }
+        return Ok(());
+    }
+    // Bands 4-6 sample the QP map at every second column of every other band row,
+    // bands 7-9 at every fourth column of each row; `adaptive_step` derives that row
+    // and column from the band-relative coefficient position. Lower bands with a
+    // gain are rejected there, as before.
+    let column_scale = match band {
+        4..=6 => 2,
+        7..=9 => 4,
+        _ => return Err(RawError::Unsupported("Canon CRX adaptive low-frequency quantization".into())),
+    };
+    let columns = width.div_ceil(column_scale);
+    let mut steps = Vec::new();
+    steps
+        .try_reserve_exact(height.checked_mul(columns).ok_or(RawError::Limit("CRX dequantization table size"))?)
+        .map_err(|_| RawError::Limit("CRX dequantization table allocation"))?;
+    for y in 0..height {
+        for column in 0..columns {
+            steps.push(adaptive_step(map, band, column * column_scale, y, base, gain)?);
+        }
+    }
+    for (y, values) in data.chunks_mut(width).enumerate() {
+        let row = steps.get(y * columns..).and_then(|steps| steps.get(..columns)).ok_or_else(|| corrupt("dequantization table row"))?;
+        for (step, group) in row.iter().zip(values.chunks_mut(column_scale)) {
+            for value in group {
+                *value = value.checked_mul(*step).ok_or_else(|| corrupt("dequantized coefficient overflow"))?;
+            }
+        }
     }
     Ok(())
 }
