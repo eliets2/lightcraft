@@ -2,15 +2,21 @@
 //!
 //! Sources: Laurent Clévy's public CR3 format description (`CMP1`, `CDI1/IAD1`, `CMT3`),
 //! <https://github.com/lclevy/canon_cr3/blob/master/readme.md>, and ExifTool's published Canon
-//! tag-name tables (`SensorInfo`, `ColorData9`…`ColorData12`, `LensModel`),
+//! tag-name tables (`SensorInfo`, `ColorData9`…`ColorData12`, `ColorCalib`, `LensModel`),
 //! <https://exiftool.org/TagNames/Canon.html>. No third-party decoder source was consulted.
 //!
 //! `IAD1` stores the valid sensor area separately from the recommended image crop. Both use inclusive
 //! sensor offsets. The CFA is anchored at the full sensor's origin; cropping shifts its phase later.
 //! Unknown camera metadata versions are ignored rather than assigned a guessed white balance.
+//!
+//! Colour: the file's `ColorData` carries its own white-balance planes (a neutral surface's raw
+//! levels for each stored illuminant, with the illuminant's Kelvin temperature). The XYZ → camera
+//! matrices of the DNG colour model are fitted to those planes and validated against them, so a
+//! wrong layout or a body whose planes don't fit keeps the embedded-JPEG colour fallback.
 
 use super::{black_from_columns, crx, white_from_data};
-use crate::{BlackLevel, Cfa, ColorData, MAX_SAMPLES, Mode, OpcodeLists, RawData, RawError, RawFormat, RawImage, Rect, Result};
+use crate::{BlackLevel, Cfa, ColorData, MAX_SAMPLES, Mat3, Mode, OpcodeLists, RawData, RawError, RawFormat, RawImage, Rect, Result};
+use lightcraft_color::{SRGB, Xy, cct};
 use lightcraft_meta::cr3::{Cr3ImageArea, Cr3Track, Cr3TrackKind, parse_cr3};
 use lightcraft_tiff::{Ifd, Tiff};
 
@@ -101,25 +107,44 @@ struct CameraLevels {
     wb: Option<[f32; 3]>,
     black: Option<[f32; 4]>,
     white: Option<f32>,
+    color: ColorData,
+}
+
+/// Word offsets of Canon's versioned `ColorData` array (ExifTool's published `ColorData9`–
+/// `ColorData12` tables; the R6 Mark III's version 66 follows the `ColorData12` layout, verified
+/// by its sane plane, black and white words and by the white-balance round trip below).
+#[derive(Clone, Copy)]
+struct ColorLayout {
+    /// Word index of the as-shot white-balance plane; each plane is four RGGB levels then a Kelvin temperature.
+    planes_at: usize,
+    /// White-balance planes stored before the `ColorCalib` block.
+    planes: usize,
+    black_at: usize,
+    white_at: usize,
+}
+
+fn color_layout(version: Option<u64>) -> Option<ColorLayout> {
+    Some(match version? {
+        16..=19 => ColorLayout { planes_at: 71, planes: 39, black_at: 329, white_at: 797 },
+        32 | 33 => ColorLayout { planes_at: 85, planes: 39, black_at: 343, white_at: 811 },
+        34 | 48 => ColorLayout { planes_at: 105, planes: 39, black_at: 363, white_at: 641 },
+        64..=66 => ColorLayout { planes_at: 105, planes: 43, black_at: 383, white_at: 661 },
+        _ => return None,
+    })
 }
 
 /// Canon's versioned word arrays. Offsets are word indices from the published tag tables, not
 /// byte offsets. The four as-shot WB values are R, G, G, B, independent of the CFA layout.
 fn camera_levels(maker: Option<&Ifd>, bits: u8) -> CameraLevels {
     let Some(values) = maker.and_then(|m| m.u64s(COLOR_DATA)) else { return CameraLevels::default() };
-    let offsets = match values.first().copied() {
-        Some(16..=19) => (71, 329, 797),
-        Some(32 | 33) => (85, 343, 811),
-        Some(34 | 48) => (105, 363, 641),
-        Some(64 | 65) => (105, 383, 661),
-        _ => return CameraLevels::default(),
-    };
+    let Some(layout) = color_layout(values.first().copied()) else { return CameraLevels::default() };
+    let (wb_at, black_at, white_at) = (layout.planes_at, layout.black_at, layout.white_at);
     let full = ((1u32 << u32::from(bits.clamp(1, 16))) - 1) as f32;
     let quadruple = |at: usize| -> Option<[f32; 4]> {
         let v = values.get(at..at + 4)?;
         Some([*v.first()? as f32, *v.get(1)? as f32, *v.get(2)? as f32, *v.get(3)? as f32])
     };
-    let wb = quadruple(offsets.0).and_then(|[r, g1, g2, b]| {
+    let wb = quadruple(wb_at).and_then(|[r, g1, g2, b]| {
         let green = (g1 + g2) * 0.5;
         if !(64.0..=32767.0).contains(&green) || (g1 - g2).abs() > green * 0.1 {
             return None;
@@ -128,10 +153,297 @@ fn camera_levels(maker: Option<&Ifd>, bits: u8) -> CameraLevels {
         let blue = b / green;
         ((0.1..8.0).contains(&red) && (0.1..8.0).contains(&blue)).then_some([red, 1.0, blue])
     });
-    let black = quadruple(offsets.1).filter(|v| v.iter().any(|&b| b > 0.0) && v.iter().all(|&b| b >= 0.0 && b < full * 0.5));
+    let black = quadruple(black_at).filter(|v| v.iter().any(|&b| b > 0.0) && v.iter().all(|&b| b >= 0.0 && b < full * 0.5));
     let max_black = black.map(|v| v.into_iter().fold(0.0f32, f32::max)).unwrap_or(0.0);
-    let white = values.get(offsets.2).map(|&v| v as f32).filter(|&v| v > max_black && v >= full * 0.5 && v <= full);
-    CameraLevels { wb, black, white }
+    let white = values.get(white_at).map(|&v| v as f32).filter(|&v| v > max_black && v >= full * 0.5 && v <= full);
+    let color = camera_color(&values, layout).unwrap_or_default();
+    CameraLevels { wb, black, white, color }
+}
+
+/// One white-balance plane: the camera's own rendition of a neutral surface under a recorded
+/// illuminant. The stored RGGB levels are the white-balance gains (×1024), so the camera neutral
+/// — the illuminant's colour in camera RGB, what the colour matrix maps XYZ to — is their
+/// reciprocal, green-normalised (`[G/R, 1, G/B]`).
+struct WbPlane {
+    neutral: [f64; 3],
+    kelvin: f64,
+}
+
+/// The file's white-balance planes (Canon's named presets and measured shots, deduplicated).
+fn wb_planes(values: &[u64], layout: ColorLayout) -> Vec<WbPlane> {
+    let mut planes: Vec<WbPlane> = Vec::new();
+    for i in 0..layout.planes {
+        let at = layout.planes_at + i * 5;
+        let Some(plane) = values.get(at..at + 5) else { break };
+        let (r, g1, g2, b, kelvin) = (plane[0] as f64, plane[1] as f64, plane[2] as f64, plane[3] as f64, plane[4] as f64);
+        let green = (g1 + g2) * 0.5;
+        let (red, blue) = (r / green, b / green);
+        // Placeholders, never real illuminants: 0x100-gain planes with impossible equal red and
+        // blue gains, and identity-gain planes carrying no colour information. Real measured and
+        // preset gains stay at or above 0x200 per channel and differ between the colour channels.
+        let sane = (1500.0..=30000.0).contains(&kelvin)
+            && (64.0..=32767.0).contains(&green)
+            && (g1 - g2).abs() <= green * 0.1
+            && r >= 512.0
+            && b >= 512.0
+            && r != b
+            && !(r == green && b == green)
+            && (0.1..7.0).contains(&red)
+            && (0.1..7.0).contains(&blue);
+        let neutral = [green / r, 1.0, green / b];
+        if sane && !planes.iter().any(|p| p.kelvin == kelvin && p.neutral[0] == neutral[0] && p.neutral[2] == neutral[2]) {
+            planes.push(WbPlane { neutral, kelvin });
+        }
+    }
+    planes
+}
+
+/// Temperature (K) separating the two calibration-illuminant plane groups: tungsten-side planes
+/// fit matrix 1, daylight-side planes matrix 2 (DNG's dual-illuminant model).
+const WARM_SIDE: f64 = 4750.0;
+/// Calibration illuminants of the derived matrices: standard light A and D65 (Exif codes 17, 21).
+const ILLUMINANTS: [u16; 2] = [17, 21];
+
+/// The white point used to normalise the fitted matrices (the green row maps it to 1).
+fn reference_xy() -> Xy {
+    cct::temp_tint_to_xy(6504.0, 0.0)
+}
+
+/// The chromaticity the file records for a plane's Kelvin temperature.
+fn plane_xy(kelvin: f64) -> Xy {
+    cct::temp_tint_to_xy(kelvin, 0.0)
+}
+
+/// Fit one XYZ → camera matrix to a plane group: alternating least squares over the neutral
+/// ratios (each plane requires the red and blue rows to agree with its neutral relative to the
+/// green row: `m_red·x − n_red·(m_green·x) = 0`, likewise blue). With the green row fixed each
+/// row is an ordinary linear solve; the plane ratios only constrain the matrix on the Planckian
+/// locus's narrow band, so each solve is ridged toward the generic camera (the pipeline's own
+/// neutral fallback) on the locus's unconstrained directions. Grossly inconsistent planes
+/// (Canon's fluorescent and placeholder planes) are dropped once and the fit repeated.
+fn fit_plane_matrix(planes: &[(&WbPlane, Xy)]) -> Option<Mat3> {
+    fit_plane_core(planes).ok()
+}
+
+/// Why a plane group produced no matrix, with the failed check's measurement.
+type PlaneRejection = (&'static str, f64);
+
+/// Ridge weight relative to a solve's data scale.
+const RIDGE: f64 = 1e-3;
+/// Alternating least squares passes (each is exact given the other rows; the iteration breaks on
+/// its first degenerate pass and stops early once settled).
+const ALS_PASSES: usize = 100;
+/// Smallest plane group that still carries colour information of its own.
+const MIN_GROUP: usize = 4;
+
+fn fit_plane_core(planes: &[(&WbPlane, Xy)]) -> std::result::Result<Mat3, PlaneRejection> {
+    let group: Vec<&(&WbPlane, Xy)> = planes.iter().collect();
+    if group.len() < MIN_GROUP {
+        return Err(("planes", group.len() as f64));
+    }
+    let mut matrix = als_fit(&group);
+    if group.len() > MIN_GROUP + 2 {
+        // One outlier pass: grossly inconsistent planes (Canon's fluorescent presets, placeholder
+        // entries) would bias a least-squares fit; drop them and refit once, keeping the untrimmed
+        // fit when the survivors are too few to determine a matrix.
+        let mut errors: Vec<f64> = group.iter().filter_map(|(p, w)| direct_error(&matrix, p, *w)).collect();
+        errors.sort_by(|a, b| a.total_cmp(b));
+        let median = errors.get(errors.len() / 2).copied().unwrap_or(0.0);
+        let cut = (median * 3.0).max(MAX_PLANE_ERROR);
+        let survivors: Vec<&(&WbPlane, Xy)> = group.iter().copied().filter(|(p, w)| direct_error(&matrix, p, *w).is_some_and(|e| e <= cut)).collect();
+        if survivors.len() < group.len() && survivors.len() > MIN_GROUP {
+            matrix = als_fit(&survivors);
+        }
+    }
+    let scale = matrix.0[1].iter().zip(reference_xy().to_xyz()).map(|(m, x)| m * x).sum::<f64>();
+    if !scale.is_finite() || scale.abs() < 1e-9 {
+        return Err(("scale", scale));
+    }
+    let normalized = Mat3(matrix.0.map(|r| r.map(|v| v / scale)));
+    normalized.inverse().map(|_| normalized).ok_or(("final singular", scale))
+}
+
+/// The generic camera the fits fall back to on the locus's unconstrained directions: linear sRGB
+/// as XYZ → camera, green row normalised at the reference white like a fitted matrix.
+fn prior_matrix() -> Mat3 {
+    let m = SRGB.from_xyz();
+    let scale = m.0[1].iter().zip(reference_xy().to_xyz()).map(|(v, x)| v * x).sum::<f64>();
+    if !scale.is_finite() || scale.abs() < 1e-9 {
+        return m;
+    }
+    Mat3(m.0.map(|r| r.map(|v| v / scale)))
+}
+
+fn als_fit(group: &[&(&WbPlane, Xy)]) -> Mat3 {
+    let prior = prior_matrix();
+    let mut green = prior.0[1];
+    let mut sane = prior;
+    for _ in 0..ALS_PASSES {
+        // A failed linear solve cannot update the fixed row, so the iteration stops; `sane`
+        // keeps the last usable iterate (the prior until one succeeds) and the caller's plane
+        // validation decides whether that tracks the file's planes well enough to use.
+        let Some(red) = solve_row(group, &green, 0, &prior.0[0]) else { break };
+        let Some(blue) = solve_row(group, &green, 2, &prior.0[2]) else { break };
+        let Some(next) = solve_green(group, &red, &blue, &prior.0[1]) else { break };
+        let matrix = Mat3([red, next, blue]);
+        let settled = sane.0.iter().flatten().zip(matrix.0.iter().flatten()).all(|(a, b)| (a - b).abs() <= 1e-12 * a.abs().max(1.0));
+        green = next;
+        // Usable = finite, bounded, invertible, and its green row still maps the reference white
+        // (the scale the caller normalises by): a narrow plane set can pass through degenerate,
+        // row-dependent iterates on its way to the fixed point, so they are recorded but the
+        // iteration continues from them.
+        let scale = matrix.0[1].iter().zip(reference_xy().to_xyz()).map(|(m, x)| m * x).sum::<f64>();
+        let bounded = matrix.0.iter().flatten().all(|v| v.is_finite() && v.abs() < 8.0);
+        if bounded && scale.abs() > 1e-6 && matrix.inverse().is_some() && Mat3(matrix.0.map(|r| r.map(|v| v / scale))).inverse().is_some() {
+            sane = matrix;
+        }
+        if settled {
+            break;
+        }
+    }
+    sane
+}
+
+/// `min Σ (m·x − n·(green·x))² + ridge·‖m − prior‖²` for one colour row.
+fn solve_row(group: &[&(&WbPlane, Xy)], green: &[f64; 3], row: usize, prior: &[f64; 3]) -> Option<[f64; 3]> {
+    let mut a = [[0.0f64; 3]; 3];
+    let mut b = [0.0f64; 3];
+    for (plane, white) in group {
+        let x = white.to_xyz();
+        let target = plane.neutral[row] * green.iter().zip(x).map(|(g, x)| g * x).sum::<f64>();
+        for (i, &xi) in x.iter().enumerate() {
+            b[i] += xi * target;
+            for (j, &xj) in x.iter().enumerate() {
+                a[i][j] += xi * xj;
+            }
+        }
+    }
+    solve_ridged(&a, &b, prior)
+}
+
+/// The green row from both other rows' ratio equations, likewise ridged.
+fn solve_green(group: &[&(&WbPlane, Xy)], red: &[f64; 3], blue: &[f64; 3], prior: &[f64; 3]) -> Option<[f64; 3]> {
+    let mut a = [[0.0f64; 3]; 3];
+    let mut b = [0.0f64; 3];
+    for (plane, white) in group {
+        let x = white.to_xyz();
+        for (row, ratio) in [(red, plane.neutral[0]), (blue, plane.neutral[2])] {
+            let target = row.iter().zip(x).map(|(m, x)| m * x).sum::<f64>() / ratio;
+            for (i, &xi) in x.iter().enumerate() {
+                b[i] += xi * target;
+                for (j, &xj) in x.iter().enumerate() {
+                    a[i][j] += xi * xj;
+                }
+            }
+        }
+    }
+    solve_ridged(&a, &b, prior)
+}
+
+/// `(A + ridge·tr(A)/3·I)·m = b + ridge·tr(A)/3·prior` (data-scale-relative Tikhonov).
+fn solve_ridged(a: &[[f64; 3]; 3], b: &[f64; 3], prior: &[f64; 3]) -> Option<[f64; 3]> {
+    let trace: f64 = a[0][0] + a[1][1] + a[2][2];
+    let ridge = trace * RIDGE / 3.0;
+    let mut ridged = *a;
+    for i in 0..3 {
+        ridged[i][i] += ridge;
+    }
+    let inverse = Mat3(ridged).inverse()?;
+    let rhs = [b[0] + ridge * prior[0], b[1] + ridge * prior[1], b[2] + ridge * prior[2]];
+    let m = inverse.apply(rhs);
+    m.iter().all(|v| v.is_finite() && v.abs() < 8.0).then_some(m)
+}
+
+/// Relative neutral error of `matrix` at one plane (its own group's matrix, no interpolation).
+fn direct_error(matrix: &Mat3, plane: &WbPlane, white: Xy) -> Option<f64> {
+    let predicted = matrix.apply(white.to_xyz());
+    let pg = predicted[1];
+    if pg <= 0.0 {
+        return None;
+    }
+    let error = [0, 2].into_iter().map(|c| (predicted[c] * plane.neutral[1] / (pg * plane.neutral[c]) - 1.0).abs()).fold(0.0f64, f64::max);
+    error.is_finite().then_some(error)
+}
+
+/// Relative per-plane error of the derived colour model: how far the matrix's white balance for
+/// the plane's recorded illuminant is from the plane's own multipliers (max of red and blue).
+fn plane_error(color: &ColorData, plane: &WbPlane) -> Option<f64> {
+    let predicted = crate::color::camera_neutral(color, plane_xy(plane.kelvin));
+    let (g, pg) = (plane.neutral[1], predicted[1]);
+    if g <= 0.0 || pg <= 0.0 {
+        return None;
+    }
+    let error = [0, 2].into_iter().map(|c| (predicted[c] * g / (pg * plane.neutral[c]) - 1.0).abs());
+    let max = error.fold(0.0f64, f64::max);
+    max.is_finite().then_some(max)
+}
+
+/// Mean and max per-plane error of `color` over all planes.
+fn plane_errors(color: &ColorData, planes: &[WbPlane]) -> (f64, f64) {
+    let mut count = 0usize;
+    let mut sum = 0.0;
+    let mut max = 0.0f64;
+    for plane in planes {
+        let Some(error) = plane_error(color, plane) else { continue };
+        count += 1;
+        sum += error;
+        max = max.max(error);
+    }
+    if count == 0 { (f64::INFINITY, f64::INFINITY) } else { (sum / count as f64, max) }
+}
+
+/// Planes must fit this well (relative white-balance error) for the matrices to be used. The
+/// generic camera fallback these replace is typically several times worse, and a wrong layout
+/// fails by an order of magnitude, so the bar is set by "clearly beats the fallback".
+const MAX_MEAN_PLANE_ERROR: f64 = 0.08;
+const MAX_PLANE_ERROR: f64 = 0.25;
+/// The file's own as-shot plane (the white balance this photo ships with) must reproduce better.
+const MAX_AS_SHOT_PLANE_ERROR: f64 = 0.08;
+
+/// The file's colour model: XYZ → camera matrices fitted to its own white-balance planes,
+/// validated by reproducing them (and the as-shot plane) within tolerance. `None` keeps the
+/// embedded-JPEG colour fallback (unknown layout, too few planes, or a failed validation).
+fn camera_color(values: &[u64], layout: ColorLayout) -> Option<ColorData> {
+    camera_color_core(values, layout).ok()
+}
+
+fn camera_color_core(values: &[u64], layout: ColorLayout) -> std::result::Result<ColorData, PlaneRejection> {
+    let planes = wb_planes(values, layout);
+    let xy_of = |p: &WbPlane| plane_xy(p.kelvin);
+    let warm: Vec<_> = planes.iter().filter(|p| p.kelvin < WARM_SIDE).map(|p| (p, xy_of(p))).collect();
+    let cool: Vec<_> = planes.iter().filter(|p| p.kelvin >= WARM_SIDE).map(|p| (p, xy_of(p))).collect();
+    // Both calibration matrices from their temperature sides; a side with too few planes falls
+    // back to the global matrix over all planes (never to a far-extrapolating other side).
+    let global = fit_plane_matrix(&planes.iter().map(|p| (p, xy_of(p))).collect::<Vec<_>>());
+    let m1 = fit_plane_matrix(&warm).or(global).ok_or(("fit", 0.0))?;
+    let m2 = fit_plane_matrix(&cool).or(global).ok_or(("fit", 0.0))?;
+    let color = ColorData {
+        illuminant: ILLUMINANTS,
+        color_matrix: [Some(m1), Some(m2)],
+        forward_matrix: [None, None],
+        camera_calibration: [None, None],
+        analog_balance: None,
+        as_shot_neutral: None,
+        as_shot_white_xy: None,
+        baseline_exposure: 0.0,
+        profile: Default::default(),
+    };
+    let (mean, max) = plane_errors(&color, &planes);
+    if !mean.is_finite() {
+        return Err(("planes", mean));
+    }
+    if mean > MAX_MEAN_PLANE_ERROR {
+        return Err(("mean", mean));
+    }
+    if max > MAX_PLANE_ERROR {
+        return Err(("max", max));
+    }
+    // The as-shot plane is the photo's own white balance: reproduce it, not just the family.
+    let shot = plane_error(&color, planes.first().ok_or(("planes", 0.0))?).ok_or(("as shot", f64::NAN))?;
+    if shot > MAX_AS_SHOT_PLANE_ERROR {
+        return Err(("as shot", shot));
+    }
+    Ok(color)
 }
 
 fn black_at_active(levels: [f32; 4], pattern: u8, active: Rect) -> BlackLevel {
@@ -221,7 +533,7 @@ pub(crate) fn decode(bytes: &[u8], mode: Mode) -> Result<RawImage> {
         active_area: active,
         crop,
         orientation: metadata.orientation.unwrap_or_default(),
-        color: ColorData::default(),
+        color: levels.color,
         wb_multipliers: levels.wb,
         linearized: false,
         opcodes: OpcodeLists::default(),
@@ -469,5 +781,49 @@ mod tests {
         }
         let b = black_at_active([100.0, 101.0, 102.0, 103.0], 0, Rect::new(3, 1, 32, 20));
         assert_eq!(b.values, vec![103.0, 102.0, 101.0, 100.0]);
+    }
+
+    /// The fit must recover a synthetic camera matrix from Planckian planes. The ridge toward the
+    /// generic camera leaves a small equilibrium bias for a matrix this far from the prior (the
+    /// planes only constrain the matrix on the locus's narrow band), so the assertion is the
+    /// production bar: locus predictions within a few percent, the same relative-error shape the
+    /// plane validation gates on.
+    #[test]
+    fn synthetic_fit_recovers_matrix() {
+        let m = Mat3([[0.9, 0.2, -0.15], [-0.3, 1.25, 0.08], [0.02, -0.12, 0.85]]);
+        let mk = |ts: &[f64]| -> Vec<WbPlane> {
+            ts.iter()
+                .map(|&t| {
+                    let n = m.apply(plane_xy(t).to_xyz());
+                    let g = n[1];
+                    WbPlane { neutral: [n[0] / g, 1.0, n[2] / g], kelvin: t }
+                })
+                .collect()
+        };
+        let warm_planes = mk(&[2600.0, 3200.0, 3700.0, 4200.0]);
+        let cool_planes = mk(&[5200.0, 6000.0, 7000.0, 8000.0]);
+        let warm: Vec<(&WbPlane, Xy)> = warm_planes.iter().map(|p| (p, plane_xy(p.kelvin))).collect();
+        let cool: Vec<(&WbPlane, Xy)> = cool_planes.iter().map(|p| (p, plane_xy(p.kelvin))).collect();
+        for (name, group) in [("warm", &warm), ("cool", &cool)] {
+            let fitted = fit_plane_core(group).unwrap_or_else(|reason| panic!("{name} fit failed: {reason:?}"));
+            for (plane, white) in group {
+                let error = direct_error(&fitted, plane, *white).expect("plane error finite");
+                assert!(error < 0.06, "{name} @{}: plane error {error}", plane.kelvin);
+            }
+            // Predictions inside the group's temperature span are what rendering usually sees
+            // (white points and the illuminant interpolation between the two calibrants). Past
+            // the end planes the prior takes over and the error grows — asserted only to stay
+            // bounded (the production max-plane bar), never exploding into a wrong matrix.
+            let (inside, outside) = if name == "warm" { ([3000.0, 4000.0], [2300.0, 4500.0]) } else { ([5500.0, 7500.0], [5000.0, 9000.0]) };
+            for (t, limit) in inside.iter().map(|&t| (t, 0.05)).chain(outside.iter().map(|&t| (t, MAX_PLANE_ERROR))) {
+                let a = fitted.apply(plane_xy(t).to_xyz());
+                let b = m.apply(plane_xy(t).to_xyz());
+                let k = a[1] / b[1];
+                for c in [0, 2] {
+                    let relative = (a[c] / k - b[c]).abs() / b[c].abs();
+                    assert!(relative < limit, "{name} @{t}: channel {c} off by {relative:.4} (limit {limit})");
+                }
+            }
+        }
     }
 }
