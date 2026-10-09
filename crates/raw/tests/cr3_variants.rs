@@ -9,9 +9,10 @@
 //! layers agreeing on the error class. Control fixtures decode successfully, so a rejection below
 //! can only come from the documented gate.
 //!
-//! Deliberately absent: the odd-QP-map-height rejection (`"Canon CRX adaptive QP map with an odd
-//! height"`). It is tracked, fix in flight on another branch (see `docs/cr3.md`); a fixture here
-//! would enshrine behaviour that is about to change. The deeper
+//! Deliberately absent: the former odd-QP-map-height rejection. It was removed by
+//! cr3/p0-odd-qp (odd heights now decode; the last QP row keeps its own value, measured
+//! bit-exact against the LibRaw oracle on all thirteen known files — see `docs/cr3.md`),
+//! and `crx_properties.rs` pins the acceptance property. The deeper
 //! `"Canon CRX adaptive low-frequency quantization"` dequantization gate is unreachable through
 //! this API — plane validation rejects any gain on the low-frequency bands first — and no public
 //! entry point reaches it; it is defence in depth, not a contract.
@@ -320,8 +321,9 @@ fn adaptive_gains_on_low_frequency_bands_are_unsupported() {
 }
 
 #[test]
-fn uniform_quantization_outside_4_to_43_is_unsupported() {
-    for quant in [3u8, 44] {
+fn uniform_quantization_outside_4_to_44_is_unsupported() {
+    // 44 is accepted since cr3/p0-odd-qp (measured: step 102, next entry of the sequence).
+    for quant in [3u8, 45] {
         assert_rejected(&format!("quant {quant}"), &cr3_file(&craw_coding(), &craw_stream(quant)), &format!("Canon CRX quantization value {quant}"));
     }
 }
@@ -329,12 +331,13 @@ fn uniform_quantization_outside_4_to_43_is_unsupported() {
 // --- qp_map gate ------------------------------------------------------------
 
 #[test]
-fn adaptive_qp_outside_131_to_167_is_unsupported() {
+fn adaptive_qp_outside_131_to_168_is_unsupported() {
     // The 16-bit literal after the 16-zero escape is Rice-mapped: even literals give positive
-    // values, odd ones negative. 336 → signed +168, 5 → signed −3; both leave 131..=167.
+    // values, odd ones negative. 338 → signed +169, 5 → signed −3; both leave 131..=168
+    // (168 is accepted since cr3/p0-odd-qp: the R50 C-RAW maps carry it).
     let mut high = ADAPTIVE_QP;
-    high[2..4].copy_from_slice(&336u16.to_be_bytes());
-    assert_rejected("QP 168", &cr3_file(&adaptive_coding(), &adaptive_stream(&ADAPTIVE_GAINS, 0, 0, high)), "Canon CRX adaptive QP value 168");
+    high[2..4].copy_from_slice(&338u16.to_be_bytes());
+    assert_rejected("QP 169", &cr3_file(&adaptive_coding(), &adaptive_stream(&ADAPTIVE_GAINS, 0, 0, high)), "Canon CRX adaptive QP value 169");
     let mut low = ADAPTIVE_QP;
     low[2..4].copy_from_slice(&5u16.to_be_bytes());
     assert_rejected("QP -3", &cr3_file(&adaptive_coding(), &adaptive_stream(&ADAPTIVE_GAINS, 0, 0, low)), "Canon CRX adaptive QP value -3");

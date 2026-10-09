@@ -28,19 +28,19 @@ preview-only fallback depends on the two layers agreeing on the error class.
 | Variant | Status | Gate | Exact rejection |
 |---|---|---|---|
 | Version `0x100`, 4 planes, encoding 0, CFA 0–3, levels 0 or 3 (horizontal tiles) | Supported | `supports()` `vendor/crx.rs` | — |
-| Version `0x200` single-tile 14-bit C-RAW with adaptive QP, even QP-map height, QP 131–167 | Supported | `supports()` + `qp_map` `vendor/crx.rs` | — |
+| Version `0x200` single-tile 14-bit C-RAW with adaptive QP, any QP-map height (odd heights decode: the last QP row keeps its own value), QP 131–168 | Supported | `supports()` + `qp_map` `vendor/crx.rs` | — |
 | Version not `0x100`/`0x200`, encoding ≠ 0 inside CRX, planes ≠ 4 inside CRX, CFA > 3, levels ∉ {0, 3} | Rejected | `supports()` `vendor/crx.rs` | `Canon CRX version {version:#x}, encoding {encoding}, {planes} planes, {levels} wavelet levels` |
 | Bit depth outside 8–16 (CMP1 parse bounds it to 1–16) | Rejected | `supports()` `vendor/crx.rs` | `Canon CRX {bits}-bit samples` |
 | C-RAW with vertical tiles (`tile_height ≠ height`, levels 3) | Rejected | `supports()` `vendor/crx.rs` | `Canon CRX C-RAW with vertical tiles` |
 | `0x200` that is not single-tile 14-bit C-RAW | Rejected | `supports()` `vendor/crx.rs` | `Canon CRX version 0x200 requires a single-tile 14-bit Bayer C-RAW image` |
-| `0x200` QP map of odd height (13 known files) | Rejected — tracked, fix in flight on another branch | `supports()` + `qp_map` `vendor/crx.rs` | `Canon CRX adaptive QP map with an odd height` |
+| `0x200` QP map with zero or oversized dimensions | Rejected | `supports()` + `qp_map` `vendor/crx.rs` | `Canon CRX adaptive QP map…` (corrupt/limit) |
 | Extended CMP1 median-bit-depth header (type-3 burst) | Rejected | `supports()` `vendor/crx.rs` | `Canon CRX extended median-bit-depth header` |
 | Rounded-plane coding (plane flags bits 25–26) or wrong plane flags | Rejected | `validate_planes()` `vendor/crx.rs` | `Canon CRX plane coding flags` |
 | Partial-subband coding (band flags bit 27) | Rejected | `validate_planes()` `vendor/crx.rs` | `Canon CRX partial subband coding` |
 | Adaptive gain on bands 0–3 | Rejected | `validate_planes()` `vendor/crx.rs` | `Canon CRX adaptive quantization subband parameters` |
 | Adaptive low-frequency quantization (bands 0–3 at dequantization) | Rejected (unreachable via the public API: the gate above fires first; unit-tested) | `adaptive_step()` `vendor/crx.rs` | `Canon CRX adaptive low-frequency quantization` |
-| Uniform quantization value outside 4–43 | Rejected | `quant_step()` via `validate_planes()` `vendor/crx.rs` | `Canon CRX quantization value {value}` |
-| Adaptive QP value outside 131–167 | Rejected | `qp_map()` `vendor/crx.rs` | `Canon CRX adaptive QP value {value}` |
+| Uniform quantization value outside 4–44 | Rejected | `quant_step()` via `validate_planes()` `vendor/crx.rs` | `Canon CRX quantization value {value}` |
+| Adaptive QP value outside 131–168 | Rejected | `qp_map()` `vendor/crx.rs` | `Canon CRX adaptive QP value {value}` |
 | `ff11`/`ff12`/`ff13` marker family inside a `0x100` stream | Rejected | `layout()` `vendor/crx.rs` | `Canon CRX ff11/ff12/ff13 marker family` |
 | Marker header length ≠ 8 (`ff01`/`ff02`/`ff03`) or ≠ 16 (`ff11`/`ff12`/`ff13`) | Rejected | `layout()` `vendor/crx.rs` | `Canon CRX marker {marker:#x} header length {size}` |
 | Nonzero reserved field or wrong magic in a `0x200` tile header | Rejected | `layout()` `vendor/crx.rs` | `Canon CRX adaptive quantization tile header` |

@@ -21,7 +21,7 @@
 //! 4. IAD1 geometry: `active_area ⊆ sensor dims` and `crop ⊆ active_area` hold or the file is rejected
 //!    (the bug class DNGLab fixed in 0.8.0).
 //! 5. Decoding is deterministic across repeated and parallel invocations (rayon plane decode).
-//! 6. An odd QP-map height 0x200 stream is pinned as `#[ignore]` until cr3/p0-odd-qp lands.
+//! 6. An odd QP-map height 0x200 stream decodes with in-range values (active since cr3/p0-odd-qp).
 //!
 //! Case budget: 256 per property by default; `PROPTEST_CASES` overrides it (proptest's standard knob).
 
@@ -898,14 +898,14 @@ fn adversarial_frame(kind: usize, payload: &[u8], slot: usize) -> Vec<u8> {
 
 #[test]
 fn every_uniform_quant_value_dequantizes_within_the_bit_depth() {
-    for quant in 4u8..=43 {
+    for quant in 4u8..=44 {
         let fixture = constant_bands_file(8000, None, quant);
         let expected_value = (8192 + 8000 * quant_step(quant)).clamp(0, 16383) as u16;
         let image = decode(&fixture.file).unwrap();
         assert_eq!(image.data, RawData::U16(vec![expected_value; 256]), "quant {quant}");
         assert_eq!(probe_info(&fixture.file).unwrap().bits, 14);
     }
-    for quant in [3u8, 44] {
+    for quant in [3u8, 45] {
         let fixture = constant_bands_file(8000, None, quant);
         assert!(matches!(decode(&fixture.file), Err(RawError::Unsupported(_))), "quant {quant}");
         assert!(matches!(probe_info(&fixture.file), Err(RawError::Unsupported(_))));
@@ -918,7 +918,7 @@ fn every_qp_value_in_the_verified_band_dequantizes_within_the_bit_depth() {
     let bases = [8, 8, 8, 8, 2, 2, 2, 2, 2, 2];
     let mut first_hash = 0u64;
     let mut last_hash = 0u64;
-    for value in 131i32..=167 {
+    for value in 131i32..=168 {
         let fixture = v200_constant_bands_file(16, 16, value, 400, Some((4, 8)), gains, bases);
         let image = decode(&fixture.file).unwrap();
         let RawData::U16(samples) = &image.data else { panic!("u16 sensor data expected") };
@@ -930,7 +930,7 @@ fn every_qp_value_in_the_verified_band_dequantizes_within_the_bit_depth() {
         last_hash = sensor_hash(&image);
     }
     assert_ne!(first_hash, last_hash, "the QP value must reach the dequantization step");
-    for value in [130i32, 168] {
+    for value in [130i32, 169] {
         let fixture = v200_constant_bands_file(16, 16, value, 400, None, gains, bases);
         assert!(matches!(decode(&fixture.file), Err(RawError::Unsupported(_))), "QP {value}");
         assert!(matches!(probe_info(&fixture.file), Err(RawError::Unsupported(_))));
@@ -956,13 +956,12 @@ fn decoding_is_deterministic_across_repeated_and_parallel_invocations() {
     }
 }
 
-// --- odd QP-map height (property 6, forward-looking pin) ---
+// --- odd QP-map height (property 6, active since cr3/p0-odd-qp) ---
 
-/// An odd QP-map height (16×12 sensor → 1×3 map) must decode with in-range values once cr3/p0-odd-qp
-/// relaxes the gates at crx.rs:176-178 (supports) and crx.rs:737-739 (qp_map); the merging agent flips
-/// this on together with `odd_qp_map_height_is_currently_rejected_until_p0_odd_qp`.
+/// An odd QP-map height (16×12 sensor → 1×3 map) decodes with in-range values: cr3/p0-odd-qp
+/// relaxed the gates (former crx.rs:176-178 and 737-739) and the last QP row keeps its own value
+/// (measured bit-exact against the LibRaw 0.22.2 oracle on all thirteen known files — docs/cr3.md).
 #[test]
-#[ignore = "blocked on cr3/p0-odd-qp: gates at crx.rs:176-178/737-739 still reject odd heights"]
 fn odd_qp_map_height_0x200_decodes_within_range() {
     let gains = [0; 10];
     let bases = [1; 10];
@@ -971,17 +970,4 @@ fn odd_qp_map_height_0x200_decodes_within_range() {
     let RawData::U16(samples) = &image.data else { panic!("u16 sensor data expected") };
     assert_eq!(samples, &vec![8592u16; 16 * 12], "step 1 (base 1) keeps the LL3 coefficient exact");
     assert_eq!(probe_info(&fixture.file).unwrap(), image.info());
-}
-
-/// Companion pin: until cr3/p0-odd-qp lands, the same stream is explicitly rejected with the odd-height
-/// unsupported error. When that branch lands this test fails on purpose, reminding the merger to flip
-/// `odd_qp_map_height_0x200_decodes_within_range` back on.
-#[test]
-fn odd_qp_map_height_is_currently_rejected_until_p0_odd_qp() {
-    let gains = [0; 10];
-    let bases = [1; 10];
-    let fixture = v200_constant_bands_file(16, 12, 150, 400, None, gains, bases);
-    let error = decode(&fixture.file).unwrap_err();
-    assert!(matches!(error, RawError::Unsupported(ref message) if message.contains("odd height")), "{error:?}");
-    assert!(matches!(probe_info(&fixture.file), Err(RawError::Unsupported(_))));
 }
