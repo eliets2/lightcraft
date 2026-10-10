@@ -446,6 +446,7 @@ fn camera_color_core(values: &[u64], layout: ColorLayout) -> std::result::Result
         as_shot_neutral: None,
         as_shot_white_xy: None,
         baseline_exposure: 0.0,
+        baseline_sharpness: None,
         profile: Default::default(),
     };
     let (mean, max) = plane_errors(&color, &planes);
@@ -459,9 +460,20 @@ fn camera_color_core(values: &[u64], layout: ColorLayout) -> std::result::Result
         return Err(("max", max));
     }
     // The as-shot plane is the photo's own white balance: reproduce it, not just the family.
-    let shot = plane_error(&color, planes.first().ok_or(("planes", 0.0))?).ok_or(("as shot", f64::NAN))?;
-    if shot > MAX_AS_SHOT_PLANE_ERROR {
-        return Err(("as shot", shot));
+    // It is plane 0 in Canon's layout; anchor on that plane only when it survived the
+    // placeholder filter above — a rejected (identity-gain) as-shot plane must not
+    // silently validate some other preset in its place.
+    let anchor = values.get(layout.planes_at..layout.planes_at + 5).and_then(|plane| {
+        let (r, g1, g2, b, kelvin) = (plane[0] as f64, plane[1] as f64, plane[2] as f64, plane[3] as f64, plane[4] as f64);
+        let green = (g1 + g2) * 0.5;
+        let neutral = [green / r, 1.0, green / b];
+        planes.iter().find(|p| p.kelvin == kelvin && p.neutral[0] == neutral[0] && p.neutral[2] == neutral[2])
+    });
+    if let Some(shot_plane) = anchor {
+        let shot = plane_error(&color, shot_plane).ok_or(("as shot", f64::NAN))?;
+        if shot > MAX_AS_SHOT_PLANE_ERROR {
+            return Err(("as shot", shot));
+        }
     }
     Ok(color)
 }

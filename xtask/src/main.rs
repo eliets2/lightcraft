@@ -512,7 +512,6 @@ const RAW_SAMPLES: &[(&str, &str, &str)] = &[
         "https://raw.pixls.us/getfile.php/6587/nice/Canon%20-%20EOS%20R8%20-%203:2.CR3",
         "df33cf394573645ce03dea1b2e9f0b5cc2b7734e9e3391ee7114151414cf2812",
     ),
-
     (
         "dng-adobe-canon-5d3-linear-lj92.dng",
         "https://raw.pixls.us/getfile.php/1032/nice/Adobe%20DNG%20Converter%20-%20Canon%20EOS%205D%20Mark%20III%20-%20Lossless%20JPEG%20compression%2C%20rgb%20%283:2%29.DNG",
@@ -842,206 +841,7 @@ const RAW_SAMPLES: &[(&str, &str, &str)] = &[
         "4f6db6492da83f7f2a5012591e370557249d1ed44d4c948784016605b799327c",
     ),
 ];
-/// SHA-256 pins for every Canon CR3 in the corpus: the complete raw.pixls.us Canon data tree (110 files over
-/// 29 bodies, swept 2026-10-09), keyed by the `corpus/raw/` file name. `cargo xtask corpus --download` verifies
-/// each file against its pin and fails on content drift. The six `getfile.php` entries above are pinned by the
-/// hash of the data-tree file they were verified byte-identical to.
-const CR3_SHA256: &[(&str, &str)] = &[
-    ("cr3-canon-eos-m200-mg-2231.cr3", "9b900c04ae37ba827b7894e66907657a0b174a74855c40039a8ca0c95583f141"),
-    ("cr3-canon-eos-m200-mg-2233.cr3", "0585a468143c6606936d0ffbff1788c6c02e3610d8ecb50614e21492fbacd052"),
-    ("cr3-canon-eos-r10-img-6310.cr3", "2dc0bbdf04c93ca62c914604f644c735286037912d6fba609d0cb78d00acd097"),
-    ("cr3-canon-eos-r50-v-img-0034.cr3", "955ff98710505498ce7f98cbcc5875793ef2d6941b3b5692ed3baf2817ee7c9f"),
-    ("cr3-canon-eos-r5m2-aps-c-craw.cr3", "6a597497776a6abbfab8fcf12d0086ac7a3f8afea2879d61accf6bbf48d357d7"),
-    ("cr3-canon-eos-r5m2-aps-c-raw.cr3", "9f88c0ff012924193b7f4497559d133dfe626766d600b5d67689156721739ead"),
-    ("cr3-canon-eos-r5m2-craw.cr3", "b3c08a5c7a97299dfd58896a12b939e7b43ec78682761812524825e6e5d087be"),
-    ("cr3-canon-eos-r5m2-raw.cr3", "d6e6aa3b493ea8936dff0efb0cc17c87471437e7317bce37c8c82ba08b9cab7b"),
-    ("cr3-canon-eos-r6-mark-iii-img-4241.cr3", "e491e4bb960961b5fa299361bf698310a80cbe7b15d30d8dad3bb21bc5457dab"),
-    ("cr3-canon-eos-r6-mark-iii-img-4242.cr3", "1395adbae77aaf0ea344fbe2eb2eb7ff825ccae815177cc499fb65e55eaaa495"),
-    ("cr3-canon-eos-r6-mark-iii-img-4243.cr3", "1f533686b2230817dac98266a6cc8ffd960413c109965768b7efc05cc1ca96eb"),
-    ("cr3-canon-eos-r6-mark-iii-img-4244.cr3", "7e1a5d84297a52853b0bbe5a5c03a5d4f5b93e00b7020271523240f9cabfe50e"),
-    ("cr3-canon-m50-craw.cr3", "15384b775867ec4c42b11882837f1e368cedc0561832ffab271221e6bb80be4c"),
-    ("cr3-canon-m50-raw.cr3", "1ba9ad6b51b315b88820eb0fe5fd7f52bc136ba37b1a5ca76825ebfe25b18058"),
-    ("cr3-canon-powershot-v1-img-1225.cr3", "0a0abfd81b3a34fa513ac8ed24c809275160d65b07e892c2eb4353b77c535a31"),
-    ("cr3-canon-r100-craw.cr3", "0b66842b2fe00329ebc05fe8ab9357ddbbe1a0a2d2e69a2893102de7fdf5c942"),
-    ("cr3-canon-r100-raw.cr3", "6d83217d58a5e6d2dabcf470430e91a16676b60531c025b81fa7453fc74b0521"),
-    ("cr3-canon-r8-craw.cr3", "df33cf394573645ce03dea1b2e9f0b5cc2b7734e9e3391ee7114151414cf2812"),
-    ("cr3-canon-r8-raw.cr3", "7d5c6dbb11ff7e6ee58715d90a20f5d801e8b103f4711ff6ea329ceafcef254c"),
-    (
-        "cr3-eos-1d-x-mark-iii-canon-eos-1d-x-mark-iii-craw-iso-100-nocrop-nodual.cr3",
-        "e5755d1414a2dd51fb0120b272058f00b0199861646070c00304d927eb119560",
-    ),
-    (
-        "cr3-eos-1d-x-mark-iii-canon-eos-1d-x-mark-iii-raw-iso-100-nocrop-nodual.cr3",
-        "8f38b9de90eaebefcd54022fcbfdf38e05fb86831c4c976c8ac05c599e63535b",
-    ),
-    ("cr3-eos-200d-mark-ii-mg-3608.cr3", "4ea0cbd52b760a5654d3f431c7c9ecf8acdc62a6aa74a2cfbfe651693c740c77"),
-    ("cr3-eos-250d-canon250d-craw-1-1.cr3", "7ece52df8b7ed868e6c6096e6a28f807694768cc045383c541e9707f1a669a5d"),
-    ("cr3-eos-250d-canon250d-craw-16-9.cr3", "e81963db1ee6df76bb10fd536b3646cede277f2ca8b26895b1b34debafa03fc4"),
-    ("cr3-eos-250d-canon250d-craw-3-2.cr3", "69bdd267defb3d676f41f62a5e5ea65651669a04191cf4e89740917c59cedbcc"),
-    ("cr3-eos-250d-canon250d-craw-4-3.cr3", "b55eb1a78810ebbfbed5c9a2639a739fee10e93e03f67d239a4708062603de2a"),
-    ("cr3-eos-250d-canon250d-raw-1-1.cr3", "1af771b745999f058c89d70514a154007480bdcea0cd6ca7db14f65e6a422a6b"),
-    ("cr3-eos-250d-canon250d-raw-19-9.cr3", "fc07c0e502bd9d945e510b33d1c20b5b996a487547a642a218b0660a499ec09a"),
-    ("cr3-eos-250d-canon250d-raw-2-3.cr3", "ed1bd1bb8dbcf31735fbe52eeabdbd3a32236eda9cb20b132e8847cb0d89517f"),
-    ("cr3-eos-250d-canon250d-raw-4-3.cr3", "3ab8d63285f9a5b5c5d76641847cdb14162a7d2968d78f597aedb2e08e902012"),
-    ("cr3-eos-850d-img-1837.cr3", "47f7747b74073515bdbd65015738bc31947504d68255c5377baa21f179df2486"),
-    ("cr3-eos-850d-img-1906.cr3", "c6e781a58fdbe97fac5b99deb878a8568904aba48de0e4c31076b4d3887e2c91"),
-    ("cr3-eos-90d-canon-90d-craw-iso-100.cr3", "c8c918b2d1a53e64d7d5009ebac89a920dbba5f766c2f396bb4ec95312b21034"),
-    ("cr3-eos-90d-canon-90d-raw-iso-100.cr3", "e47981d90142291a2bd7ba5a3dea51a25fff72ad3dad83dd2d2698f3ef5f59a8"),
-    ("cr3-eos-kiss-m-img-2695.cr3", "49a4bcd16e0236451b73ae052af8a4d0c9872063f79fc62fdf982d462792741c"),
-    ("cr3-eos-m50-canon-eos-m50-craw-iso-100-nocrop-nodual.cr3", "27a88fdae82516ba136e12c2cc9b934f25dbaaac24d64ab4e5517f8524463594"),
-    ("cr3-eos-m50-mark-ii-img-0051.cr3", "1a3c11d85f48b8c644664b505f69fbdd75eb51270bb8ab556dbc660f0487e957"),
-    ("cr3-eos-m6-mark-ii-img-craw-1-1.cr3", "0ccbb6c447d0fab996291be9a5c2728cd7367bcc2f640e2a30eae112e13e6c0e"),
-    ("cr3-eos-m6-mark-ii-img-craw-16-9.cr3", "2f766ce3b220a16430be3bcca96da58e3567cc7a04d7c46a18770f56b5a70dd1"),
-    ("cr3-eos-m6-mark-ii-img-craw-3-2.cr3", "94635c6f91e7d743cee6881cc2519992ae9f9031fd86b49e5d0f16edf5961b55"),
-    ("cr3-eos-m6-mark-ii-img-craw-4-3.cr3", "9bb482b003a0749af615a9b3e52616b01a2ad2794a2d9fe47fafcf6bdcb9a35a"),
-    ("cr3-eos-m6-mark-ii-img-raw-1-1.cr3", "6a7d52f7ae5e12b58cfebd39d82e8d71f35e6c6216775569eea7a7e168f83fac"),
-    ("cr3-eos-m6-mark-ii-img-raw-16-9.cr3", "4f89f3770c794a0ca5af86b84f1f694eb5a0f553b64f85fc1ba3ddf412a211b8"),
-    ("cr3-eos-m6-mark-ii-img-raw-3-2.cr3", "48be4fbcc36e4f9bf31dd63ba7f97aa906a39b29f6b2caa679506c4cdb20f5a7"),
-    ("cr3-eos-m6-mark-ii-img-raw-4-3.cr3", "8b41dbeadb91c44e596da5fef935fe3acb2154c06afb11123b3079da79a5ec51"),
-    ("cr3-eos-r-canon-eos-r-craw-iso-100-crop-dual.cr3", "c1f07fa57aa76290df640a15f2a1a74deb21519b0c99051941c47b36c685246d"),
-    ("cr3-eos-r-canon-eos-r-craw-iso-100-crop-nodual.cr3", "90bbf397b592f9ce9799477df4affbdf0025578c07eac26f928696b0d40d5121"),
-    ("cr3-eos-r-canon-eos-r-craw-iso-100-dual-pixel-on.cr3", "cfd118af4477ef37538eb953421572a7a5c80694e59764049223107cc0c9ae83"),
-    ("cr3-eos-r-canon-eos-r-craw-iso-100.cr3", "1b3efe0664a28a0decb53e225cbfecdbc0dd27d85abdc4683fc2a4add5129b4d"),
-    ("cr3-eos-r-canon-eos-r-raw-iso-100-crop-dual.cr3", "08ae87dd40cf051d2073d0eb2309548297ce8780e0d956bd766fe36dc561d7d1"),
-    ("cr3-eos-r-canon-eos-r-raw-iso-100-crop-nodual.cr3", "78ef0efef541c2618b9f95915e825726fc31b06f7d61149167f5af620f6b4c30"),
-    ("cr3-eos-r-canon-eos-r-raw-iso-100-dual-pixel-on.cr3", "4b0809c4fca8c00d84df0a1b0ebbe4959784e50bf865616f151e67d76a9e4b01"),
-    ("cr3-eos-r-canon-eos-r-raw-iso-100.cr3", "89bd55532b0cceb5efa360e97827ba35c2076bce0de4675f3a4413a883dac880"),
-    ("cr3-eos-r10-img-4276.cr3", "5d2e076d38e7835d4c4f13dc2030a913cc573a31d7199b60777d23a25ccc3ef9"),
-    ("cr3-eos-r10-img-4279.cr3", "dd33ee51dfcb142e8954e1ce375d60786459b4194968831e65d62d86d2c0a8cb"),
-    ("cr3-eos-r10-img-4361.cr3", "15d017f0770b3da17180077617ffe07b786a1ec2cb36297f81a82a27a54756db"),
-    ("cr3-eos-r3-c3a1200.cr3", "295d46a4d5383895e63126f67000d4352a5bb425ee4d8b16eb6b6c284bdf7994"),
-    ("cr3-eos-r5-canon-eos-r5-craw-iso-100-crop-dual.cr3", "88497fe7f71018ce35810e6b033fb696c7792b57e8c73e842d8326095287526a"),
-    ("cr3-eos-r5-canon-eos-r5-craw-iso-100-crop-nodual.cr3", "a5f4935e0331cc16003c0b1ab6c657272739e82175557aaae576e78a8262511b"),
-    ("cr3-eos-r5-canon-eos-r5-craw-iso-100-nocrop-dual.cr3", "00b80633af35c0f85b0299a1d2ea87c6788a9007a1df8a3c5c05ea487b2549e1"),
-    ("cr3-eos-r5-canon-eos-r5-craw-iso-100-nocrop-nodual.cr3", "2deae46b816e56ba91ae7a3892ca121290e12d5b22afb11f5b05a3d8f09f759f"),
-    ("cr3-eos-r5-canon-eos-r5-raw-iso-100-crop-dual.cr3", "10a1116bd00e92314b09382b403f76706b1eeab3ce33234a6c75fe25ed289756"),
-    ("cr3-eos-r5-canon-eos-r5-raw-iso-100-crop-nodual.cr3", "dc3ef975ef029fe527ba6cafa0f899720cfdcbcfb4f590edcff81f26d499c2f0"),
-    ("cr3-eos-r5-canon-eos-r5-raw-iso-100-nocrop-dual.cr3", "d52fca2f9233211d7912632f0f27b7284807ed3262627bfce7e4f12cf343820e"),
-    ("cr3-eos-r5-canon-eos-r5-raw-iso-100-nocrop-nodual.cr3", "21430c36387efe65bd09ac0fcd724bfd959d93dd391ec811a1b741c8663becb5"),
-    ("cr3-eos-r50-canon-r50-iso100-craw-electronicshutter.cr3", "38fc458f2f74d0cfa04afd0ce513b40797080079f0786bedbfc55c39cc28d7d8"),
-    ("cr3-eos-r50-canon-r50-iso100-craw-mechanicshutter.cr3", "b79af9ffa184dd740e8af7a9f451f7150053d7e456b3435ca2e43bbbf5f65026"),
-    ("cr3-eos-r50-canon-r50-iso100-raw-electronicshutter.cr3", "979d27717906ce0d7b66132a68eb01cf63d22388de1808239ee65991184540c5"),
-    ("cr3-eos-r50-canon-r50-iso100-raw-mechanicshutter.cr3", "cbc0666f27d37007203df53f3668c30d3980aab93c3e33e7bff41c72b77414e9"),
-    ("cr3-eos-r6-canon-eos-r6-craw-iso-100-crop-nodual.cr3", "74abb0a113d075ad9887a058082f40dd2a938c4813a08474d82356f11a027778"),
-    ("cr3-eos-r6-canon-eos-r6-craw-iso-100-nocrop-nodual.cr3", "4775df76433b1e5844bc7a42b95d93efc8438c0a4cd9681e120e23fe3e3007e8"),
-    ("cr3-eos-r6-canon-eos-r6-raw-iso-100-crop-nodual.cr3", "6156ee9cfd1a61e08719a8309095d05162891fd2adb8dd1505b31d4716dcee05"),
-    ("cr3-eos-r6-canon-eos-r6-raw-iso-100-nocrop-nodual.cr3", "81fab349ae9080fd0172583b7fd5ea36806e95ffa434909d2ccc6527dde34ee6"),
-    ("cr3-eos-r6-mark-ii-canon-r6m2-img-0346-raw-normal-full.cr3", "1a93f96556aabbc4a7260750ab0a191ec7926bb978fe8428bf3465121da730d6"),
-    ("cr3-eos-r6-mark-ii-canon-r6m2-img-0347-raw-normal-crop.cr3", "b9ff8d98be99bb22effe47c61906dadcb214b0909699cb4fa1ff089b2f889a07"),
-    ("cr3-eos-r6-mark-ii-canon-r6m2-img-0349-raw-dual-crop.cr3", "6a82fe3b643ba42c96655108734999599c1c2f34e463951af7cc4b48325f7332"),
-    ("cr3-eos-r6-mark-ii-canon-r6m2-img-0351-raw-dual-full.cr3", "9ecb9254ff3873091a7f69e5af8509547a4d2cda3c715c1ddb4397067fd4ebc4"),
-    ("cr3-eos-r6-mark-ii-canon-r6m2-img-0355-craw-dual-full.cr3", "18a3ce780ed5433dc9b078f94bb8bd87927b0877331cce9597078f0dd4313c9f"),
-    ("cr3-eos-r6-mark-ii-canon-r6m2-img-0356-craw-dual-crop.cr3", "deed19ea7b5178c70f64710c97bcdc9d21f6610c19b42a2310223e51034d4fc8"),
-    ("cr3-eos-r6-mark-ii-canon-r6m2-img-0359-craw-normal-crop.cr3", "51ae1e673d2801d8a54f33dd8669c43034c506e2d355e75b26c0648e2f14a431"),
-    ("cr3-eos-r6-mark-ii-canon-r6m2-img-0361-craw-normal-full.cr3", "409eb724212abde94e18fbd3170abf3264951fab13384c36cbf6fb4f22ea4201"),
-    ("cr3-eos-r7-443a0157.cr3", "887439cb1a45becd6a5c85fe75ae10e6c520a9f13a8b9ed077c6cf5d7c37700c"),
-    ("cr3-eos-r7-443a0159.cr3", "10a18e3f01ca9cd93408496d3853388ef140830548bfeed4237e40f967eb9d5c"),
-    ("cr3-eos-r7-443a0161.cr3", "c01cee1b598120668370892c16a73da915f2aaec8169c5c60a96efd98d9aa220"),
-    ("cr3-eos-r7-443a0163.cr3", "b87079049afda620c88717e4b895bc80646428b41795f43f10ac0cc06ad0d496"),
-    ("cr3-eos-r8-craw-full-frame-dual-pixel.cr3", "f2caa26172e94ddb893c6e1a594c23b95b8d3197a5e7243f84ed4b0ab2f682cd"),
-    ("cr3-eos-r8-raw-full-frame-dual-pixel.cr3", "c1dac426c6e3cba0409e13ab65e22639d6831792685dda2de39b4e50a68531f8"),
-    ("cr3-eos-rebel-sl3-sedona2020-sl3-mg-1061.cr3", "6f26a2e4ea5a3e3b859662c9b01da6b24731413835aa601065bff1d7f30c6092"),
-    ("cr3-eos-rp-canon-eos-rp-craw-iso-100-crop-nodual.cr3", "4a859ab137f792aedaf3416b0aad1497ebaab02052a49453902e226699154aa7"),
-    ("cr3-eos-rp-canon-eos-rp-craw-iso-100-nocrop-nodual.cr3", "bd3270610593d37ff8a399908bb9406a4e32f9151d55bf19ac1cf8f10d787b46"),
-    ("cr3-eos-rp-canon-eos-rp-raw-iso-100-crop-nodual.cr3", "7d4ba45dc9264d598336133593c677b09774bcdf13b602ee770e72415a652a16"),
-    ("cr3-eos-rp-canon-eos-rp-raw-iso-100-nocrop-nodual.cr3", "dcbd0f6f9929de2e2331b0fd10a9d01e7cfd04c5a5e4038456de1647d714cdf2"),
-    ("cr3-powershot-g5-x-mark-ii-canon-powershot-g5-x-mark-ii-craw-1-1.cr3", "7d1160f4c7159dd30daae7a99a575d0c37dc11493aa6c796e1ff9e504c2bdd8f"),
-    ("cr3-powershot-g5-x-mark-ii-canon-powershot-g5-x-mark-ii-craw-16-9.cr3", "71b2f703c09be153e48ff0075772f19ea0a2c2e81acc08d11e0a979ba79f07ce"),
-    ("cr3-powershot-g5-x-mark-ii-canon-powershot-g5-x-mark-ii-craw-3-2.cr3", "16d7b944344004c866bf2f84c5673969e76adfe16e5fb4388da48c72bdd58058"),
-    ("cr3-powershot-g5-x-mark-ii-canon-powershot-g5-x-mark-ii-craw-4-3.cr3", "53eec9eecf1a7270b06750efe73f90712d5649ab50e41a7310d37c3097689e54"),
-    ("cr3-powershot-g5-x-mark-ii-canon-powershot-g5-x-mark-ii-raw-1-1.cr3", "13bc9926954dd62f2b84c1539428554754c078953c7af9baa5650cb85237aec8"),
-    ("cr3-powershot-g5-x-mark-ii-canon-powershot-g5-x-mark-ii-raw-16-9.cr3", "feb0ece1244ba45f179f48ad1a52c887e6042a605927156d9b944d1305f10d59"),
-    ("cr3-powershot-g5-x-mark-ii-canon-powershot-g5-x-mark-ii-raw-3-2.cr3", "16f69a73e25e0555259a942d65be816042dcb3af03505b25335e5d02ad6f2af6"),
-    ("cr3-powershot-g5-x-mark-ii-canon-powershot-g5-x-mark-ii-raw-4-3.cr3", "322c8e0765513e94071fc84fa29c39ba6cbd5fd70be1a657d7d7fe55dbd54fc9"),
-    ("cr3-powershot-g7-x-mark-iii-img-0253.cr3", "63ce623055dd2ac7374e0b1c645a4eabc7e181cd12c2039625f64b4e63a5ee86"),
-    ("cr3-powershot-g7-x-mark-iii-img-0254.cr3", "29fa26718f2791f8dc3a69d8517d0575f8cf165492253671e7b1a5151a512f02"),
-    ("cr3-powershot-sx70-hs-img-1000.cr3", "3b346078836f933f505338ba45965be17a39cac82bfffc7006db07e3af944839"),
-    ("cr3-powershot-sx70-hs-img-1001.cr3", "26d5f6deebb65e5a544d7d1b7706dca2bb8b06642065aa725c1394054e9b717d"),
-    ("cr3-powershot-sx70-hs-img-1002.cr3", "1b2b52b08f8a0701fccd6c9371cd5160105db8b6cbcd0b8e8ada47d680aac30c"),
-    ("cr3-powershot-sx70-hs-img-1003.cr3", "ca34fd5a464ddcca13ff66376da685630045e82050af3136570c7f804bc130c8"),
-    ("cr3-powershot-sx70-hs-img-1004.cr3", "ab5a2da7ee80c2ef2ae05bda30b0e70c1fad81e81f6d1994aeb520b83ef662c1"),
-    ("cr3-powershot-sx70-hs-img-1005.cr3", "5c37f0d865c79e22156f684281773dc4bf550f8ae1bfce2acc23cacb07a7893c"),
-    ("cr3-powershot-sx70-hs-img-1006.cr3", "fad9653d691d002bc2de4f1e98366e6031351412fd45523d2cd753fbc4645e62"),
-    ("cr3-powershot-sx70-hs-img-1007.cr3", "fef71beb2df8bd94ccf2bd9783e8d696a59f71cce494f94aca4c122fed911e1a"),
-];
 
-/// SHA-256 (FIPS 180-4), std-only so the corpus manifest stays dependency-free.
-fn sha256_hex(data: &[u8]) -> String {
-    const K: [u32; 64] = [
-        0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be,
-        0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa,
-        0x5cb0a9dc, 0x76f988da, 0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967, 0x27b70a85,
-        0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3,
-        0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070, 0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f,
-        0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
-    ];
-    let mut h = [0x6a09e667u32, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
-    let bit_len = (data.len() as u64).wrapping_mul(8);
-    let mut msg = data.to_vec();
-    msg.push(0x80);
-    while msg.len() % 64 != 56 {
-        msg.push(0);
-    }
-    msg.extend_from_slice(&bit_len.to_be_bytes());
-    for block in msg.as_chunks::<64>().0 {
-        let mut w = [0u32; 64];
-        for (i, word) in block.as_chunks::<4>().0.iter().enumerate() {
-            w[i] = u32::from_be_bytes(*word);
-        }
-        for i in 16..64 {
-            let s0 = w[i - 15].rotate_right(7) ^ w[i - 15].rotate_right(18) ^ (w[i - 15] >> 3);
-            let s1 = w[i - 2].rotate_right(17) ^ w[i - 2].rotate_right(19) ^ (w[i - 2] >> 10);
-            w[i] = w[i - 16].wrapping_add(s0).wrapping_add(w[i - 7]).wrapping_add(s1);
-        }
-        let mut v = h;
-        for i in 0..64 {
-            let s1 = v[4].rotate_right(6) ^ v[4].rotate_right(11) ^ v[4].rotate_right(25);
-            let ch = (v[4] & v[5]) ^ (!v[4] & v[6]);
-            let t1 = v[7].wrapping_add(s1).wrapping_add(ch).wrapping_add(K[i]).wrapping_add(w[i]);
-            let s0 = v[0].rotate_right(2) ^ v[0].rotate_right(13) ^ v[0].rotate_right(22);
-            let maj = (v[0] & v[1]) ^ (v[0] & v[2]) ^ (v[1] & v[2]);
-            let t2 = s0.wrapping_add(maj);
-            v = [t1.wrapping_add(t2), v[0], v[1], v[2], v[3].wrapping_add(t1), v[4], v[5], v[6]];
-        }
-        h = std::array::from_fn(|i| h[i].wrapping_add(v[i]));
-    }
-    h.iter().map(|word| format!("{word:08x}")).collect()
-}
-
-/// Verify every CR3 under `dest` against its pinned SHA-256. Content drift is an error; absent files are
-/// expected when the corpus has not been downloaded yet and are only reported.
-fn verify_corpus_hashes(dest: &std::path::Path) -> Result<(), String> {
-    let (mut verified, mut absent) = (0usize, 0usize);
-    let mut drift = Vec::new();
-    for (name, want) in CR3_SHA256 {
-        let path = dest.join(name);
-        if !path.exists() {
-            absent += 1;
-            continue;
-        }
-        let bytes = std::fs::read(&path).map_err(|e| format!("read {}: {e}", path.display()))?;
-        let got = sha256_hex(&bytes);
-        if got == *want {
-            verified += 1;
-        } else {
-            drift.push(format!("{}: sha256 {got} != pinned {want}", path.display()));
-        }
-    }
-    if drift.is_empty() {
-        println!("  CR3 pins: {verified} verified against SHA-256, {absent} absent");
-        Ok(())
-    } else {
-        Err(format!(
-            "{} CR3 file(s) do not match their pinned SHA-256 (delete the file and re-run with --download):
-  {}",
-            drift.len(),
-            drift.join(
-                "
-  "
-            )
-        ))
-    }
-}
 
 fn cmd_corpus(download: bool) -> Result<(), String> {
     let corpus = root().join("corpus");
@@ -1094,7 +894,6 @@ fn file_sha256(path: &Path) -> Result<String, String> {
     let mut hash = Sha256::new();
     std::io::copy(&mut file, &mut hash).map_err(|e| format!("read {}: {e}", path.display()))?;
     Ok(format!("{:x}", hash.finalize()))
-
 }
 
 #[cfg(test)]
@@ -1126,7 +925,6 @@ mod corpus_tests {
         assert_eq!(names.len(), RAW_SAMPLES.len(), "duplicate file name");
         for (name, _, sha256) in RAW_SAMPLES {
             assert!(sha256.len() == 64 && sha256.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')), "{name}: not a lowercase sha256");
-
         }
     }
 }

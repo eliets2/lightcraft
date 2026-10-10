@@ -60,8 +60,8 @@ struct Entry {
 
 /// Whether the decoder applies the CMT3 `AspectInfo` crop. `false` documents today's reality
 /// (the camera aspect mode is ignored and the full recommended crop is developed); flip the
-/// generator's `ASPECT_APPLIED` together with this when AspectInfo lands.
-const ASPECT_APPLIED: bool = false;
+/// AspectInfo cropping shipped upstream (the camera's shot-aspect recommendation is applied),
+const ASPECT_APPLIED: bool = true;
 
 // BEGIN GENERATED TABLE — tools/cr3_metadata_reference.py against ExifTool 13.59 dumps; do not edit by hand.
 #[rustfmt::skip]
@@ -135,16 +135,11 @@ fn path_of(entry: &Entry) -> PathBuf {
     corpus().join("raw").join(entry.file)
 }
 
-/// Decode, retrying once on failure: the CRX decoder is rayon-parallel and very rarely fails
-/// spuriously on a good file (see [`KNOWN_DECODE_GAPS`]); a retry keeps this metadata gate from
-/// tripping over that flake, while a reproducible failure still fails with its error.
-fn decode_retrying(entry: &Entry, bytes: &[u8]) -> lightcraft_raw::Result<RawImage> {
-    decode(bytes).or_else(|first| {
-        eprintln!("note: {}: decode failed once ({first}); retrying", entry.file);
-        decode(bytes).inspect_err(|second| {
-            assert_eq!(first.to_string(), second.to_string(), "{}: decode errors differ between retries", entry.file);
-        })
-    })
+/// Decode once. A failure is a real signal about this branch's decoder and must surface as
+/// such (a retry would paper over a genuine regression and blur the gate's meaning).
+fn decode_once(entry: &Entry, bytes: &[u8]) -> lightcraft_raw::Result<RawImage> {
+    let _ = entry;
+    decode(bytes)
 }
 
 /// Header fields for every present corpus file; samples too unless the file is a documented decode
@@ -164,12 +159,12 @@ fn load(entry: &Entry) -> Option<(RawInfo, Option<RawImage>)> {
                 "{} now decodes: remove it from KNOWN_DECODE_GAPS and regenerate the table with tools/cr3_metadata_reference.py --update so its black/white levels gate again",
                 entry.file
             );
-            let err = decode_retrying(entry, &bytes).expect_err(&msg).to_string();
+            let err = decode_once(entry, &bytes).expect_err(&msg).to_string();
             assert!(err.contains(expected), "{}: decode-gap error changed: {err:?} (expected {expected:?}); update KNOWN_DECODE_GAPS", entry.file);
             eprintln!("note: {}: documented decode gap: {err}", entry.file);
             None
         }
-        None => Some(decode_retrying(entry, &bytes).unwrap_or_else(|e| panic!("{}: decode failed: {e}", entry.file))),
+        None => Some(decode_once(entry, &bytes).unwrap_or_else(|e| panic!("{}: decode failed: {e}", entry.file))),
     };
     Some((info, image))
 }
@@ -245,11 +240,8 @@ fn metadata_matches_exiftool_ground_truth_per_body() {
             assert!(image.black.values.iter().all(|b| b.is_finite() && *b >= 0.0), "{file}: black levels");
             assert!(image.white.iter().all(|w| w.is_finite() && *w > black_max), "{file}: white {:?} must exceed black {black_max}", image.white);
             if let (Some(black), Some(white)) = (entry.black, entry.white) {
-                let mut actual = image.black.values.clone();
-                actual.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-                let mut expected: Vec<f32> = black.into_iter().collect();
-                expected.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-                assert_eq!(actual, expected, "{file}: per-channel black levels");
+                // Channel order carries site assignment (R, G1, B, G2) — compare positionally.
+                assert_eq!(image.black.values, black, "{file}: per-channel black levels (channel order)");
                 assert_eq!(image.white[0], white, "{file}: white level");
             } else {
                 panic!("{file}: sample-derived levels are no longer expected — every corpus ColorData version (v16–v66) is parsed");
@@ -283,7 +275,7 @@ fn dump_lightcraft_fields() {
             Some([r, g, b]) => format!("[{r}, {g}, {b}]"),
             None => "null".to_string(),
         };
-        let (black, white, error) = match decode_retrying(entry, &bytes) {
+        let (black, white, error) = match decode_once(entry, &bytes) {
             Ok(image) => (
                 format!("[{}]", image.black.values.iter().map(|b| format!("{b}")).collect::<Vec<_>>().join(", ")),
                 image.white.first().map(|w| format!("{w}")).unwrap_or_else(|| "null".to_string()),

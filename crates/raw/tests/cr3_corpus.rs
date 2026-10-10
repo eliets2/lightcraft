@@ -89,8 +89,8 @@ fn canon_r8_craw_sensor_is_exact() {
 /// LibRaw 0.22.2 oracle sample for sample over the entire full sensor, masked borders
 /// included. The R50 files also carry adaptive QP value 168 (quantValue 44), measured as
 /// the next entry of the integer quantization sequence.
-/// The EOS R6 Mark III ColorData version is not parsed yet, so its as-shot white balance
-/// is absent (documented limit); black/white fallbacks apply and are still validated.
+/// The EOS R6 Mark III ColorData version 66 parses (v12 layout), so its as-shot white balance
+/// is asserted present.
 
 #[test]
 fn canon_r5_mark_ii_craw_odd_qp_map_is_exact() {
@@ -181,6 +181,7 @@ fn canon_r7_craw_443a0161_odd_qp_map_is_exact() {
     // raw.pixls.us/data/Canon/EOS%20R7/443A0161.CR3; SHA256
     // c01cee1b598120668370892c16a73da915f2aaec8169c5c60a96efd98d9aa220
     check("cr3-eos-r7-443a0161.cr3", 0xc6e0_dd45_1046_c484, (7128, 4732), (6960, 4640), true);
+}
 
 #[test]
 fn canon_m50_craw_crop_is_the_shot_aspect() {
@@ -193,5 +194,4 @@ fn canon_m50_craw_crop_is_the_shot_aspect() {
     };
     let raw = decode(&bytes).unwrap();
     assert_eq!((raw.crop.x, raw.crop.y, raw.crop.width, raw.crop.height), (1012, 12, 4000, 4000));
-
 }
