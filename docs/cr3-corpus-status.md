@@ -78,7 +78,7 @@ Reading the matrix:
 - No file decodes to garbage, no import crashes, no hangs; every failure is an explicit
   `Unsupported` string and (when a JPEG preview exists) falls back to preview-only import.
 
-## 3. The 13 odd-QP-map failures (exact list for the fix in flight)
+## 3. The 13 odd-QP-map failures (exact list; fixed since this sweep)
 
 All 13 are CRX `0x200` C-RAW whose QP map height `ceil(sensor_height/4)` is odd; the decoder
 rejects that (docs/cr3.md: "an odd QP-map height … rejected"). Twelve import preview-only with
@@ -155,7 +155,7 @@ Median 5.7 s. The slow tail is one cluster: large-sensor **0x100 lossless RAW** 
 R10 38 s, R3 31 s, EOS R 31 s, M6 II 25 s, R6 III 19 s, R7 12 s) — the horizontal-tile lossless
 path scales badly beyond ~24 MP; C-RAW of the same bodies renders 4–7 s. That decode-throughput
 gap, not the 13 odd-QP failures, is the biggest user-visible CR3 performance issue. The R8 Mark II
-local set renders 6.1–8.6 s per 24 MP file (`USER-SAMPLES-FINDINGS.md`).
+local set renders 6.1–8.6 s per 24 MP file.
 
 ## 6. Wanted list (what the corpus still lacks)
 
@@ -174,7 +174,7 @@ Variant gaps independent of body count:
 - **Raw-burst "roll" files** (multi-frame CR3, `CRAW` rolls): zero in corpus; type-3 roll
   extraction untested.
 - **HDR CR3** (`CNCV = CanonCR3_003/…`): zero in corpus.
-- **Odd QP-map height**: the 13 files of §3 — known, fix in flight.
+- **Odd QP-map height**: the 13 files of §3 — fixed since this sweep.
 - **0x200 with vertical tiles / partial-subband / rounded planes**: no corpus coverage; decoder
   reports them unsupported by construction — samples would confirm the strings.
 - **Crop mode**: closed for 0x100 (EOS R/R5/R6/R6 II/RP crop files all decode); open for 0x200 —
@@ -186,7 +186,7 @@ Variant gaps independent of body count:
 
 No third-party decoder source was read. ExifTool 13.59 and a
 python CMP1 box-walker (`corpus/_sweep/probe_cr3.py`, offsets documented in
-`USER-SAMPLES-FINDINGS.md`) provided container facts; `lightcraft-cli` was exercised strictly as a
+the private local sample findings) provided container facts; `lightcraft-cli` was exercised strictly as a
 black box. Corpus files are CC0 from raw.pixls.us and stay in git-ignored `corpus/`; nothing
 photographic is committed.
 

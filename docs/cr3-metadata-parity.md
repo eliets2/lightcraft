@@ -40,7 +40,7 @@ follow the verification research (E) §6: (1) as-shot WB,
 | `SpecularWhiteLevel` (word 0x31d/0x32b/0x281/0x295 by version) | `white` scalar (`NormalWhiteLevel` correctly NOT used) | 42/43 exact; R6 III sample-derived (G1) |
 | `SensorWidth`/`SensorHeight` (SensorInfo 0x00e0 words 1-2) | full `width`/`height` | 43/43 exact |
 | `ExifImageWidth`/`ExifImageHeight` (CMT1 0xa002/0xa003) = recommended crop | `developed_size()` | 42/43 exact; R5m2 APS-C keeps +24×16 px (gap G2) |
-| `AspectInfo` `CroppedImageWidth/Height` (CMT3 block) | not applied — full recommended crop developed | documented (gap G3) |
+| `AspectInfo` `CroppedImageWidth/Height` (CMT3 block) | applied — shot-aspect crop developed | matches camera recommendation |
 | `LensModel` (ExifIFD 0xa434; the CMT3 0x0095 string agrees on every corpus file) | `metadata.lens_model` | 35/35 interchangeable bodies exact; 8 fixed-lens bodies correctly absent |
 | `CanonModelID` (0x4010) | recorded per table row (bookkeeping, not gated) | — |
 | Dual Pixel (2nd full-size raw track = delta) | main track wins; sensor dims, WB and levels all match | 4/4 DPR files ok |
@@ -58,26 +58,16 @@ model 43/43.** All of it is gated by the test.
 
 ## Gaps
 
-- **G1 — EOS R6 Mark III: ColorData version 66 unparsed.** `cr3.rs camera_levels` handles versions
-  16-19 / 32-33 / 34 / 48 / 64-65 only; v66 falls through to the default, so as-shot WB, black and
-  white are absent (levels fall back to sample-derived) — while ExifTool reads them fine. The dump
-  shows v66 uses the *same* level offsets as v64/65: `WB_RGGBLevelsAsShot` int16s[4] at word 0x0069
-  (= 105; the R6 III file reads `2330 1024 1024 1454`), `PerChannelBlackLevel` int16u[4] at 0x017f
-  (= 383; `512 512 512 512`), `SpecularWhiteLevel` int16u[1] at 0x0295 (= 661; 13995;
-  `NormalWhiteLevel` at 0x0294 = 13200 is not the clip level). Ingestion is a one-line arm
-  (`Some(64 | 65 | 66)`), after which the table row flips from documented-absent to exact.
+- **G1 — RESOLVED: EOS R6 Mark III ColorData version 66.** v66 follows the ColorData12 layout (`camera_levels` handles 64..=66); as-shot WB, black and white levels now match the ExifTool ground truth on all four corpus files.
+
 - **G2 — EOS R5 Mark II APS-C crop: 24×16 px of extra border.** LightCraft develops the IAD1 active
   area (5112×3408); the camera's own recommendation is 5088×3392 (CMT1 `ExifImageWidth/Height`
   0xa002/0xa003 and the `AspectInfo` crop agree). All other corpus files match the recommendation
   exactly. The deviation is pinned in the test's `KNOWN_DEVELOPED_GAPS` so it cannot drift
   silently; fixing it means re-checking the IAD1 vs SensorInfo-border (0x00e0 words 3-6) mapping
   for crop-mode files.
-- **G3 — camera `AspectInfo` crop not applied.** Aspect-mode files (1:1, 19:9, 2:3, 4:3, APS-C; 8
-  corpus variants) develop the full 3:2 recommended crop. ExifTool exposes the camera's aspect
-  crop as `AspectRatio` + `CroppedImageWidth/Height` in the CMT3 AspectInfo block. Documented by
-  `ASPECT_APPLIED = false` in the test; the ground truth per file sits in the table's `aspect`
-  column. User impact is low (Lightroom also treats the aspect mode as a crop, not a different
-  raw), but the developed aspect should eventually follow the camera setting.
+- **G3 — RESOLVED: camera `AspectInfo` crop applied.** The decoder now develops the camera's shot-aspect recommendation (1:1, 16:9, APS-C, …); the harness runs with aspect expectations enabled.
+
 - **F1 — nondeterministic CRX decode errors: stale shared-target artifacts, not a code bug (probably).**
   During this work the same verified M200 file (SHA-256 matches the corpus pin) decoded fine in the
   parity test binary but consistently failed in other test binaries with *different* error texts per

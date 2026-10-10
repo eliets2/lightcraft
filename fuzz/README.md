@@ -52,7 +52,7 @@ anything that panics there is a finding by definition.
 ## Running locally on Windows (today)
 
 ```bash
-export CARGO_TARGET_DIR=/d/lightcraft-repo/target   # shared target dir
+export CARGO_TARGET_DIR="$(pwd)/../target"   # shared target dir
 # run from your LightCraft worktree/checkout root
 
 # build once (stable toolchain is enough)

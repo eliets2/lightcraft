@@ -1,7 +1,7 @@
 # CR3 decode performance baseline (2026-10-09)
 
 Recorded on branch `cr3/p3-speed-bench` (base `8380b19`), release build from the shared target dir
-(`/d/lightcraft-repo/target`), by `crates/raw/tests/cr3_perf.rs`
+(a shared build directory), by `crates/raw/tests/cr3_perf.rs`
 (`cargo test --release -p lightcraft-raw --test cr3_perf -- --nocapture`). Closes the
 D-code-review §6 gap 6 ("corpus.rs prints MP/s but asserts nothing") together with that test's
 two-tier guard.
@@ -66,7 +66,7 @@ the CRX entropy decoder.
   the monotonic `std::time::Instant`; the printed/asserted number is the **median** wall time.
 - Baseline recording: two quiet-ish 9-pass runs at High process priority; the table records the
   best per-file run median. Run-to-run the two agreed within ~2 %.
-- **Observed load sensitivity (same day, same binary):** with sibling agents compiling on the box
+- **Observed load sensitivity (same day, same binary):** concurrent builds on the box degrade every measurement; record baselines only on an idle machine.
   (CPU pegged at 100 %), unprioritized runs swung 1.5–2.0× slower per file (e.g. R5m2 C-RAW:
   39.4 MP/s quiet-ish vs 16.5 MP/s under load; M50 RAW: 69.5 vs 35.6). Consequences:
   1. the 25 % gate is meaningful **only** on the baseline machine, quiet (idle or High priority,
@@ -75,7 +75,7 @@ the CRX entropy decoder.
      shared runner never flakes;
   3. if a nightly gate run fails, first re-run quiet before believing a regression.
 - **Shared-target-dir hazard on this box:** the recording used the shared
-  `/d/lightcraft-repo/target`, where sibling agents build their own worktrees. Mid-session, the
+  a shared build directory used by several worktrees. Mid-session, the
   test binary silently linked a sibling's WIP `lightcraft-raw` artifact (same deps-file name
   hash) and R8 decode failed with a foreign error until `cargo clean --release -p
   lightcraft-raw` + rebuild from this tree. Numbers above were recorded before/after that
@@ -144,4 +144,4 @@ left by a killed session degraded every measurement 2–4× (R100 "430 ms", M50 
 after killing it the box showed multi-hundred-ms run-to-run swings (thermal/contention after days
 of sustained builds). The baseline table above stays authoritative until someone re-baselines on a
 quiet, cold machine with the established discipline (High priority, 9-pass best-of, two agreeing
-runs). Diagnose any "regression" by checking for stray `rustc`/`cargo` processes first.
+runs). Diagnose any "regression" by checking for stray `rustc`/`cargo` processes and machine load first.

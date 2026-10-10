@@ -17,7 +17,6 @@ Status: **no crashes found** so far. The table below is the running log.
 | `cr3_container` | 2,011,379 | 6,705/s | 0 | 0 | none |
 | `crx_bitstream` | 14,349,293 | 47,831/s | 0 | 0 | none |
 | `iso_bmff_boxes` | 105,049,233 | 350,109/s | 0 | 0 | none |
-| `cr3_whole_file` | 1,486 (real 18–30 MB EOS R8 Mark II CR3s) | 5/s | 0 | 0 | none |
 
 `cr3_whole_file` ran with the nine real photos as seeds; every seed replays
 through probe → probe_info → embedded preview → decode → develop_binned. The
