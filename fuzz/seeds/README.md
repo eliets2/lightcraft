@@ -45,7 +45,7 @@ truncated entropy data exercises the decode-failure path.
 | File | What it is |
 |---|---|
 | `container-synthetic.bin`, `container-crx-lossless.bin` | Full synthetic CR3 containers (same bytes as the cr3_container seeds) — small enough to mutate exhaustively. |
-| *(not committed)* | **Full** real CR3 files stay outside the repository. Point the harness at them locally: `mutate-smoke cr3_whole_file D:\lightcraft-parity\cr3\samples`. Linux CI fuzzes full files from `cargo xtask corpus --download` (CC0, pinned by SHA-256) instead. |
+| *(not committed)* | **Full** real CR3 files stay outside the repository. Point the harness at them locally (a private directory of real CR3s). Linux CI fuzzes full files from `cargo xtask corpus --download` (CC0, pinned by SHA-256) instead. |
 
 ## iso_bmff_boxes/ — structure-aware box-graph fuzzing
 
