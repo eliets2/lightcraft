@@ -115,9 +115,10 @@ had SHA-256 `ee70805cb60f18d5ed62548c4e595f6cee0a33407e15358eb1766a46afc1c16e`
 (LibRaw-0.22.2-Win64.zip). All nineteen sensor comparisons pass. R8 HEVC
 preview tracks are distinguished from the primary Bayer RAW; the HEVC preview
 itself is not decoded. Missing corpus files are reported as skipped by the
-tests. The EOS R6 Mark III stores a ColorData version whose layout is not yet
-imported, so its as-shot white balance is absent (a documented colour limit);
-its black/white levels fall back to measurement and remain validated.
+tests. The EOS R6 Mark III's ColorData version 66 follows the ColorData12
+layout, so its as-shot white balance and black/white levels are read from the
+file (gated by `cr3_metadata_parity.rs`, which asserts them exact against the
+ExifTool ground truth).
 
 The version `0x200` QP predictor and entropy framing were checked independently.
 Controlled input mutations establish floor averaging of paired QP rows before
@@ -133,14 +134,4 @@ so a small crafted file fails before reserving memory for the image it claims.
 
 ## Colour limits
 
-CR3 carries as-shot white balance but no measured camera matrix is imported
-here. The existing guarded embedded-JPEG fitting path now includes CR3, with
-both proxies oriented identically before gathering training pairs. A bounded
-crop/translation registration of the JPEG is confirmed on held-out edge
-directions before fitting colour; the existing held-out colour acceptance gates
-are unchanged. No lens distortion correction is applied (LightCraft has no lens
-profiles of its own yet), so lenses whose camera JPEG is strongly
-distortion-corrected may fail the gates and keep the neutral matrix. Render
-cache version 13 invalidates earlier thumbnails. All developed pixels still come
-from the RAW sensor; a rejected colour fit retains the documented neutral
-matrix fallback. See `camera-preview-colour.md` for the limits of this estimate.
+CR3 files now import **measured per-body colour matrices derived from the file's own ColorData planes** (all 29 corpus bodies, ColorData v16–v66 including the R6 Mark III's version 66 = ColorData12 layout): dual-illuminant XYZ→camera matrices fitted per body by ridged least squares over the file's WB planes, validated by exact as-shot round trips and held-out plane-error gates (`camera_color_core`). This supersedes the per-photo embedded-JPEG colour fit for every body with parseable ColorData — the fit remains the fallback for files whose planes fail validation. As-shot white balance anchors on the file's own AsShot plane (plane 0 in the layout) when it survives placeholder filtering. Body-level fixture pins live in `crates/raw/tests/cr3_color_matrices.rs`; the remaining limits are tone (the matrix path renders the neutral finish, as DNG files do — pooled per-body tone curves are future work) and lens distortion (no lens profiles of our own yet).

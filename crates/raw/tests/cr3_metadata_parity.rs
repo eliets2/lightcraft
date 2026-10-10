@@ -11,7 +11,7 @@
 //! Field map follows `docs/cr3-metadata-parity.md` (E-corpus-verification §6 priority order):
 //! as-shot white balance, per-body black/white levels, crop/active area, developed size (aspect),
 //! dual-pixel handling and the lens string. Known-absent fields are asserted absent so the table
-//! documents reality instead of hiding it (today: the camera `AspectInfo` crop — the EOS R6 Mark
+//! documents reality instead of hiding it (historical: the camera `AspectInfo` crop, applied since upstream — the EOS R6 Mark
 //! III ColorData v66 was parsed since cr3/p4-color-matrices), and [`KNOWN_DECODE_GAPS`] /
 //! [`KNOWN_DEVELOPED_GAPS`] pin the places
 //! where decoding still deviates — when one heals, the assert says what to regenerate.
@@ -48,8 +48,8 @@ struct Entry {
     /// truth (the recommended crop; also pins the aspect information).
     developed: (u32, u32),
     /// ExifTool `AspectInfo` `CroppedImageWidth`/`CroppedImageHeight` (CMT3): the camera-applied
-    /// aspect crop when an aspect mode is active, else (0, 0). Ground truth only: until it is
-    /// implemented the decoder develops the full recommended crop (`ASPECT_APPLIED` documents that).
+/// Ground truth: the decoder applies the camera's shot-aspect crop when active
+/// (`ASPECT_APPLIED` documents the switch).
     aspect: (u32, u32),
     /// ExifTool `LensModel` (ExifIFD 0xa434; the CMT3 maker-note 0x0095 string agrees). Empty:
     /// fixed-lens bodies record no lens name, so absence is expected.
@@ -58,9 +58,8 @@ struct Entry {
     model_id: u32,
 }
 
-/// Whether the decoder applies the CMT3 `AspectInfo` crop. `false` documents today's reality
-/// (the camera aspect mode is ignored and the full recommended crop is developed); flip the
-/// AspectInfo cropping shipped upstream (the camera's shot-aspect recommendation is applied),
+/// Whether the decoder applies the CMT3 `AspectInfo` crop: true since upstream b70ae174
+/// (the camera's shot-aspect recommendation is developed when an aspect mode is active),
 const ASPECT_APPLIED: bool = true;
 
 // BEGIN GENERATED TABLE — tools/cr3_metadata_reference.py against ExifTool 13.59 dumps; do not edit by hand.

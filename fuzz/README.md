@@ -150,6 +150,6 @@ jobs:
 3. Commit the minimized input as a seed in `fuzz/seeds/<target>/`, add the
    analysis to `FINDINGS.md`, and fix the crash with a synthetic regression
    test that panicked before the fix (crashes in `crates/` are reported to the
-   crate owners — the fuzz agent fixes none of them directly).
+   crate owners — the fuzz suite fixes none of them directly).
 4. The regression-mode CI run replays all seeds, so the minimized input is now
    a permanent merge gate.

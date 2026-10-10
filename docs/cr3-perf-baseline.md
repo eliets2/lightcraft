@@ -9,7 +9,7 @@ two-tier guard.
 **Baseline machine (numbers are machine-relative — the nightly guard compares same-machine
 only):** Windows 11 x64, Intel Core i5-12400F (6P/12T), 16 GB RAM, rustc 1.99.0
 x86_64-pc-windows-gnu, `--release` profile. The recording process ran at High priority to shield
-it from sibling workloads on the shared box (see §3).
+it from other workloads on the shared box (see §3).
 
 **TL;DR — the five representative corpus files decode at 39–70 MP/s (25–48 MP full sensor
 buffers, 0.36–1.22 s median). A quiet-rough 25 % tolerance night on the same machine gates at
@@ -74,9 +74,9 @@ the CRX entropy decoder.
   2. the default tier's floors are deliberately far below even the loaded numbers, so CI on a
      shared runner never flakes;
   3. if a nightly gate run fails, first re-run quiet before believing a regression.
-- **Shared-target-dir hazard on this box:** the recording used the shared
-  a shared build directory used by several worktrees. Mid-session, the
-  test binary silently linked a sibling's WIP `lightcraft-raw` artifact (same deps-file name
+- **Shared-target-dir hazard on this box:** the recording used the shared build directory
+  used by several worktrees. Mid-session, the
+  test binary silently linked another worktree's WIP `lightcraft-raw` artifact (same deps-file name
   hash) and R8 decode failed with a foreign error until `cargo clean --release -p
   lightcraft-raw` + rebuild from this tree. Numbers above were recorded before/after that
   incident from this tree's sources; on a shared target dir, **always force-clean the package
@@ -122,15 +122,15 @@ absolute MP/s, are the comparison, and both columns above are generous to LibRaw
 
 All 2026-10-09, shared target dir, `cargo test --release -p lightcraft-raw --test cr3_perf`:
 
-- 9-pass, unprioritized, machine loaded (siblings compiling): 61.9 / 30.1 / 41.8 / 27.9 / 40.8
+- 9-pass, unprioritized, machine loaded (parallel builds running): 61.9 / 30.1 / 41.8 / 27.9 / 40.8
   MP/s; second run 46.8 / 23.6 / 35.6 / 16.5 / 18.5 — the §3 load caveat in one line.
 - 9-pass, High priority (`Start-Process -PriorityClass High` on the test binary), two runs:
   70.11 / 42.01 / 68.10 / 38.18 / 40.37 and 69.51 / 41.46 / 69.47 / 39.42 / 40.48 MP/s. The
   baseline table records the best of these.
 - LibRaw medians as printed by the script, §4 (one 14.8 s outlier pass on R5m2 `dcraw_emu`
-  discarded by the median, sibling compile burst).
+  discarded by the median, a parallel-compile burst).
 
-## 5. Post-Phase-3 note (2026-10-10, merged stack)
+## 6. Post-Phase-3 note (2026-10-10, merged stack)
 
 The entropy (`cr3/p3-speed-entropy`) and wavelet (`cr3/p3-speed-wavelet`) optimizations are merged
 and proven **bit-exact** (110/110 corpus sensor hashes identical to the `8380b19` base). Their

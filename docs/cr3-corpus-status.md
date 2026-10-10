@@ -9,8 +9,8 @@ manifest, intentionally not documented further). Fingerprints: ExifTool 13.59 + 
 sensor decode.
 
 **TL;DR — 119 files, 106 full sensor decodes, 13 known odd-QP-map failures, 0 corrupt, 0 panics,
-0 timeouts.** Every failure is the explicit `Canon CRX adaptive QP map with an odd height` (fix in
-flight on another branch; expected to keep failing on this commit). The complete 110-file pixls set
+0 timeouts.** Every failure is the explicit `Canon CRX adaptive QP map with an odd height` (all
+13 have since been fixed — §3). The complete 110-file pixls set
 is now pinned in `cargo xtask corpus --download` (`CR3_SHA256`, round-trip verified).
 
 ## 1. Corpus inventory & manifest state
@@ -27,7 +27,7 @@ is now pinned in `cargo xtask corpus --download` (`CR3_SHA256`, round-trip verif
   `pixls-cr3.tsv` (site enumeration), `downloads.tsv` (per-file SHA-256), `probe-raw.tsv` (CMP1
   inventory), `master.tsv` (joined table), `sweep-raw.tsv` (decode sweep), `timing/timing.tsv`.
 
-## 2. Per-body × variant matrix (110 pixls files)
+## 2. Per-body × variant matrix (110 pixls files; sweep-time snapshot)
 
 | Body | Files | 0x100 RAW | 0x100 C-RAW | 0x200 C-RAW | Dual | ok | previewOnly | fail |
 |---|---|---|---|---|---|---|---|---|
@@ -64,13 +64,13 @@ is now pinned in `cargo xtask corpus --download` (`CR3_SHA256`, round-trip verif
 
 Reading the matrix:
 
-- **0x100 lossless** (59 RAW + 29 C-RAW + 10 dual-track files): 98/98 decode. Every lossless variant
+- **0x100 lossless** (59 RAW + 29 C-RAW, of which 10 carry a muxed dual-track): 88/88 decode. Every lossless variant
   we claim is now exercised by a whole-body family, not one sample: 1.6× crop mode (EOS R, R5, R6,
   R6 II, RP), aspect-ratio sets (250D, M6 II, G5 X II), dual pixel ON, and two-raw-track
   muxing (thumbnail-raw + full, e.g. M200/R10/R5m2/R8 families) all decode from sensor.
-- **0x200 C-RAW** (22 files, 9 bodies): 9 decode (incl. PowerShot V1 — a 0x200-only body), 13 fail
+- **0x200 C-RAW** (22 files, 10 bodies): 9 decode (incl. PowerShot V1 — a 0x200-only body), 13 fail
   with the odd-QP-map error (§3).
-- **Dual pixel** (16 files, 8 bodies): 13 decode; the 3 failures are the odd-QP cases that also
+- **Dual pixel** (16 files, 5 bodies): 13 decode; the 3 failures are the odd-QP cases that also
   carry a delta track (R5 CRAW nocrop-dual, R6 II 0356, R7 443A0161).
 - **HEVC preview tracks** (recognized, never decoded): 6 files — the R8 set (`RAW`/`CRAW`,
   plain + dual) and the R5m2 pair. All sensor-decode (except R5m2 CRAW, §3); the HEVC preview is
@@ -101,8 +101,9 @@ import outright. Filenames, sensor track size, SHA-256:
 | `cr3-eos-r7-443a0159.cr3` | R7 | 7128×4732 | `10a18e3f01ca9cd93408496d3853388ef140830548bfeed4237e40f967eb9d5c` | previewOnly |
 | `cr3-eos-r7-443a0161.cr3` | R7 | 7128×4732 | `c01cee1b598120668370892c16a73da915f2aaec8169c5c60a96efd98d9aa220` | previewOnly |
 
-The other nine 0x200 files (even QP-map height) decode, so the fix's blast radius is precisely
-these 13; after it lands, `corpus/raw` should be 110/110 sensor-decodes.
+The other nine 0x200 files (even QP-map height) decode, so the fix's blast radius was precisely
+these 13; with it landed, `corpus/raw` decodes 110/110 — `cr3_corpus.rs` pins each odd-QP file
+full-sensor and the whole-corpus colour test asserts every CR3 decodes.
 
 ## 4. Local Canon EOS R8 Mark II set (9 files, not in the manifest)
 
@@ -177,8 +178,9 @@ Variant gaps independent of body count:
 - **Odd QP-map height**: the 13 files of §3 — fixed since this sweep.
 - **0x200 with vertical tiles / partial-subband / rounded planes**: no corpus coverage; decoder
   reports them unsupported by construction — samples would confirm the strings.
-- **Crop mode**: closed for 0x100 (EOS R/R5/R6/R6 II/RP crop files all decode); open for 0x200 —
-  both R6 II crop files are odd-QP cases, so crop-mode 0x200 success is gated on §3.
+- **Crop mode**: closed for 0x100 (EOS R/R5/R6/R6 II/RP crop files all decode); closed for 0x200
+  too now that §3 is fixed — the R6 and both R6 II crop files were odd-QP cases and are pinned
+  full-sensor in `cr3_corpus.rs`.
 - **HEVC-preview-only CR3** (no JPEG preview at all): none in corpus; the 6 HEVC-track files here
   all carry a JPEG track too.
 
@@ -194,5 +196,6 @@ Test-gate note: while this sweep ran, the parallel pixel-verification lane was d
 sensor buffers as `corpus/raw/*.cr3.u16` sidecars (first seen 06:31, still arriving at 06:40). The
 `crates/raw/tests/corpus.rs` glob tests only skip `.part/.txt/.md`, so they panic on those foreign
 scratch files (`cr3-…cr3.u16: not recognised`) — an environment artifact, not a decode regression:
-`cr3_corpus.rs` passes 6/6, the CLI sweep above handles all 119 files, and the panics name only
-`.u16` files. The suite is green once the oracle dumps are removed or the globs learn to skip them.
+the panics name only `.u16` files, `cr3_corpus.rs` passes 20/20 today (19 sensor-hash fixtures +
+the M50 crop test), and the CLI sweep above handles all 119 files. The suite is green once the
+oracle dumps are removed or the globs learn to skip them.
