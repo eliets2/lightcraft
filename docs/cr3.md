@@ -5,6 +5,12 @@ The CR3 adapter reads the CRX Bayer track, `CMP1` compression descriptor,
 black/white levels and the default crop come from the file. A Dual Pixel delta
 track is never substituted for the primary Bayer track.
 
+The in-camera aspect ratio (3:2, 4:3, 16:9, 1:1) is not applied to the sensor data. The maker note's
+`AspectInfo` (tag `0x009a`: aspect code, cropped width, height, left, top) gives the shot's rectangle inside the
+recommended crop, and the decoder uses it as the default crop, so the developed image has the shape the photographer
+framed (PowerShot SX70 HS, EOS 250D, PowerShot G5 X Mark II, EOS M6 Mark II and EOS M50 samples). A rectangle that
+is missing or does not fit inside the crop is ignored. The embedded JPEG still shows the whole frame.
+
 The decoder is independent Rust code shared by desktop, CLI and WebAssembly;
 it has no operating-system imaging dependency or external decoder. Its sources
 are the public prose descriptions and patents cited in
@@ -116,13 +122,7 @@ its black/white levels fall back to measurement and remain validated.
 The version `0x200` QP predictor and entropy framing were checked independently.
 Controlled input mutations establish floor averaging of paired QP rows before
 the nonlinear integer table, then multiplication, division by eight, addition
-of the subband base and a minimum step of one. QP values 131–168 are verified
-(the R50 files use 168 across the map); larger values and truncated maps are
-rejected, and a map with zero or oversized dimensions is still corrupt. The
-odd-height last row was measured against the oracle on all thirteen files:
-both plausible policies (averaging the row with itself, or skipping the
-average) keep the row's own value, and the samples match bit-exactly.
-Partial-subband and
+of the subband base and a minimum step of one. QP values 131–168 are verified (the R50 files use 168 across the map); larger values and truncated maps are rejected, and a map with zero or oversized dimensions is still corrupt. An odd QP-map height (EOS R7: 4732 sensor rows give 1183 QP rows) leaves the last row of the second-level high-frequency bands without a partner row; that row's QP is used on its own. Two independent validations agree: paired R7 RAW and C-RAW captures of the same scene (ISO 100 and 6400) match visually with sensor means agreeing within 0.1%, and the thirteen affected pixls C-RAW files were measured against the LibRaw 0.22.2 oracle sample for sample — both plausible policies (averaging the row with itself, or skipping the average) keep the row's own value, so the samples match bit-exactly either way. Partial-subband and
 rounded-plane coding, vertical C-RAW tiling and adaptive low-frequency gains
 remain unsupported; the remaining unsupported families and the exact gate
 boundaries are enforced by `crates/raw/tests/cr3_variants.rs` (see the

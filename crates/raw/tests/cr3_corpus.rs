@@ -57,7 +57,9 @@ fn canon_r100_lossless_sensor_is_exact() {
 fn canon_m50_craw_sensor_is_exact() {
     // raw.pixls.us/getfile.php/2663; SHA256
     // 15384b775867ec4c42b11882837f1e368cedc0561832ffab271221e6bb80be4c
-    check("cr3-canon-m50-craw.cr3", 0x9aac_bfe6_6f50_5e1b, (6288, 4056), (6000, 4000), true);
+    // The camera was set to 1:1: the file's AspectInfo is a 4000 x 4000 square at x = 1000 inside the 6000 x 4000
+    // image (the archive's "3:2" label is wrong). The sensor samples are unchanged; only the crop is.
+    check("cr3-canon-m50-craw.cr3", 0x9aac_bfe6_6f50_5e1b, (6288, 4056), (4000, 4000), true);
 }
 
 #[test]
@@ -179,4 +181,17 @@ fn canon_r7_craw_443a0161_odd_qp_map_is_exact() {
     // raw.pixls.us/data/Canon/EOS%20R7/443A0161.CR3; SHA256
     // c01cee1b598120668370892c16a73da915f2aaec8169c5c60a96efd98d9aa220
     check("cr3-eos-r7-443a0161.cr3", 0xc6e0_dd45_1046_c484, (7128, 4732), (6960, 4640), true);
+
+#[test]
+fn canon_m50_craw_crop_is_the_shot_aspect() {
+    // raw.pixls.us/getfile.php/2663: the 1:1 square starts 1000 px right of the recommended crop's origin,
+    // which is (12, 12) inside the valid sensor area.
+    let path = corpus().join("raw").join("cr3-canon-m50-craw.cr3");
+    let Ok(bytes) = std::fs::read(&path) else {
+        eprintln!("skip: {} absent", path.display());
+        return;
+    };
+    let raw = decode(&bytes).unwrap();
+    assert_eq!((raw.crop.x, raw.crop.y, raw.crop.width, raw.crop.height), (1012, 12, 4000, 4000));
+
 }

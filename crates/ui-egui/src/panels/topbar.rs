@@ -8,6 +8,40 @@ use crate::icons::{Icon, paint};
 use crate::theme::Tokens;
 use crate::widgets::{icon_button, register};
 
+/// The bar doubles as the window's title bar: dragging its empty space moves the window and a
+/// double-click zooms or restores it. Registered before the bar's widgets so they win the click.
+fn window_handle(app: &LightcraftApp, ui: &mut egui::Ui, content: Rect, margin_left: f32, margin_right: f32) {
+    use crate::titlebar::{Gesture, WindowState, command_for};
+    let bar = Rect::from_min_max(pos2(content.left() - margin_left, content.top()), pos2(content.right() + margin_right, content.bottom()));
+    register(ui.ctx(), "region:titlebar", bar);
+    let handle = egui::Id::new("titlebar-handle");
+    let resp = ui.interact(bar, handle, Sense::click_and_drag());
+    // a press that began on a button or the search field is theirs: dragging off it must not move the window
+    // (while pressing, egui hovers every widget under the pointer; once the drag starts, only the dragged one)
+    let ctx = ui.ctx().clone();
+    let memo = egui::Id::new("titlebar-press-on-widget");
+    if resp.is_pointer_button_down_on() && ctx.input(|i| i.pointer.primary_pressed()) {
+        let hovered = ctx.interaction_snapshot(|s| s.hovered.clone());
+        let on_widget =
+            hovered.iter().any(|id| *id != handle && ctx.read_response(*id).is_some_and(|r| r.sense.senses_click() || r.sense.senses_drag()));
+        ctx.data_mut(|d| d.insert_temp(memo, on_widget));
+    }
+    let on_widget = ctx.data(|d| d.get_temp::<bool>(memo)).unwrap_or(false);
+    let gesture = if resp.double_clicked_by(egui::PointerButton::Primary) {
+        Some(Gesture::DoubleClicked)
+    } else if resp.drag_started_by(egui::PointerButton::Primary) && !on_widget {
+        Some(Gesture::DragStarted)
+    } else {
+        None
+    };
+    if let Some(g) = gesture {
+        let window = WindowState { maximized: ui.input(|i| i.viewport().maximized).unwrap_or(false), fullscreen: app.window_is_fullscreen };
+        if let Some(cmd) = command_for(g, window) {
+            ui.ctx().send_viewport_cmd(cmd);
+        }
+    }
+}
+
 pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let left = if app.integrated_titlebar { 78 } else { 10 };
@@ -16,6 +50,9 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         .frame(egui::Frame::NONE.fill(t.chrome).inner_margin(egui::Margin { left, right: 12, top: 0, bottom: 0 }))
         .show(ui, |ui| {
             let full = ui.max_rect();
+            if app.integrated_titlebar {
+                window_handle(app, ui, full, left as f32, 12.0);
+            }
             let mut sw = 640.0f32.min(full.width() - 460.0).max(200.0);
             if !app.native_menu {
                 // leave room for the in-window menus left of the (centred) search field
@@ -42,7 +79,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
             });
             // search field (centred on the window)
             let sr = Rect::from_center_size(pos2(full.center().x, full.center().y), vec2(sw, 28.0));
-            let id = egui::Id::new("search-field");
+            let id = crate::text_field::id("field:search");
             if std::mem::take(&mut app.ui.focus_search) {
                 ui.memory_mut(|m| m.request_focus(id));
             }
@@ -54,7 +91,6 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 Stroke::new(1.0, if focused { t.accent } else { t.field_border }),
                 StrokeKind::Inside,
             );
-            register(ui.ctx(), "field:search", sr);
             let mut child =
                 ui.new_child(egui::UiBuilder::new().max_rect(sr.shrink2(vec2(10.0, 4.0))).layout(egui::Layout::left_to_right(egui::Align::Center)));
             let empty = app.ui.search.is_empty();
@@ -65,14 +101,13 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 paint(child.painter(), Rect::from_min_size(pos2(x0, sr.center().y - 8.0), vec2(16.0, 16.0)), Icon::Search, t.text_dim);
                 child.painter().galley(pos2(x0 + 24.0, sr.center().y - g.size().y / 2.0), g, t.text_dim);
             }
-            let resp = child.add(
-                egui::TextEdit::singleline(&mut app.ui.search)
-                    .id(id)
-                    .frame(egui::Frame::NONE)
-                    .desired_width(sr.width() - 20.0)
-                    .font(t.font(13.5))
-                    .text_color(t.text),
-            );
+            let resp = crate::text_field::TextField::singleline("field:search", &mut app.ui.search)
+                .frame(false)
+                .width(sr.width() - 20.0)
+                .font(t.font(13.5))
+                .text_color(t.text)
+                .show(&mut child)
+                .response;
             if resp.changed() {
                 let q = app.ui.search.clone();
                 let _ = app.run("library.filter", json!({"text": q}));

@@ -94,7 +94,8 @@ fn auto_write_and_naming_preference() {
     // a slider drag writes once, at the end
     s.execute("develop.beginInteraction", &json!({"label": "Exposure"})).unwrap();
     s.execute("develop.set", &json!({"control": "light.exposure", "value": 1.5})).unwrap();
-    let exposure = |p: &Path| match crate::sidecar::parse_sidecar(&std::fs::read_to_string(p).unwrap(), false).unwrap().develop {
+    let exposure = |p: &Path| match crate::sidecar::parse_sidecar(&std::fs::read_to_string(p).unwrap(), crate::crs::Target::Rendered).unwrap().develop
+    {
         Some(crate::sidecar::DevelopPatch::Full(d)) => d.light.exposure,
         other => panic!("{other:?}"),
     };
@@ -335,10 +336,15 @@ fn synthetic_dng(xmp: &str) -> Vec<u8> {
 
 /// A tiny Bayer DNG written by our own DNG writer (optional embedded XMP, camera metadata).
 pub(crate) fn synthetic_dng_with(xmp: Option<&str>, metadata: lightcraft_meta::Metadata) -> Vec<u8> {
-    use lightcraft_raw::*;
     let (w, h) = (32usize, 24usize);
-    let cfa = Cfa::bayer("RGGB").unwrap();
     let data: Vec<u16> = (0..w * h).map(|i| 256 + ((i % w) * 300 + (i / w) * 200) as u16).collect();
+    synthetic_dng_of(w, h, "RGGB", data, xmp, metadata)
+}
+
+/// A synthetic Bayer DNG for denoise and cache tests.
+pub(crate) fn synthetic_dng_of(w: usize, h: usize, cfa: &str, data: Vec<u16>, xmp: Option<&str>, metadata: lightcraft_meta::Metadata) -> Vec<u8> {
+    use lightcraft_raw::*;
+    let cfa = Cfa::bayer(cfa).unwrap();
     let raw = RawImage {
         format: RawFormat::Dng,
         width: w,

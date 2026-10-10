@@ -10,7 +10,8 @@
 //!
 //! Current support: version 0x100 lossless Bayer RAW and horizontal-tile C-RAW,
 //! plus version 0x200 single-tile 14-bit C-RAW with adaptive QP quantization,
-//! including odd QP-map heights (the unpaired last row is averaged with itself).
+//! including odd-height QP maps (the unpaired last row is averaged with itself,
+//! as on the EOS R7).
 //! Both ff01/ff02/ff03 and ff11/ff12/ff13 marker families are supported.
 //! Nineteen full sensor fixtures across eleven bodies match an external decoder
 //! sample for sample. Unverified coding variants return explicit unsupported errors.
@@ -506,6 +507,8 @@ fn adaptive_step(map: &QpMap, band: usize, x: usize, y: usize, base: u32, gain: 
         let index = row.checked_mul(map.width).and_then(|n| n.checked_add(column)).ok_or(RawError::Limit("CRX QP map index"))?;
         let first = *map.data.get(index).ok_or_else(|| corrupt("QP coordinate outside map"))?;
         let value = if band < 7 {
+            // An odd-height map (R7: 4732 rows give 1183 QP rows) leaves the
+            // last row of the coarser bands without a partner; it is used alone.
             let second_row = (row + 1).min(map.height - 1);
             let second = *map.data.get(second_row * map.width + column).ok_or_else(|| corrupt("QP average outside map"))?;
             (first + second) / 2
@@ -1128,6 +1131,17 @@ mod tests {
         config.height = 4056; // ceil(4056/4) = 1014: even, as in the earlier fixtures.
         config.tile_height = 4056;
         assert!(supports(&config).is_ok());
+    }
+
+    #[test]
+    fn odd_height_qp_map_uses_its_last_row_alone() {
+        // EOS R7 C-RAW: 4732 sensor rows give a 1183-row QP map, so the last
+        // row of the coarser high-frequency bands has no partner row.
+        let map = QpMap { width: 1, height: 3, data: vec![150, 153, 151] };
+        assert_eq!(adaptive_step(&map, 4, 0, 0, 0, 4).unwrap(), 7);
+        // Row 2 alone is QP 151; averaging with a missing row would leave the table.
+        assert_eq!(adaptive_step(&map, 4, 0, 1, 0, 4).unwrap(), adaptive_step(&map, 7, 0, 2, 0, 4).unwrap());
+        assert!(adaptive_step(&map, 4, 0, 2, 0, 4).is_err());
     }
 
     #[test]
