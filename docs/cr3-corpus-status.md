@@ -11,7 +11,7 @@ sensor decode.
 **TL;DR — 119 files, 106 full sensor decodes, 13 known odd-QP-map failures, 0 corrupt, 0 panics,
 0 timeouts.** Every failure is the explicit `Canon CRX adaptive QP map with an odd height` (all
 13 have since been fixed — §3). The complete 110-file pixls set
-is now pinned in `cargo xtask corpus --download` (`CR3_SHA256`, round-trip verified).
+is now pinned in `cargo xtask corpus --download` (the `RAW_SAMPLES` inline SHA-256 pins, round-trip verified).
 
 ## 1. Corpus inventory & manifest state
 
@@ -19,7 +19,7 @@ is now pinned in `cargo xtask corpus --download` (`CR3_SHA256`, round-trip verif
   2026-10-09; matches #396's "110"). Six data-tree files are byte-identical (SHA-256 verified) to the
   six `getfile.php` entries the manifest already had — they supply the exact-pixel cases in
   `cr3_corpus.rs`. The remaining **104 files were added to the manifest**, each pinned in the new
-  `CR3_SHA256` table (`xtask/src/main.rs`), so `cargo xtask corpus --download` now fetches and
+  `RAW_SAMPLES` table (`xtask/src/main.rs`), so `cargo xtask corpus --download` now fetches and
   verifies the complete set. Pin verification hashes ~3 GB; expect minutes in a debug build.
 - Round-trip: `cargo xtask corpus --download` → `CR3 pins: 110 verified against SHA-256, 0 absent`;
   a deliberate one-byte corruption is rejected with a `does not match their pinned SHA-256` error.

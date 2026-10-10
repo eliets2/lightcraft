@@ -8,7 +8,7 @@
 //! passes; timings use the monotonic `std::time::Instant` clock; per-file results report the
 //! median wall time and MP/s (full sensor pixels, the same convention as `corpus.rs`).
 //!
-//! The five files are picked from the xtask corpus manifest (`CR3_SHA256` in `xtask/src/main.rs`,
+//! The five files are picked from the xtask corpus manifest (the inline SHA-256 pins in `RAW_SAMPLES`, `xtask/src/main.rs`,
 //! which pins every file's SHA-256) to cover the decode paths that dominate real-world cost:
 //! the large-sensor lossless tail (EOS R100 RAW — the slowest end-to-end render in the corpus),
 //! version-0x100 C-RAW (EOS R8 CRAW), a lossless mid-size sensor (EOS M50 RAW), the biggest
@@ -41,7 +41,7 @@ fn corpus_root() -> PathBuf {
     std::env::var_os("LIGHTCRAFT_CORPUS").map(PathBuf::from).unwrap_or_else(|| Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus"))
 }
 
-/// The representative slice: (file name, SHA-256 as pinned in `CR3_SHA256`, what it exercises).
+/// The representative slice: (file name, SHA-256 as pinned in `RAW_SAMPLES`, what it exercises).
 /// Keep the names and hashes in lockstep with the xtask manifest; if a corpus file ever changes,
 /// the nightly gate refuses to compare instead of reporting a bogus regression.
 const CASES: &[(&str, &str, &str)] = &[
