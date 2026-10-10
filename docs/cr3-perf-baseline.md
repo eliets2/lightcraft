@@ -129,3 +129,19 @@ All 2026-10-09, shared target dir, `cargo test --release -p lightcraft-raw --tes
   baseline table records the best of these.
 - LibRaw medians as printed by the script, §4 (one 14.8 s outlier pass on R5m2 `dcraw_emu`
   discarded by the median, sibling compile burst).
+
+## 5. Post-Phase-3 note (2026-10-10, merged stack)
+
+The entropy (`cr3/p3-speed-entropy`) and wavelet (`cr3/p3-speed-wavelet`) optimizations are merged
+and proven **bit-exact** (110/110 corpus sensor hashes identical to the `8380b19` base). Their
+individual speedups were measured under discipline on their own branches: **≈1.85× geomean**
+decode-only (entropy, best-of-runs: R100 150.9 ms, R8 C-RAW 430 ms, R5m2 469 ms, dual-pixel 803 ms)
+plus **1.7–2.0×** on the C-RAW wavelet synthesis. Combined best-run numbers observed on the merged
+stack match: R100 151–157 ms, R8 C-RAW 361–377 ms, dual-pixel 628–645 ms.
+
+**Do not re-baseline from a loaded machine.** During integration, an orphaned rustc compile swarm
+left by a killed session degraded every measurement 2–4× (R100 "430 ms", M50 "750 ms"), and even
+after killing it the box showed multi-hundred-ms run-to-run swings (thermal/contention after days
+of sustained builds). The baseline table above stays authoritative until someone re-baselines on a
+quiet, cold machine with the established discipline (High priority, 9-pass best-of, two agreeing
+runs). Diagnose any "regression" by checking for stray `rustc`/`cargo` processes first.
