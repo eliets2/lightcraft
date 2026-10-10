@@ -53,7 +53,7 @@ anything that panics there is a finding by definition.
 
 ```bash
 export CARGO_TARGET_DIR=/d/lightcraft-repo/target   # shared target dir
-cd /d/lc-wt-fuzz
+# run from your LightCraft worktree/checkout root
 
 # build once (stable toolchain is enough)
 cargo build --release -p lightcraft-fuzz
@@ -69,7 +69,7 @@ cargo run --release -p lightcraft-fuzz --bin mutate-smoke -- \
 # whole-file fuzzing needs real CR3s (never committed): pass their directory
 cargo run --release -p lightcraft-fuzz --bin mutate-smoke -- \
     cr3_whole_file fuzz/seeds/cr3_whole_file \
-    "D:\lightcraft-parity\cr3\samples" --minutes 5 --seed 20261009
+    "D:\path\to\private\CR3s" --minutes 5 --seed 20261009
 ```
 
 The harness replays every committed seed unmodified first (a panic there blocks

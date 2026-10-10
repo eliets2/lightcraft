@@ -88,7 +88,7 @@ LibRaw 0.22.2-Release Win64 (libraw.org, 2026-07-16 build), black-box. LibRaw 0.
 `dcraw_emu` has no dcraw-style document mode — `-E` prints `Unknown option` **and then continues
 with defaults**, so the naive `-4 -E -T` silently measures the wrong pipeline and must not be
 used. Two honest variants instead (1 warm-up + 5 timed passes, median, High priority — script:
-`D:\lightcraft-parity\cr3\tools\libraw-0.22.2\bench-dcraw-emu.ps1`):
+a small local PowerShell script):
 
 - `dcraw_emu -4 -o 0 -j -T -q 0`: linear 16-bit TIFF, raw colour, no rotation, linear
   interpolation = **decode + demosaic + TIFF write**;

@@ -2,7 +2,7 @@
 //!
 //! Ground truth was captured once with `exiftool -a -U -G1 -H -v3` (ExifTool 13.59) over the
 //! gitignored CC0 corpus (`corpus/raw/cr3-*.cr3`, 110 files / 29 bodies); the dumps live outside
-//! the repository under `D:\lightcraft-parity\cr3\exiftool-dumps\` and the expected values below
+//! the repository under a local ExifTool dump directory and the expected values below
 //! were generated from them by `tools/cr3_metadata_reference.py`. The test never runs ExifTool: it
 //! re-derives LightCraft's fields through the same [`probe_info`] / [`decode`] path the importer
 //! uses and compares them against the committed table, so it stays hermetic and fast. Rows whose

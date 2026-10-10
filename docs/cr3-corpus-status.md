@@ -2,8 +2,8 @@
 
 Measured on branch `cr3/p1-corpus-status` (main `7b47ba7`), release `lightcraft-cli` from the shared
 target dir (same commit). Corpus: the complete raw.pixls.us Canon CR3 tree, `corpus/raw/*.cr3` (CC0,
-git-ignored), plus the local 9-file Canon EOS R8 Mark II set at `D:\lightcraft-parity\cr3\samples\`
-(not CC0 yet — local-only, not in the manifest). Fingerprints: ExifTool 13.59 + a python CMP1 probe
+git-ignored), plus a private local 9-file Canon EOS R8 Mark II set (not CC0 — local-only, not in the
+manifest, intentionally not documented further). Fingerprints: ExifTool 13.59 + a python CMP1 probe
 (version u16 @ 4, bit depth @ 24, planes|CFA @ 21, encoding|levels @ 22). Decode sweep: one fresh
 `lightcraft-cli run --import <f> catalog.query 'filter={}'` per file; `previewOnly: None` = full
 sensor decode.
@@ -106,26 +106,12 @@ these 13; after it lands, `corpus/raw` should be 110/110 sensor-decodes.
 
 ## 4. Local Canon EOS R8 Mark II set (9 files, not in the manifest)
 
-`D:\lightcraft-parity\cr3\samples\*.CR3` — CRX `0x100` lossless 14-bit, two raw tracks
-(1624×1080 thumbnail-raw + 6188×4120 full), standard JPEG preview. All 9 import with
-`previewOnly: None` (full sensor decode at 6000×4000; the three portrait shots report 4000×6000).
-Confirms the newest 2026 body stays inside the verified 0x100 family. Renders + SHA-256 of every
-render: `D:\lightcraft-parity\cr3\results\` (see `USER-SAMPLES-FINDINGS.md`). Input SHA-256:
-
-| File | Lens | SHA-256 |
-|---|---|---|
-| `069A0384.CR3` | RF35mm F1.8 MACRO IS STM | `fe8e121d33e318e138c5c0dd879e93f8829c5fa57cf33fd8d1db0257a820b3be` |
-| `069A9221.CR3` | RF85mm F1.4 L VCM | `a7b4933c3b5011078729a31fcdf2ce7117952c8474804e718dc18c3984d5f572` |
-| `069A9237.CR3` | RF85mm F1.4 L VCM | `9666cb5262a4d165024f03d8ae92bcb3561c401eb49c95be10a0c843f598a5f1` |
-| `069A9253.CR3` | RF45mm F1.2 STM | `a474c7eec59f2b1851bcf60f1eacac4d6d63101e358f4db04e9a905961725ee0` |
-| `069A9362.CR3` | RF45mm F1.2 STM | `9b4d0b9bc9562e08cd76a8e1441d9a2a9cf855cec8b878b5e2dd0ef389c1581a` |
-| `069A9390.CR3` | RF45mm F1.2 STM | `bda5676f0e066140758d521897f71bcda0303c15a8f1cb41a6a2cdebdd8909c5` |
-| `069A9408.CR3` | RF45mm F1.2 STM | `f56cb0d4af9f434564f654c49d39ca054d3298b6f68f899564ede60535241634` |
-| `069A9521.CR3` | RF45mm F1.2 STM | `4874d11827911af8f27457fe2a0ee4859ac960165bf793ad04a8f350e1a94701` |
-| `069A9793.CR3` | RF24-50mm F4.5-6.3 IS STM | `b64e68122323840efe590f0ca4fb9e7bb5a4f98fea274364db5157a9b7e5deba` |
-
-These stay local until the owner dedicates them CC0; the zero-sample R8 Mark II body is otherwise
-only reachable via user donations (§6).
+A private local set — CRX `0x100` lossless 14-bit, two raw tracks (1624×1080 thumbnail-raw +
+6188×4120 full), standard JPEG preview. All 9 import with `previewOnly: None` (full sensor decode
+at 6000×4000; the three portrait shots report 4000×6000). Confirms the newest 2026 body stays
+inside the verified 0x100 family. File names, digests and renders are deliberately kept out of the
+repository; the set stays local until the owner dedicates it CC0 — the zero-sample R8 Mark II body
+is otherwise only reachable via user donations (§6).
 
 ## 5. Render timing (one full render per body, 29 bodies)
 
@@ -198,7 +184,7 @@ Variant gaps independent of body count:
 
 ## 7. Method notes (clean-room)
 
-No third-party decoder source was read. ExifTool 13.59 (`D:\lightcraft-parity\cr3\tools\`) and a
+No third-party decoder source was read. ExifTool 13.59 and a
 python CMP1 box-walker (`corpus/_sweep/probe_cr3.py`, offsets documented in
 `USER-SAMPLES-FINDINGS.md`) provided container facts; `lightcraft-cli` was exercised strictly as a
 black box. Corpus files are CC0 from raw.pixls.us and stay in git-ignored `corpus/`; nothing

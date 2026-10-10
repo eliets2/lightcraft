@@ -3,20 +3,20 @@
 What LightCraft records from CR3 metadata, checked against ExifTool 13.59 as the ground truth, per
 body and variant across the complete CC0 corpus (`corpus/raw/cr3-*.cr3`: 110 files, 29 bodies).
 Companion to `docs/cr3-corpus-status.md` (decode coverage) and `docs/cr3.md`; field priorities
-follow `D:\lightcraft-parity\cr3\research\E-corpus-verification.md` §6: (1) as-shot WB,
+follow the verification research (E) §6: (1) as-shot WB,
 (2) black/white levels, (3) crop/active area, (4) aspect/crop info, (5) dual pixel, (6) lens,
 (7) `CanonModelID`.
 
 ## Method (hermetic, no ExifTool at test time)
 
 - **Ground truth:** `exiftool -a -U -G1 -H -v3` over all 110 corpus files, run once; the dumps live
-  outside the repository in `D:\lightcraft-parity\cr3\exiftool-dumps\` (ExifTool 13.59,
-  `D:\lightcraft-parity\cr3\tools\exiftool.exe`). Only ExifTool's CLI output and its published tag
+  outside the repository in a local ExifTool dump directory (ExifTool 13.59,
+  ExifTool 13.59). Only ExifTool's CLI output and its published tag
   documentation were consulted (clean-room: never its source).
 - **Extraction side:** LightCraft's own fields via `lightcraft_raw::probe_info` / `decode` — the
   same path the importer uses — dumped as JSON lines by the ignored test
   `cargo test -p lightcraft-raw --test cr3_metadata_parity dump -- --ignored --nocapture`
-  (last sweep: `D:\lightcraft-parity\cr3\results\lightcraft-metadata-dump.jsonl`). An import-side
+  (last sweep: a local dump file). An import-side
   spot check (`lightcraft-cli run --import <f> catalog.query 'filter={}'`) agrees: camera
   make/model, dimensions and a full decode (`previewOnly: null`) are recorded for every body.
 - **Selection:** one base file per body plus the variants that exercise distinct metadata paths
@@ -159,6 +159,6 @@ the camera's recording order and LightCraft's; the values agree exactly).
    CR3 decode on a shared target dir should force a rebuild from their own worktree first
    (see F1); a `cargo clean -p lightcraft-raw` between agent worktrees would remove the hazard.
 
-Regeneration: dumps in `D:\lightcraft-parity\cr3\exiftool-dumps\`; table via
+Regeneration: dumps in a local ExifTool dump directory; table via
 `python tools/cr3_metadata_reference.py <dump-dir> --update crates/raw/tests/cr3_metadata_parity.rs`;
 matrix via `--matrix <lightcraft-dump.jsonl>` (see Method).
