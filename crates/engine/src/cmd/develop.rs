@@ -916,7 +916,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "develop.matchExposure",
             "Match Total Exposures",
             ["Photo"],
-            None,
+            Some("Cmd+Alt+Shift+M"),
             "{ids?} — set each selected photo's Exposure so its total exposure (shutter × ISO ÷ aperture², plus the slider) equals the active photo's; photos without exposure data are skipped → {changed, skipped}",
             has_selection,
             |s, p| {

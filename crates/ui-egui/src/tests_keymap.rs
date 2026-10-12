@@ -237,3 +237,182 @@ fn opening_numeric_release_keeps_keys_in_the_editor() {
         }
     }
 }
+
+/// Press `key` with the named modifiers held (`cmd`, `shift`, `alt`, `ctrl`).
+fn press(h: &mut Headless, key: &str, mods: &[&str]) {
+    let mut p = json!({ "key": key });
+    for m in mods {
+        p[*m] = json!(true);
+    }
+    let r = h.request("ui.key", p, T);
+    assert_eq!(r["ok"], true, "{r}");
+    h.step();
+}
+
+fn view(h: &mut Headless, p: serde_json::Value) {
+    let r = h.request("ui.set", p, T);
+    assert_eq!(r["ok"], true, "{r}");
+}
+
+/// The declared shortcut of every command these tests bind, and the shape of each alias: a key
+/// that doesn't parse would never fire.
+#[test]
+fn parity_keys_are_declared_and_parse() {
+    use crate::shortcuts::{ALIASES, Keymap, parse, shortcut_of};
+
+    let keymap = Keymap::new();
+    for (id, want) in [
+        ("view.visualizeHdr", "Shift+H"),
+        ("app.openLibrary", "Cmd+O"),
+        ("library.findSimilar", "Cmd+Alt+Shift+F"),
+        ("develop.matchExposure", "Cmd+Alt+Shift+M"),
+    ] {
+        assert_eq!(shortcut_of(&keymap, id), Some(want), "{id}");
+        assert!(parse(want).is_some(), "{want} does not parse");
+    }
+    for (sc, id) in [
+        ("Cmd+Alt+Shift+Left", "beforeAfter.copyAfterToBefore"),
+        ("Cmd+Alt+Shift+Right", "beforeAfter.copyBeforeToAfter"),
+        ("Cmd+Alt+Shift+Up", "beforeAfter.swap"),
+        ("Cmd+Enter", "view.slideshow"),
+    ] {
+        assert!(ALIASES.iter().any(|(s, i, _)| *s == sc && *i == id), "{sc} → {id}");
+        assert!(parse(sc).is_some(), "{sc} does not parse");
+    }
+}
+
+/// Opening a library uses the same folder picker as File > Open Library. Cancelling it
+/// leaves the current photo and library intact.
+#[test]
+fn cmd_o_opens_the_library_picker_once() {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+    let mut h = demo();
+    let calls = Arc::new(AtomicUsize::new(0));
+    let observed = calls.clone();
+    h.app.services.pick_folder = Some(Box::new(move || {
+        observed.fetch_add(1, Ordering::SeqCst);
+        None
+    }));
+    let active = h.app.session.active();
+    let photos = h.app.session.catalog.len();
+    press(&mut h, "O", &["cmd"]);
+    assert_eq!(calls.load(Ordering::SeqCst), 1, "one picker for Cmd+O");
+    assert_eq!(h.app.session.active(), active);
+    assert_eq!(h.app.session.catalog.len(), photos);
+}
+
+/// ⇧H toggles View ▸ Visualize HDR; ⌘⇧H (Histogram) is untouched.
+#[test]
+fn shift_h_toggles_the_hdr_view() {
+    let mut h = demo();
+    assert!(!h.app.ui.hdr_visualize);
+    let histogram = h.app.ui.histogram;
+    press(&mut h, "H", &["shift"]);
+    assert!(h.app.ui.hdr_visualize, "⇧H turns Visualize HDR on");
+    assert_eq!(h.app.ui.histogram, histogram, "⇧H leaves the Histogram unchanged");
+    press(&mut h, "H", &["shift"]);
+    assert!(!h.app.ui.hdr_visualize, "⇧H turns it back off");
+}
+
+/// ⌘↩ plays the photos in view as the impromptu slideshow (the declared key stays ⌘⌥↩).
+#[test]
+fn cmd_enter_plays_the_slideshow() {
+    let mut h = demo();
+    assert_eq!(h.app.ui.slideshow, None);
+    let panel = h.app.ui.right;
+    press(&mut h, "Enter", &["cmd"]);
+    assert!(h.app.ui.slideshow.is_some(), "⌘↩ starts the slideshow");
+    assert!(h.app.ui.fullscreen, "the slideshow goes full screen");
+    assert_eq!(h.app.ui.right, panel, "⌘↩ preserves the panel rather than invoking Done");
+}
+
+/// ⌥⇧⌘← / → / ↑ are Lightroom's copy After → Before, Before → After and swap.
+#[test]
+fn before_after_settings_aliases_run() {
+    let mut h = demo();
+    let id = h.app.session.active().expect("a demo photo");
+    let set = |h: &mut Headless, v: f64| {
+        let r = h.request("engine.execute", json!({"command": "develop.set", "params": {"values": {"light.exposure": v}}}), T);
+        assert_eq!(r["ok"], true, "{r}");
+    };
+    let exposure = |h: &Headless| h.app.session.develop_of(id).unwrap().light.exposure;
+    let before = |h: &Headless| h.app.session.before.get(&id).map(|b| b.light.exposure);
+
+    set(&mut h, 0.7);
+    press(&mut h, "Left", &["cmd", "alt", "shift"]);
+    assert_eq!(before(&h), Some(0.7), "⌥⇧⌘← copies After's settings to Before");
+    assert_eq!(exposure(&h), 0.7, "the photo itself is untouched");
+
+    set(&mut h, -0.5);
+    let undo = h.app.session.undo.len();
+    press(&mut h, "Right", &["cmd", "alt", "shift"]);
+    assert_eq!(exposure(&h), 0.7, "⌥⇧⌘→ copies Before's settings to After");
+    assert_eq!(h.app.session.undo.len(), undo + 1, "one undo step");
+
+    set(&mut h, -1.0);
+    press(&mut h, "Up", &["cmd", "alt", "shift"]);
+    assert_eq!(exposure(&h), 0.7, "⌥⇧⌘↑ swaps the two sides");
+    assert_eq!(before(&h), Some(-1.0), "the old After became the new Before");
+}
+
+/// Home / End make the first / last photo of the view the active one — and yield to a key the user
+/// gave to another command.
+#[test]
+fn home_and_end_select_the_ends_of_the_grid() {
+    let mut h = demo();
+    view(&mut h, json!({ "view": "photoGrid" }));
+    let vis = h.app.session.visible_cloned();
+    assert!(vis.len() > 2, "{vis:?}");
+    let (first, last, middle) = (vis[0], *vis.last().unwrap(), vis[vis.len() / 2]);
+    let r = h.request("engine.execute", json!({"command": "library.select", "params": {"ids": [middle.0], "active": middle.0}}), T);
+    assert_eq!(r["ok"], true, "{r}");
+
+    press(&mut h, "Home", &[]);
+    assert_eq!(h.app.session.active(), Some(first), "Home goes to the first photo");
+    press(&mut h, "End", &[]);
+    assert_eq!(h.app.session.active(), Some(last), "End goes to the last photo");
+
+    view(&mut h, json!({ "view": "detail" }));
+    press(&mut h, "Home", &[]);
+    assert_eq!(h.app.session.active(), Some(last), "Home is a grid key");
+
+    view(&mut h, json!({ "view": "photoGrid" }));
+    let r = h.app.run("app.setShortcut", json!({"id": "view.survey", "shortcut": "Home"})).unwrap();
+    assert_eq!(r["shortcut"], "Home", "{r}");
+    press(&mut h, "Home", &[]);
+    assert_eq!(h.app.ui.view, crate::state::ViewMode::Survey, "the user's Home binding fires");
+    assert_eq!(h.app.session.active(), Some(last), "the grid key stayed out of the way");
+}
+
+/// + and − nudge the slider under the pointer, one undo step each, like ↑ / ↓.
+#[test]
+fn plus_and_minus_nudge_the_slider() {
+    let mut h = demo();
+    view(&mut h, json!({ "view": "detail", "right": "edit", "openSections": ["light"], "histogram": false }));
+    h.settle(SETTLE);
+    let id = h.app.session.active().expect("a demo photo");
+    let exposure = |h: &Headless| h.app.session.develop_of(id).unwrap().light.exposure;
+    assert!(exposure(&h).abs() < 1e-9, "the demo photo starts at 0 EV");
+    let r = h.request("ui.hoverWidget", json!({"id": "slider:light.exposure"}), T);
+    assert_eq!(r["ok"], true, "{r}");
+
+    let undo = h.app.session.undo.len();
+    press(&mut h, "=", &[]);
+    assert!((exposure(&h) - 0.05).abs() < 1e-9, "{}", exposure(&h));
+    assert_eq!(h.app.session.undo.len(), undo + 1, "one undo step");
+    press(&mut h, "-", &[]);
+    assert!(exposure(&h).abs() < 1e-9, "{}", exposure(&h));
+    for (key, modifiers) in [("=", &["shift"][..]), ("+", &[][..])] {
+        let undo = h.app.session.undo.len();
+        press(&mut h, key, modifiers);
+        assert!((exposure(&h) - 0.05).abs() < 1e-9, "{key}: {}", exposure(&h));
+        assert_eq!(h.app.session.undo.len(), undo + 1, "one undo step for {key}");
+        press(&mut h, "-", &[]);
+        assert!(exposure(&h).abs() < 1e-9, "{}", exposure(&h));
+    }
+    press(&mut h, "=", &["cmd"]);
+    assert!(exposure(&h).abs() < 1e-9, "⌘= zooms, it does not nudge the slider");
+}

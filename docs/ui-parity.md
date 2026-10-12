@@ -67,6 +67,8 @@ under the UI command that wraps it (a no-op error); the UI command now wins.
 
 **Library culling (KEYC-RATING):** `0–5`, `6–9` and `P/X/U` reach egui on macOS even when displayed in the native menu (adapted from PR #261; issue #283). `Shift+0–9` applies and advances once; `Shift+P` picks and advances in Photo Grid / Square Grid and retains Presets elsewhere. See [library shortcuts](library-shortcuts.md) for the verified Classic mapping and regression coverage. Remaining Classic gaps: rating `[` / `]`, flag cycling and filter-bar keys.
 
+**Additional keyboard coverage:** Home/End select the first or last grid photo; Shift+Left/Right extend the grid selection. Command+Enter plays the slideshow, Command+Option+Shift+arrows copy or swap Before/After settings, Shift+H visualizes HDR, and `+`/`-` nudge the hovered or focused slider. Find Similar and Match Total Exposures have Command+Option+Shift+F/M bindings. The mask-pin H behavior remains proposed separately in PR #1458.
+
 **Still missing / broken:**
 - No command yet: F1 help (verify the rest of the old list: full screen, settings, stacks,
   visualize spots and merges have commands now).
