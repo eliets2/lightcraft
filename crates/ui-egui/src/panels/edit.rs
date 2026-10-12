@@ -740,6 +740,20 @@ fn soft_proofing(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
 
 // ------------------------------------------------------------------------------ tone curve
 
+/// The channel's points as the graph works with them: non-finite dropped, clamped to 0..1, sorted by
+/// x, duplicates in x merged the way the spline merges them (the first of a run wins). `develop.curve`
+/// stores the vector it is handed — an imported or hand-written curve can be unsorted, out of range
+/// or duplicated — while the drawn curve normalizes internally, so hit-testing and neighbour
+/// arithmetic on the raw vector would disagree with what is on screen and can cross a drag window's
+/// bounds (`f64::clamp` panics when `min > max`).
+fn interaction_points(v: &[Point]) -> Vec<Point> {
+    let mut p: Vec<Point> =
+        v.iter().filter(|q| q.x.is_finite() && q.y.is_finite()).map(|q| Point::new(q.x.clamp(0.0, 1.0), q.y.clamp(0.0, 1.0))).collect();
+    p.sort_by(|a, b| a.x.total_cmp(&b.x));
+    p.dedup_by(|a, b| (a.x - b.x).abs() < 1e-9);
+    p
+}
+
 fn curve_editor(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, d: &DevelopSettings) {
     let t = Tokens::get(ui.ctx());
     // channel selector
@@ -846,7 +860,8 @@ fn curve_editor(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, d: &Dev
             "blue" => &d.curve.blue,
             _ => &d.curve.master,
         };
-        if v.is_empty() { vec![Point::new(0.0, 0.0), Point::new(1.0, 1.0)] } else { v.clone() }
+        let p = interaction_points(v);
+        if p.is_empty() { vec![Point::new(0.0, 0.0), Point::new(1.0, 1.0)] } else { p }
     };
     let pts = pts_of(d);
     let curve = lightcraft_color::spline::MonotoneCurve::new(&pts.iter().map(|q| (q.x, q.y)).collect::<Vec<_>>());
@@ -922,15 +937,13 @@ fn curve_editor(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, d: &Dev
         let (mut x, y) = from_screen(q);
         let mut v = pts.clone();
         if i < v.len() {
-            let lo = if i == 0 { 0.0 } else { v[i - 1].x + 0.01 };
-            let hi = if i + 1 >= v.len() { 1.0 } else { v[i + 1].x - 0.01 };
-            if i == 0 {
-                x = x.min(hi);
-            } else if i + 1 == v.len() {
-                x = x.max(lo);
-            } else {
-                x = x.clamp(lo, hi);
-            }
+            // The window the point may move in: strictly between its neighbours and inside 0..1.
+            // Neighbours can sit closer than the 0.01 the editor keeps between points (an imported
+            // curve can), which leaves no room — the point then keeps its x instead of crossing the
+            // bounds of `f64::clamp`.
+            let lo = if i == 0 { 0.0 } else { (v[i - 1].x + 0.01).clamp(0.0, 1.0) };
+            let hi = if i + 1 >= v.len() { 1.0 } else { (v[i + 1].x - 0.01).clamp(0.0, 1.0) };
+            x = if lo <= hi { x.clamp(lo, hi) } else { v[i].x };
             v[i] = Point::new(x, y);
             new_pts = Some(v);
         }
@@ -960,13 +973,15 @@ fn curve_editor(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, d: &Dev
 
 /// The row under the curve graph: point-curve presets and reset every curve.
 fn curve_footer(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &DevelopSettings) {
-    use lightcraft_engine::cmd::curves::{all_presets, matching_preset};
+    use lightcraft_engine::cmd::curves::{all_presets, builtin_presets, matching_preset};
     let t = Tokens::get(ui.ctx());
     egui::Frame::NONE.inner_margin(egui::Margin { left: 24, right: 22, top: 2, bottom: 4 }).show(ui, |ui| {
         ui.horizontal(|ui| {
             ui.label(RichText::new(crate::i18n::tr("Point Curve")).font(t.font(12.0)).color(t.text_label));
             let current = matching_preset(&app.session, &d.curve);
-            let builtin = current.as_ref().is_none_or(|name| all_presets(&app.session).iter().any(|p| p.builtin && &p.name == name));
+            let builtin = current
+                .as_ref()
+                .is_none_or(|name| builtin_presets().iter().chain(app.session.curve_presets.iter()).any(|p| p.builtin && &p.name == name));
             let label = crate::i18n::builtin_label(current.as_deref().unwrap_or("Custom"), builtin);
             let r = crate::widgets::dropdown(ui, "curvePreset", label, t.font(12.0), t.text);
             egui::Popup::menu(&r).show(|ui| {

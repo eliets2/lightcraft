@@ -719,7 +719,7 @@ From `08-lightroom-classic-extras.md` (Classic-only features) and part 2 of `06-
 | LRC-DEV-CALIB | Calibration panel | P1 | ✅ | `ctl:calibration.*` | |
 | LRC-DEV-TAT | Targeted adjustment tools | P1 | ✅ | `cmd:develop.targeted` (`target`: curve / hue / sat / lum) | |
 | LRC-DEV-DEFAULTS | Per-camera raw defaults | P1 | ✅ | `cmd:library.preferences` (`camera`, `import.perCamera`), `crates/ui-egui/src/panels/settings.rs` | Settings → Import: raw default and per-camera presets |
-| LRC-DEV-PROCESS | Process versions, Update to Current Process | P1 | ✅ | `cmd:develop.updateProcess`, `cmd:develop.reset`, `cmd:develop.get`, `crates/develop/src/settings.rs`, `crates/pipeline/src/finish.rs`, `docs/process-versions.md` | each photo records the rendering process its settings are interpreted by: settings saved before this existed load as V1, new photos and Reset get the latest, virtual copies inherit, copy / paste / sync / presets keep each photo's own; Photo ▸ Update to Current Process (one undo step, enabled while a selected photo is on an older process); a number from a newer LightCraft is kept and renders with the newest known process. Only V1 exists so far: this is what lets a retuned default tone (#146) or stronger Light sliders (#196) ship without changing existing edits |
+| LRC-DEV-PROCESS | Process versions, Update to Current Process | P1 | ✅ | `cmd:develop.updateProcess`, `cmd:develop.reset`, `cmd:develop.get`, `crates/develop/src/settings.rs`, `crates/pipeline/src/finish.rs`, `docs/process-versions.md` | each photo records the rendering process its settings are interpreted by: settings saved before this existed load as V1, new photos and Reset get the latest, virtual copies inherit, copy / paste / sync / presets keep each photo's own; Photo ▸ Update to Current Process (one undo step, enabled while a selected photo is on an older process); a number from a newer LightCraft is kept and renders with the newest known process. V1 (frozen) and V2 both exist: V2's Highlights/Shadows base keeps fine detail (#632, `docs/process-versions.md`), so a retuned default tone (#146) or stronger Light sliders (#196) ship as a new process without changing existing edits |
 | LRC-DEV-VIEWOPTIONS | Develop view options | P2 | ⬜ | | |
 | LRC-DEV-VIDEO | Video frame capture | P2 | ⬜ | | |
 | LRC-MAP-VIEW | Map view | P2 | ⬜ | | |
@@ -787,6 +787,8 @@ Latin stays upright. Advanced Japanese composition remains open. Regression cove
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-10-11 | patch | LRC-DEV-PROCESS: corrected the stale "Only V1 exists so far" note — V1 (frozen) and V2 both exist (`docs/process-versions.md`); statuses and counts unchanged |
+| 2026-10-11 | minor | Point-curve endpoint classification shared with spline evaluation; XMP/preset and master/channel regressions added. Feature statuses and cross-application fidelity assessment unchanged |
 | 2026-10-11 | minor | KEY-SLIDER-TYPE: honor immediate Return/Escape and keep typed keys in the value editor; add regression references |
 | 2026-10-11 | minor | LR-PROF-CAMERACOLOR: raws with a black-and-white camera JPEG take its tone curve (issue #577) |
 | 2026-10-11 | minor | LR-VIEW-ZOOM and LR-VIEW-COMPARE: Compare and Reference are sharp at 1:1 (zoom windows per pane, two originals kept decoded while they are open); statuses unchanged |

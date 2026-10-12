@@ -5,6 +5,17 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Control points as the curve reads them: non-finite ones dropped, sorted by x, duplicates in x
+/// merged (the first of a run in the input order wins, as a stable sort keeps it). [`MonotoneCurve::new`]
+/// and [`MonotoneCurve::points_are_identity`] share this, so what the identity check says and what
+/// the curve evaluates can't drift apart.
+fn normalized(points: &[(f64, f64)]) -> Vec<(f64, f64)> {
+    let mut p: Vec<(f64, f64)> = points.iter().copied().filter(|(x, y)| x.is_finite() && y.is_finite()).collect();
+    p.sort_by(|a, b| a.0.total_cmp(&b.0));
+    p.dedup_by(|a, b| (a.0 - b.0).abs() < 1e-9);
+    p
+}
+
 /// A curve through control points in `0..1 × 0..1` (x strictly increasing after normalization).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct MonotoneCurve {
@@ -16,9 +27,7 @@ pub struct MonotoneCurve {
 impl MonotoneCurve {
     /// Build from points; sorts by x, merges duplicates. Fewer than two points → identity.
     pub fn new(points: &[(f64, f64)]) -> MonotoneCurve {
-        let mut p: Vec<(f64, f64)> = points.iter().copied().filter(|(x, y)| x.is_finite() && y.is_finite()).collect();
-        p.sort_by(|a, b| a.0.total_cmp(&b.0));
-        p.dedup_by(|a, b| (a.0 - b.0).abs() < 1e-9);
+        let mut p = normalized(points);
         if p.len() < 2 {
             p = vec![(0.0, 0.0), (1.0, 1.0)];
         }
@@ -49,6 +58,21 @@ impl MonotoneCurve {
             }
         }
         MonotoneCurve { xs, ys, ms }
+    }
+
+    /// True when the curve through `points` is the identity `y = x` on all of `0..1`, so a renderer
+    /// can skip it. That needs more than the points lying on the diagonal: [`MonotoneCurve::eval`]
+    /// clamps to the outermost points outside their x range, so a diagonal that stops short of the
+    /// ends — `(0.25, 0.25)` and `(0.75, 0.75)`, say, which the curve editor lets you drag the
+    /// endpoints to — flattens the shadows and the highlights instead. Fewer than two points after
+    /// normalization is the identity too, because [`MonotoneCurve::new`] falls back to it.
+    pub fn points_are_identity(points: &[(f64, f64)]) -> bool {
+        let p = normalized(points);
+        if p.len() < 2 {
+            return true;
+        }
+        let Some((first, last)) = p.first().zip(p.last()) else { return true };
+        first.0 <= 0.0 && last.0 >= 1.0 && p.iter().all(|(x, y)| (x - y).abs() < 1e-9)
     }
 
     pub fn identity() -> MonotoneCurve {
@@ -153,6 +177,34 @@ mod tests {
             let y = c.eval(i as f64 / 1000.0);
             assert!((y - 0.5).abs() < 1e-9, "{y}");
         }
+    }
+
+    #[test]
+    fn identity_points_are_the_ones_the_curve_really_maps_to_x() {
+        // the identity, however the points are written down
+        assert!(MonotoneCurve::points_are_identity(&[]));
+        assert!(MonotoneCurve::points_are_identity(&[(0.0, 0.0), (1.0, 1.0)]));
+        assert!(MonotoneCurve::points_are_identity(&[(1.0, 1.0), (0.0, 0.0)]), "unsorted");
+        assert!(MonotoneCurve::points_are_identity(&[(0.0, 0.0), (0.5, 0.5), (1.0, 1.0)]));
+        // fewer than two points after normalization: `new` falls back to the identity
+        assert!(MonotoneCurve::points_are_identity(&[(0.5, 0.5)]));
+        assert!(MonotoneCurve::points_are_identity(&[(0.7, 0.2)]), "a singleton is not drawn at all");
+        assert!(MonotoneCurve::points_are_identity(&[(0.5, 0.5), (0.5, 0.5)]), "duplicates in x");
+        assert!(MonotoneCurve::points_are_identity(&[(f64::NAN, 0.0), (1.0, 1.0)]), "non-finite dropped");
+        assert!(MonotoneCurve::points_are_identity(&[(0.0, 0.0), (0.0, 1.0), (1.0, 1.0)]), "first duplicate wins");
+        assert!(!MonotoneCurve::points_are_identity(&[(0.0, 1.0), (0.0, 0.0), (1.0, 1.0)]), "duplicate order matters");
+        assert!(MonotoneCurve::points_are_identity(&[(0.0, 0.0), (1e-10, 0.5), (1.0, 1.0)]), "near-duplicates use the spline's tolerance");
+        // a diagonal that stops short of the ends is *not* the identity: the curve clamps to its
+        // outermost points, which is exactly what a renderer drawing this must show
+        assert!(!MonotoneCurve::points_are_identity(&[(0.25, 0.25), (0.75, 0.75)]));
+        assert!(!MonotoneCurve::points_are_identity(&[(0.0, 0.0), (0.5, 0.5)]));
+        assert!(!MonotoneCurve::points_are_identity(&[(0.5, 0.5), (1.0, 1.0)]));
+        assert!(!MonotoneCurve::points_are_identity(&[(0.0, 0.0), (0.5, 0.55), (1.0, 1.0)]));
+        // and the classification agrees with the curve it classifies
+        let short = MonotoneCurve::new(&[(0.25, 0.25), (0.75, 0.75)]);
+        assert!((short.eval(0.0) - 0.25).abs() < 1e-12 && (short.eval(1.0) - 0.75).abs() < 1e-12);
+        let full = MonotoneCurve::new(&[(0.0, 0.0), (1.0, 1.0)]);
+        assert!(full.to_lut(1024).is_identity());
     }
 
     #[test]

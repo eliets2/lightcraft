@@ -25,6 +25,22 @@ fn gpu() -> bool {
 }
 
 #[test]
+fn shortened_curve_endpoints() {
+    if !gpu() {
+        return;
+    }
+    let src = scene(2, 160, 120);
+    // both rendering processes: their tone chains differ, but a shortened diagonal clamps the same
+    for process in [Process::V1, Process::V2] {
+        let mut settings = DevelopSettings { process: process.version(), ..DevelopSettings::default() };
+        settings.curve.master = vec![Point::new(0.25, 0.25), Point::new(0.75, 0.75)];
+        check(&format!("shortened master curve {process:?}"), &src, &SourceInfo::default(), &settings, &RenderRequest::fit(160, 120));
+        settings.curve.red = std::mem::take(&mut settings.curve.master);
+        check(&format!("shortened red curve {process:?}"), &src, &SourceInfo::default(), &settings, &RenderRequest::fit(160, 120));
+    }
+}
+
+#[test]
 fn camera_tone_and_relative_wb() {
     if !gpu() {
         return;

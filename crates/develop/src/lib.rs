@@ -314,4 +314,22 @@ mod tests {
         s.reset_section(Section::Detail);
         assert_eq!(s.enhance.denoise_on, None);
     }
+
+    #[test]
+    fn point_curve_identity_is_what_the_spline_renders() {
+        let p = |x: f64, y: f64| lightcraft_geom::Point::new(x, y);
+        // the identity, however the points are written down
+        assert!(ToneCurve::point_curve_is_identity(&[]));
+        assert!(ToneCurve::point_curve_is_identity(&[p(0.0, 0.0), p(1.0, 1.0)]));
+        assert!(ToneCurve::point_curve_is_identity(&[p(1.0, 1.0), p(0.0, 0.0)]), "unsorted");
+        // fewer than two points after normalization: the spline falls back to the identity
+        assert!(ToneCurve::point_curve_is_identity(&[p(0.5, 0.5)]));
+        assert!(ToneCurve::point_curve_is_identity(&[p(0.5, 0.5), p(0.5, 0.5)]), "duplicates in x");
+        assert!(ToneCurve::point_curve_is_identity(&[p(f64::NAN, 0.0), p(1.0, 1.0)]), "non-finite points are dropped");
+        // a diagonal that stops short of the ends is not the identity: the spline clamps to its
+        // outermost points, which is what the curve editor draws when the endpoints are dragged in
+        assert!(!ToneCurve::point_curve_is_identity(&[p(0.25, 0.25), p(0.75, 0.75)]));
+        assert!(!ToneCurve::point_curve_is_identity(&[p(0.0, 0.0), p(0.5, 0.5)]));
+        assert!(!ToneCurve::point_curve_is_identity(&[p(0.0, 0.0), p(0.5, 0.55), p(1.0, 1.0)]));
+    }
 }

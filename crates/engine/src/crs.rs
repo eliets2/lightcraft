@@ -13,6 +13,7 @@
 use std::collections::BTreeMap;
 
 use lightcraft_develop::{MIXER_BANDS, Preset};
+use lightcraft_geom::Point;
 use serde_json::{Map, Value, json};
 
 /// Properties keyed `prefix:name` (as produced by [`lightcraft_meta::parse_xmp`]).
@@ -174,14 +175,19 @@ fn curve(props: &Props, k: &str) -> Option<Value> {
     for it in items {
         let (x, y) = it.split_once(',')?;
         let (x, y) = (x.trim().parse::<f64>().ok()?, y.trim().parse::<f64>().ok()?);
-        pts.push(json!({"x": (x / 255.0).clamp(0.0, 1.0), "y": (y / 255.0).clamp(0.0, 1.0)}));
+        pts.push(Point::new((x / 255.0).clamp(0.0, 1.0), (y / 255.0).clamp(0.0, 1.0)));
     }
     if pts.len() < 2 {
         return None;
     }
-    // A straight 0,0 → 255,255 line is the identity: store it as "no curve".
-    let identity = pts.len() == 2 && items.iter().all(|it| it.split(',').map(|v| v.trim()).collect::<Vec<_>>().windows(2).all(|w| w[0] == w[1]));
-    Some(if identity { json!([]) } else { Value::Array(pts) })
+    // A curve that renders as the identity is stored as "no curve": the whole diagonal (0,0 → 255,255)
+    // and any other curve the spline evaluates as the identity. A diagonal that stops short of the
+    // ends — 64,64 and 192,192, say — is *not* the identity: the spline clamps to its outermost
+    // points, so dropping it would change the render.
+    if lightcraft_develop::ToneCurve::point_curve_is_identity(&pts) {
+        return Some(json!([]));
+    }
+    Some(Value::Array(pts.iter().map(|p| json!({"x": p.x, "y": p.y})).collect()))
 }
 
 /// Map the `crs:` fields of an XMP packet to a partial develop-settings JSON object.
@@ -825,9 +831,11 @@ mod tests {
             )
         };
         let partial = |curves: &[String]| to_partial(&props(&packet(curves)), Target::RawAbsolute);
+        // the red channel is a shortened diagonal (64,64 → 192,192): a curve the spline clamps at the ends
+        let shortened = "<rdf:li>64, 64</rdf:li><rdf:li>192, 192</rdf:li>";
         let (master, red, green, blue) = (
             seq("ToneCurvePV2012", identity),
-            seq("ToneCurvePV2012Red", identity),
+            seq("ToneCurvePV2012Red", shortened),
             seq("ToneCurvePV2012Green", bent),
             seq("ToneCurvePV2012Blue", identity),
         );
@@ -836,9 +844,16 @@ mod tests {
         assert!(alone.pointer("/curve/green").is_none(), "{alone}");
         let master_and_green = partial(&[master.clone(), green.clone()]);
         assert!(master_and_green.pointer("/curve/green").is_none() && master_and_green.pointer("/curve/master").is_some(), "{master_and_green}");
-        // all four: read
+        // a master + red-only packet: the red curve is ignored too, as Lightroom Classic does
+        let master_and_red = partial(&[master.clone(), red.clone()]);
+        assert!(master_and_red.pointer("/curve/red").is_none() && master_and_red.pointer("/curve/master").is_some(), "{master_and_red}");
+        // all four: read, and the shortened red keeps both of its endpoints
         let all = partial(&[master, red, green, blue]);
         assert!(["/curve/master", "/curve/red", "/curve/green", "/curve/blue"].iter().all(|p| all.pointer(p).is_some()), "{all}");
+        let red = all.pointer("/curve/red").and_then(Value::as_array).cloned().unwrap_or_default();
+        assert_eq!(red.len(), 2, "{all}");
+        assert_eq!((red[0]["x"].as_f64().unwrap(), red[0]["y"].as_f64().unwrap()), (64.0 / 255.0, 64.0 / 255.0), "{all}");
+        assert_eq!((red[1]["x"].as_f64().unwrap(), red[1]["y"].as_f64().unwrap()), (192.0 / 255.0, 192.0 / 255.0), "{all}");
     }
 
     fn unmapped(x: &str) -> Vec<String> {
@@ -865,5 +880,33 @@ mod tests {
         assert!(apply_partial(&d, &to_partial(&p, Target::Any), 1.0).optics.lens_profile);
         let on = props(&preset_packet("", "").replace(r#"crs:LensProfileEnable="0""#, r#"crs:LensProfileEnable="1""#));
         assert!(apply_partial(&DevelopSettings::default(), &to_partial(&on, Target::Any), 1.0).optics.lens_profile);
+    }
+
+    #[test]
+    fn a_shortened_diagonal_curve_is_kept_but_the_whole_diagonal_is_not() {
+        let packet = |pts: &str| {
+            format!(
+                r#"<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+          <rdf:Description rdf:about="" xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/">
+            <crs:ToneCurvePV2012><rdf:Seq>{pts}</rdf:Seq></crs:ToneCurvePV2012>
+          </rdf:Description></rdf:RDF></x:xmpmeta>"#
+            )
+        };
+        // 0,0 → 255,255 is the identity: no curve, as before
+        let full = to_partial(&props(&packet("<rdf:li>0, 0</rdf:li><rdf:li>255, 255</rdf:li>")), Target::Any);
+        assert_eq!(full["curve"]["master"], json!([]), "{full}");
+        // 64,64 and 192,192 stop short of the ends: the spline clamps outside them, so they are not
+        // the identity and must survive the import (dropping them changed the render)
+        let short = to_partial(&props(&packet("<rdf:li>64, 64</rdf:li><rdf:li>192, 192</rdf:li>")), Target::Any);
+        let m = short["curve"]["master"].as_array().cloned().unwrap();
+        assert_eq!(m.len(), 2, "{short}");
+        assert_eq!((m[0]["x"].as_f64().unwrap(), m[0]["y"].as_f64().unwrap()), (64.0 / 255.0, 64.0 / 255.0), "{short}");
+        assert_eq!((m[1]["x"].as_f64().unwrap(), m[1]["y"].as_f64().unwrap()), (192.0 / 255.0, 192.0 / 255.0), "{short}");
+        // a diagonal that spans the range with a point in the middle is the identity too
+        let spanning = to_partial(&props(&packet("<rdf:li>0, 0</rdf:li><rdf:li>128, 128</rdf:li><rdf:li>255, 255</rdf:li>")), Target::Any);
+        assert_eq!(spanning["curve"]["master"], json!([]), "{spanning}");
+        // and a bent curve is untouched
+        let bent = to_partial(&props(&packet("<rdf:li>0, 0</rdf:li><rdf:li>64, 40</rdf:li><rdf:li>255, 255</rdf:li>")), Target::Any);
+        assert_eq!(bent["curve"]["master"].as_array().map(Vec::len), Some(3), "{bent}");
     }
 }

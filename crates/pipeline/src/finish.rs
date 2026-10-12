@@ -801,4 +801,35 @@ mod tests {
         assert_eq!(encode_srgb(lut, -1.0), 0.0);
         assert!((encode_srgb(lut, 2.0) - 1.0).abs() < 1e-6);
     }
+
+    fn curve(master: Vec<Point>) -> ToneCurve {
+        ToneCurve { master, ..ToneCurve::default() }
+    }
+
+    #[test]
+    fn identity_point_curves_are_skipped() {
+        assert!(curve_luts(&ToneCurve::default()).is_none(), "no point curve at all");
+        assert!(curve_luts(&curve(vec![Point::new(0.0, 0.0), Point::new(1.0, 1.0)])).is_none(), "the whole diagonal");
+        assert!(curve_luts(&curve(vec![Point::new(1.0, 1.0), Point::new(0.0, 0.0)])).is_none(), "unsorted");
+        assert!(curve_luts(&curve(vec![Point::new(0.5, 0.5)])).is_none(), "a singleton: the spline falls back to the identity");
+        assert!(curve_luts(&curve(vec![Point::new(0.5, 0.5), Point::new(0.5, 0.5)])).is_none(), "duplicates in x");
+        assert!(curve_luts(&curve(vec![Point::new(f64::NAN, 0.0), Point::new(1.0, 1.0)])).is_none(), "non-finite points dropped");
+    }
+
+    #[test]
+    fn a_shortened_diagonal_master_and_channel_are_rendered_and_clamp_at_the_ends() {
+        // what the curve editor draws for endpoints dragged to 0.25 / 0.75: the graph is flat
+        // outside them, so the render must not skip the curve (it did: graph/render mismatch)
+        let c = curve(vec![Point::new(0.25, 0.25), Point::new(0.75, 0.75)]);
+        let l = curve_luts(&c).expect("a shortened diagonal is not the identity");
+        assert!((l[0].eval(0.0) - 0.25).abs() < 1e-3, "shadows lift to the first point: {}", l[0].eval(0.0));
+        assert!((l[0].eval(0.5) - 0.5).abs() < 1e-3, "between the points it is the diagonal");
+        assert!((l[0].eval(1.0) - 0.75).abs() < 1e-3, "highlights pull down to the last point: {}", l[0].eval(1.0));
+        // a channel curve on its own counts the same way, and leaves the other channels alone
+        let c = ToneCurve { red: vec![Point::new(0.25, 0.25), Point::new(0.75, 0.75)], ..ToneCurve::default() };
+        let l = curve_luts(&c).expect("a shortened red channel is not the identity");
+        assert!((l[0].eval(0.0) - 0.25).abs() < 1e-3 && (l[0].eval(1.0) - 0.75).abs() < 1e-3, "red clamps");
+        assert!(l[1].eval(0.0).abs() < 1e-3 && (l[1].eval(1.0) - 1.0).abs() < 1e-3, "green is untouched");
+        assert!(l[2].eval(0.0).abs() < 1e-3 && (l[2].eval(1.0) - 1.0).abs() < 1e-3, "blue is untouched");
+    }
 }

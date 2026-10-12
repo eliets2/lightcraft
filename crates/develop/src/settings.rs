@@ -338,7 +338,8 @@ pub struct ToneCurve {
     pub split_shadows: f64,
     pub split_mid: f64,
     pub split_highlights: f64,
-    /// Point curves in 0..1 (identity = empty or [(0,0),(1,1)]).
+    /// Point curves in 0..1. Identity = empty, fewer than two finite points, or a diagonal that
+    /// spans the whole range (`[(0,0),(1,1)]`): see `ToneCurve::point_curve_is_identity`.
     pub master: Vec<Point>,
     pub red: Vec<Point>,
     pub green: Vec<Point>,
@@ -368,8 +369,16 @@ impl Default for ToneCurve {
 }
 
 impl ToneCurve {
+    /// True when a point curve renders as the identity, so a renderer can skip it: empty, fewer
+    /// than two finite points (the spline then falls back to the identity), or a diagonal that
+    /// spans the whole input range. A diagonal that stops short of the ends — `(0.25, 0.25)` and
+    /// `(0.75, 0.75)`, which the curve editor lets you drag the endpoints to — is **not** the
+    /// identity: the spline clamps to its outermost points, flattening the shadows and the
+    /// highlights. The classification is the spline's own
+    /// (`lightcraft_color::spline::MonotoneCurve::points_are_identity`), so the graph, the render
+    /// and the XMP importer can't disagree about a curve.
     pub fn point_curve_is_identity(pts: &[Point]) -> bool {
-        pts.is_empty() || pts.iter().all(|p| (p.x - p.y).abs() < 1e-9)
+        pts.is_empty() || lightcraft_color::spline::MonotoneCurve::points_are_identity(&pts.iter().map(|p| (p.x, p.y)).collect::<Vec<_>>())
     }
 }
 

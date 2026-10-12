@@ -144,7 +144,11 @@ fn normalize(v: &[[f64; 2]]) -> Vec<[f64; 2]> {
         v.iter().filter(|p| p[0].is_finite() && p[1].is_finite()).map(|p| [p[0].clamp(0.0, 1.0), p[1].clamp(0.0, 1.0)]).collect();
     out.sort_by(|a, b| a[0].total_cmp(&b[0]));
     out.dedup_by(|a, b| (a[0] - b[0]).abs() < 1e-6);
-    if out.len() < 2 || out.iter().all(|p| (p[0] - p[1]).abs() < 1e-9) {
+    // A curve that renders as the identity is stored as none (empty = linear). The classifier is
+    // the renderer's, so a diagonal that stops short of the ends — (0.25, 0.25) to (0.75, 0.75),
+    // which the spline clamps to — stays a curve here too; fewer than two points is the identity,
+    // because the spline falls back to it.
+    if out.len() < 2 || ToneCurve::point_curve_is_identity(&out.iter().map(|p| Point::new(p[0], p[1])).collect::<Vec<_>>()) {
         out.clear();
     }
     out
@@ -210,7 +214,11 @@ pub fn all_presets(s: &Session) -> Vec<CurvePreset> {
 
 /// Name of the preset whose point curves `c` carries (built-ins first), if any.
 pub fn matching_preset(s: &Session, c: &ToneCurve) -> Option<String> {
-    all_presets(s).into_iter().find(|p| p.matches(c)).map(|p| p.name)
+    builtin_presets()
+        .into_iter()
+        .find(|p| p.matches(c))
+        .map(|p| p.name)
+        .or_else(|| s.curve_presets.iter().find(|p| p.matches(c)).map(|p| p.name.clone()))
 }
 
 fn is_builtin_name(name: &str) -> bool {
@@ -237,13 +245,21 @@ fn list(s: &Session) -> Value {
 fn apply_preset(s: &mut Session, p: &Value) -> Result<Value> {
     const C: &str = "curve.applyPreset";
     let name = name_param(p, C)?;
-    let preset =
-        all_presets(s).into_iter().find(|x| x.name.eq_ignore_ascii_case(&name)).ok_or_else(|| bad(C, format!("no curve preset `{name}`")))?;
+    // Built-ins first (a small generated list), then the user's, in saved order: the first match
+    // wins, ignoring case. Only the matched preset is read; `all_presets` would clone every user
+    // preset just to drop all but one.
+    let builtins = builtin_presets();
+    let preset = builtins
+        .iter()
+        .find(|x| x.name.eq_ignore_ascii_case(&name))
+        .or_else(|| s.curve_presets.iter().find(|x| x.name.eq_ignore_ascii_case(&name)))
+        .ok_or_else(|| bad(C, format!("no curve preset `{name}`")))?;
+    let applied = preset.name.clone();
     let id = s.active().ok_or_else(|| bad(C, "no active photo"))?;
     let mut d = (*s.develop_of(id).unwrap_or_default()).clone();
     preset.apply(&mut d.curve);
-    s.set_develop(id, d, &format!("Point Curve: {}", preset.name))?;
-    Ok(json!({"name": preset.name}))
+    s.set_develop(id, d, &format!("Point Curve: {applied}"))?;
+    Ok(json!({"name": applied}))
 }
 
 fn save_preset(s: &mut Session, p: &Value) -> Result<Value> {
@@ -354,4 +370,160 @@ fn export_presets(s: &mut Session, p: &Value) -> Result<Value> {
     }
     std::fs::write(&path, to_file(&chosen)).map_err(|e| crate::EngineError::Other(format!("{}: {e}", path.display())))?;
     Ok(json!({"path": path.display().to_string(), "count": chosen.len()}))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn matching_presets_keep_builtin_precedence_and_user_order() {
+        let mut session = Session::new();
+        let mut curve = ToneCurve::default();
+        session.curve_presets.push(CurvePreset::from_curve("User Linear", &curve));
+        assert_eq!(matching_preset(&session, &curve).as_deref(), Some("Linear"));
+
+        builtin_presets()[1].apply(&mut curve);
+        session.curve_presets.push(CurvePreset::from_curve("User Medium", &curve));
+        assert_eq!(matching_preset(&session, &curve).as_deref(), Some("Medium Contrast"));
+
+        curve.master = vec![Point::new(0.0, 0.0), Point::new(0.5, 0.6), Point::new(1.0, 1.0)];
+        session.curve_presets.push(CurvePreset::from_curve("First", &curve));
+        session.curve_presets.push(CurvePreset::from_curve("Second", &curve));
+        assert_eq!(matching_preset(&session, &curve).as_deref(), Some("First"));
+
+        curve.master = vec![Point::new(0.0, 0.0), Point::new(0.5, 0.7), Point::new(1.0, 1.0)];
+        assert_eq!(matching_preset(&session, &curve), None);
+    }
+
+    /// `curve.applyPreset` finds a built-in or a user preset by reading the lists (only the match
+    /// is touched), keeps the command's error precedence and applies as one undoable step that
+    /// leaves the rest of the photo's settings — its process included — alone.
+    #[test]
+    fn applying_a_preset_finds_the_match_and_keeps_the_rest() {
+        use lightcraft_develop::ProcessVersion;
+        let mut s = Session::with_demo();
+        let id = s.active().expect("demo active photo");
+        {
+            let mut d = (*s.develop_of(id).unwrap_or_default()).clone();
+            d.process = ProcessVersion::V1;
+            d.curve.shadows = 20.0;
+            d.curve.refine_saturation = 35.0;
+            d.light.exposure = 0.6;
+            s.set_develop(id, d, "setup").unwrap();
+        }
+        let shaped = ToneCurve { master: vec![Point::new(0.0, 0.0), Point::new(0.5, 0.6), Point::new(1.0, 1.0)], ..ToneCurve::default() };
+        s.curve_presets.push(CurvePreset::from_curve("Late", &shaped));
+        // a user preset that copies a built-in's name (any case) never shadows the built-in
+        s.curve_presets.push(CurvePreset::from_curve("linear", &shaped));
+        // an unknown name is the command's error, and nothing changes
+        assert!(apply_preset(&mut s, &json!({"name": "Nope"})).is_err());
+        // the built-in wins and applies as one undoable step
+        let undo = s.undo.len();
+        let r = apply_preset(&mut s, &json!({"name": "LINEAR"})).unwrap();
+        assert_eq!(r["name"], "Linear", "{r}");
+        assert_eq!(s.undo.len(), undo + 1, "one undo step");
+        {
+            let d = s.develop_of(id).unwrap();
+            assert!(d.curve.master.is_empty(), "the built-in Linear clears the point curves");
+            assert_eq!((d.curve.shadows, d.curve.refine_saturation, d.light.exposure), (20.0, 35.0, 0.6), "the rest stays");
+            assert_eq!(d.process, ProcessVersion::V1, "the receiving photo keeps its process");
+        }
+        // a late user preset is found by name, ignoring case
+        let r = apply_preset(&mut s, &json!({"name": "late"})).unwrap();
+        assert_eq!(r["name"], "Late", "{r}");
+        assert_eq!(s.develop_of(id).unwrap().curve.master.len(), 3, "the user preset's curve is applied");
+    }
+
+    /// Manual timing of the preset lookup (built-ins + N user presets, built-in / first / last /
+    /// missing) and of a whole `curve.applyPreset`, original (clone every preset) vs. revised (read
+    /// the lists in place), at 0 / 10 / 100 / 1000 user presets. Lookup and command are timed in
+    /// separate loops, each with the same `black_box` treatment; the two lookups are also checked
+    /// to agree. Not a UI benchmark and not in CI: one sequential run on a quiet machine,
+    /// `cargo test -p lightcraft-engine --release --lib bench_preset_apply -- --ignored --nocapture`.
+    /// (Timing here is only meaningful together with its printed output; no numbers are asserted.)
+    #[test]
+    #[ignore = "manual timing benchmark (--release --ignored --nocapture)"]
+    fn bench_preset_apply() {
+        use std::hint::black_box;
+        use std::time::Instant;
+        for n in [0usize, 10, 100, 1000] {
+            let mut s = Session::with_demo();
+            for i in 0..n {
+                let curve = ToneCurve {
+                    master: vec![Point::new(0.0, 0.0), Point::new(0.3, 0.2), Point::new(1.0, 1.0)],
+                    red: vec![Point::new(0.0, 0.05), Point::new(0.5, 0.5), Point::new(1.0, 0.95)],
+                    ..ToneCurve::default()
+                };
+                s.curve_presets.push(CurvePreset::from_curve(&format!("User {i}"), &curve));
+            }
+            let names = ["Strong Contrast".to_string(), "User 0".to_string(), format!("User {}", n.saturating_sub(1)), "Nope".to_string()];
+            // the revision finds the same preset as the original
+            for name in &names {
+                let original = all_presets(&s).into_iter().any(|x| x.name.eq_ignore_ascii_case(name));
+                let revised = builtin_presets().iter().any(|x| x.name.eq_ignore_ascii_case(name))
+                    || s.curve_presets.iter().any(|x| x.name.eq_ignore_ascii_case(name));
+                assert_eq!(original, revised, "{name}");
+            }
+            let reps = if n >= 100 { 2_000 } else { 20_000 };
+            for name in &names {
+                let s_ref = black_box(&s);
+                let t = Instant::now();
+                let mut hits = 0usize;
+                for _ in 0..reps {
+                    // the original lookup: clone every preset, then find
+                    let found = all_presets(s_ref).into_iter().find(|x| x.name.eq_ignore_ascii_case(black_box(name)));
+                    hits += found.is_some() as usize;
+                }
+                black_box(hits);
+                let original_us = t.elapsed().as_secs_f64() * 1e6 / reps as f64;
+                let t = Instant::now();
+                let mut hits = 0usize;
+                for _ in 0..reps {
+                    // the revised lookup: read the lists in place
+                    let builtins = black_box(builtin_presets());
+                    let found = black_box(&builtins).iter().find(|x| x.name.eq_ignore_ascii_case(black_box(name))).is_some()
+                        || s_ref.curve_presets.iter().any(|x| x.name.eq_ignore_ascii_case(black_box(name)));
+                    hits += found as usize;
+                }
+                black_box(hits);
+                let revised_us = t.elapsed().as_secs_f64() * 1e6 / reps as f64;
+                eprintln!("lookup n={n:<4} {name:<16} original {original_us:8.3} µs   revised {revised_us:8.3} µs");
+            }
+            // the whole command (revised), on a built-in and on the last user preset
+            let apply_reps = 500;
+            let apply_names: Vec<&String> = if n == 0 { vec![&names[0]] } else { vec![&names[0], &names[2]] };
+            for name in apply_names {
+                let t = Instant::now();
+                for _ in 0..apply_reps {
+                    let r = apply_preset(black_box(&mut s), &json!({"name": name})).unwrap();
+                    black_box(r);
+                }
+                eprintln!("apply  n={n:<4} {name:<16} {:8.3} µs per command", t.elapsed().as_secs_f64() * 1e6 / apply_reps as f64);
+            }
+        }
+    }
+
+    /// A preset whose master curve is a diagonal that stops short of the ends is not linear: the
+    /// spline clamps to its points, so it must round-trip as a curve (it used to be cleared).
+    #[test]
+    fn a_shortened_diagonal_preset_stays_a_curve() {
+        let p = CurvePreset { name: "Short".into(), master: vec![[0.25, 0.25], [0.75, 0.75]], ..Default::default() };
+        assert!(!p.is_linear(), "a shortened diagonal clamps, so it is a curve");
+        let pts = to_points(&p.master);
+        assert_eq!(pts.len(), 2);
+        assert!((pts[0].x - 0.25).abs() < 1e-9 && (pts[0].y - 0.25).abs() < 1e-9, "{pts:?}");
+        assert!((pts[1].x - 0.75).abs() < 1e-9 && (pts[1].y - 0.75).abs() < 1e-9, "{pts:?}");
+        let mut c = ToneCurve::default();
+        p.apply(&mut c);
+        assert_eq!(c.master.len(), 2, "the preset applies its curve");
+        assert!(p.matches(&c), "and a photo carrying it matches the preset again");
+        // the whole diagonal is still linear
+        let flat = CurvePreset { name: "Flat".into(), master: vec![[0.0, 0.0], [1.0, 1.0]], ..Default::default() };
+        assert!(flat.is_linear());
+        assert!(to_points(&flat.master).is_empty());
+        // as is a singleton (the spline falls back to the identity)
+        let one = CurvePreset { name: "One".into(), master: vec![[0.5, 0.5]], ..Default::default() };
+        assert!(one.is_linear() && to_points(&one.master).is_empty());
+    }
 }

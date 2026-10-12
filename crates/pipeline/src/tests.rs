@@ -30,6 +30,39 @@ fn grey_ramp_stays_neutral() {
 }
 
 #[test]
+fn shortened_diagonal_curves_clamp_rendered_pixels() {
+    use lightcraft_develop::Process;
+    use lightcraft_geom::Point;
+    let src = Rgb32f::from_fn(8, 4, |x, _| [if x < 4 { 0.0 } else { 1.0 }; 3]);
+    let info = SourceInfo::default();
+    let request = RenderRequest::fit(8, 4);
+    // Both rendering processes keep the endpoint behaviour: a shortened diagonal still clamps
+    // shadows/highlights to its outermost points, on the master channel and on one channel alone,
+    // with the rest of that process's tone chain unchanged (base vs. curved differ only by the curve).
+    for process in [Process::V1, Process::V2] {
+        let mut settings = DevelopSettings { process: process.version(), ..DevelopSettings::default() };
+        let base = render(&src, &info, &settings, &request).image;
+        let points = vec![Point::new(0.25, 0.25), Point::new(0.75, 0.75)];
+        settings.curve.master = points.clone();
+        let master = render(&src, &info, &settings, &request).image;
+        assert_eq!((master.width, master.height), (8, 4));
+        for (i, pixel) in master.data.iter().enumerate() {
+            let expected = if i % 8 < 4 { 64i32 } else { 191i32 };
+            assert!(pixel[..3].iter().all(|&v| (i32::from(v) - expected).abs() <= 1), "{process:?} {i}: {pixel:?}");
+        }
+        assert_ne!(base.data, master.data, "{process:?}: endpoint clamping must change the image");
+        settings.curve.master.clear();
+        settings.curve.red = points;
+        let red = render(&src, &info, &settings, &request).image;
+        for (i, (pixel, original)) in red.data.iter().zip(&base.data).enumerate() {
+            let expected = if i % 8 < 4 { 64i32 } else { 191i32 };
+            assert!((i32::from(pixel[0]) - expected).abs() <= 1, "{process:?} {i}: {pixel:?}");
+            assert_eq!(&pixel[1..], &original[1..], "{process:?}: other channels stay unchanged");
+        }
+    }
+}
+
+#[test]
 fn every_slider_changes_or_keeps_output_without_panicking() {
     let src = scene();
     let base = render(&src, &SourceInfo::default(), &DevelopSettings::default(), &RenderRequest::fit(96, 96)).image;
