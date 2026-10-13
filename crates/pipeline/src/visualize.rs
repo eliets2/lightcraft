@@ -454,4 +454,91 @@ mod tests {
         assert_eq!(Overlay::from_parts(k, v), o);
         assert_ne!(o.key(), Overlay::Mask { id: 1, view: MaskView::WhiteOnBlack, color: [255, 0, 0], opacity: 100 }.key());
     }
+
+    /// Overlapping masks of different strength show as one union: at every pixel the combined overlay is
+    /// what the stronger mask shows on its own, in every view. Drawing the masks one after the other
+    /// puts the later one over the earlier one, or tints the overlap twice.
+    #[test]
+    fn all_masks_overlay_draws_the_strongest_of_overlapping_masks_once() {
+        use lightcraft_develop::{Mask, MaskComponent, MaskOp, MaskShape};
+        use lightcraft_geom::Point;
+        let src = Rgb32f::from_fn(80, 40, |x, _| if x < 40 { [0.18, 0.18, 0.18] } else { [0.05, 0.1, 0.3] });
+        let info = SourceInfo::default();
+        // a wide mask that fades out from its centre, and a smaller, firmer one over its right side
+        let wide = MaskShape::Radial { center: Point::new(0.35, 0.5), rx: 0.3, ry: 0.3, angle: 0.0, feather: 100.0, invert: false };
+        let small = MaskShape::Radial { center: Point::new(0.6, 0.5), rx: 0.15, ry: 0.15, angle: 0.0, feather: 60.0, invert: false };
+        let mut s = DevelopSettings::default();
+        for (id, shape) in [(1, wide), (2, small)] {
+            s.masks.push(Mask {
+                id,
+                visible: true,
+                components: vec![MaskComponent { name: None, op: MaskOp::Add, invert: false, shape }],
+                ..Default::default()
+            });
+        }
+        let shot = |visible: [bool; 2], view: MaskView| {
+            let mut s = s.clone();
+            for (mask, visible) in s.masks.iter_mut().zip(visible) {
+                mask.visible = visible;
+            }
+            let o = Overlay::AllMasks { view, color: [255, 0, 0], opacity: 100 };
+            render(&src, &info, &s, &RenderRequest { overlay: o, ..RenderRequest::fit(80, 40) }).image
+        };
+        // each mask's own alpha (as white on black), to tell which one is stronger at a pixel
+        let (wide_alpha, small_alpha) = (shot([true, false], MaskView::WhiteOnBlack), shot([false, true], MaskView::WhiteOnBlack));
+        let strength = |i: usize| (wide_alpha.data[i][0], small_alpha.data[i][0]);
+        let pixels = 80 * 40;
+        let wide_wins = (0..pixels).filter(|&i| strength(i).0 > strength(i).1).count();
+        let small_wins = (0..pixels).filter(|&i| strength(i).1 > strength(i).0).count();
+        let partial = |a: u8| (1..255).contains(&a);
+        let overlap = (0..pixels).filter(|&i| partial(strength(i).0) && partial(strength(i).1) && strength(i).0 != strength(i).1).count();
+        assert!(wide_wins > 50 && small_wins > 50 && overlap > 50, "the masks overlap with different alpha: {wide_wins} {small_wins} {overlap}");
+        let mut wrong = Vec::new();
+        for view in [MaskView::Color, MaskView::ColorOnBw, MaskView::ImageOnBlack, MaskView::ImageOnWhite, MaskView::WhiteOnBlack] {
+            let (both, wide_only, small_only) = (shot([true, true], view), shot([true, false], view), shot([false, true], view));
+            let differs = (0..pixels)
+                .filter(|&i| {
+                    let (wide_strength, small_strength) = strength(i);
+                    let shown = both.data[i];
+                    // equal 8-bit alphas can hide a tiny difference: either mask's own pixel is right
+                    match wide_strength.cmp(&small_strength) {
+                        std::cmp::Ordering::Greater => shown != wide_only.data[i],
+                        std::cmp::Ordering::Less => shown != small_only.data[i],
+                        std::cmp::Ordering::Equal => shown != wide_only.data[i] && shown != small_only.data[i],
+                    }
+                })
+                .count();
+            if differs > 0 {
+                wrong.push((view, differs));
+            }
+        }
+        assert!(wrong.is_empty(), "pixels that are not what the stronger mask shows alone, per view: {wrong:?}");
+    }
+
+    /// Alpha planes that do not match the picture's size are left out of the union (drawing one would
+    /// read past its end); with nothing left the picture is untouched.
+    #[test]
+    fn all_masks_overlay_ignores_planes_of_another_size() {
+        let src = Rgb32f::from_fn(8, 4, |_, _| [0.2, 0.2, 0.2]);
+        let info = SourceInfo::default();
+        let s = DevelopSettings::default();
+        let req = RenderRequest::fit(8, 4);
+        let plan = crate::plan(&src, &info, &s, &req);
+        let photo = render(&src, &info, &s, &req).image;
+        let o = Overlay::AllMasks { view: MaskView::WhiteOnBlack, color: [255, 0, 0], opacity: 100 };
+        let wrong_size = Plane::from_fn(4, 4, |_, _| 1.0);
+        let left_half = Plane::from_fn(8, 4, |x, _| if x < 4 { 1.0 } else { 0.0 });
+
+        let mut img = photo.clone();
+        apply(&mut img, o, &plan, None, Some(std::slice::from_ref(&wrong_size)));
+        assert_eq!(img, photo, "only a plane of another size: nothing to draw");
+        let mut img = photo.clone();
+        apply(&mut img, o, &plan, None, Some(&[]));
+        assert_eq!(img, photo, "no planes: nothing to draw");
+
+        let mut img = photo.clone();
+        apply(&mut img, o, &plan, None, Some(&[wrong_size, left_half]));
+        let (first_of_row, last_of_row) = (img.data[8], img.data[15]);
+        assert_eq!((first_of_row, last_of_row), ([255; 4], [0, 0, 0, 255]), "the plane of the right size is drawn");
+    }
 }
