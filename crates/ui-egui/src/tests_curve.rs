@@ -186,3 +186,26 @@ fn targeted_adjustment_announces_itself_and_esc_turns_it_off() {
     assert!(h.app.ui.tool.is_empty(), "Esc turns the tool off: {:?}", h.app.ui.tool);
     assert!(matches!(h.app.ui.view, crate::state::ViewMode::Detail), "the first Esc only leaves the tool");
 }
+
+/// The editor keeps 0.01 between a dragged point and each neighbour, so two neighbours closer than
+/// 0.02 leave no room for the point between them (an imported curve can have such points). Dragging
+/// it used to panic in `f64::clamp`, whose lower bound was then above its upper one; now the point
+/// keeps its x, follows the pointer in y, and its neighbours stay where they are.
+#[test]
+fn dragging_a_point_with_dense_neighbours_leaves_them_alone() {
+    let mut h = curve_open("master");
+    exec(&mut h, "develop.curve", json!({"channel": "master", "points": [[0.0, 0.0], [0.5, 0.5], [0.505, 0.55], [0.51, 0.6], [1.0, 1.0]]}));
+    h.step();
+    let side = curve_side(&mut h);
+    // grab the middle one of the three close points (x 0.505, y 0.55) and drag it to (0.8, 0.8)
+    let r = h.request("ui.dragWidget", json!({"id": "curve", "fx": 0.505, "fy": 0.45, "dx": 0.295 * side, "dy": -0.25 * side, "steps": 6}), T);
+    assert_eq!(r["ok"], true, "{r}");
+    h.step();
+    let c = pts(&develop(&h).curve.master);
+    assert_eq!(c.len(), 5, "{c:?}");
+    assert!(c.windows(2).all(|w| w[0].0 < w[1].0), "the stored x order stays valid: {c:?}");
+    assert_eq!(c[1], (0.5, 0.5), "the neighbour on the left stays: {c:?}");
+    assert_eq!(c[3], (0.51, 0.6), "the neighbour on the right stays: {c:?}");
+    assert!((c[2].0 - 0.505).abs() < 1e-9, "there is no room between them, so the point keeps its x: {c:?}");
+    assert!((c[2].1 - 0.8).abs() < 0.03, "y still follows the pointer: {c:?}");
+}
