@@ -1282,3 +1282,35 @@ fn has_history_after(s: &Session) -> std::result::Result<(), String> {
         Err("at the latest History step".into())
     }
 }
+
+#[cfg(test)]
+mod recipe_tests {
+    use super::*;
+
+    /// Equal settings differ nowhere, so there is nothing to store; a difference comes back with
+    /// its path only.
+    #[test]
+    fn partial_diff_is_the_changed_leaves_only() {
+        let a = json!({"light": {"exposure": 1.0, "contrast": 0.0}, "color": {"vibrance": 5.0}});
+        assert_eq!(partial_diff(&a, &a), None);
+        let b = json!({"light": {"exposure": 0.0, "contrast": 0.0}, "color": {"vibrance": 5.0}});
+        assert_eq!(partial_diff(&a, &b), Some(json!({"light": {"exposure": 1.0}})));
+        assert_eq!(partial_diff(&a, &json!({})), Some(a.clone()), "a leaf the other side lacks is a difference");
+    }
+
+    fn recipe(items: &[(&str, f64)]) -> Vec<(String, f64)> {
+        items.iter().map(|(id, v)| (id.to_string(), *v)).collect()
+    }
+
+    /// A recipe that names nothing, or a control `set` would drop (a per-photo instance on fresh
+    /// settings), stores nothing: the command answers with an error, not an empty preset.
+    #[test]
+    fn a_recipe_that_stores_nothing_is_none() {
+        assert_eq!(recipe_partial(&[]), None);
+        assert_eq!(recipe_partial(&recipe(&[("pointColor.0.hueShift", 5.0)])), None, "set returns false for it");
+        assert_eq!(recipe_partial(&recipe(&[("nope.nope", 5.0)])), None);
+        assert_eq!(recipe_partial(&recipe(&[("light.exposure", 0.5)])), Some(json!({"light": {"exposure": 0.5}})));
+        // a reset to the control's default is stored
+        assert_eq!(recipe_partial(&recipe(&[("light.exposure", 0.0)])), Some(json!({"light": {"exposure": 0.0}})));
+    }
+}
