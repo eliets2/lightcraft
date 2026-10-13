@@ -199,12 +199,20 @@ pub fn apply(img: &mut Rgba8, o: Overlay, plan: &Plan<'_>, mask: Option<&Plane>,
             }
         }
         Overlay::AllMasks { view, color, opacity } => {
+            // Draw the union of the masks (the strongest alpha at each pixel) in one pass. Drawing
+            // mask after mask paints every pass over the one before: the white-on-black, image-on-black
+            // and image-on-white views repaint the whole picture each time, the black-and-white view
+            // greys the previous tint again, and the colour view tints twice where masks overlap.
             if let Some(planes) = masks {
+                let mut planes = planes.iter().filter(|a| (a.width, a.height) == (img.width, img.height));
+                let Some(first) = planes.next() else { return };
+                let mut union = first.clone();
                 for a in planes {
-                    if (a.width, a.height) == (img.width, img.height) {
-                        mask_view(img, a, view, color, opacity);
+                    for (dst, alpha) in union.data.iter_mut().zip(&a.data) {
+                        *dst = dst.max(*alpha);
                     }
                 }
+                mask_view(img, &union, view, color, opacity);
             }
         }
     }
@@ -435,8 +443,12 @@ mod tests {
         // a hidden mask is skipped
         s.masks[1].visible = false;
         let img2 = render(&src, &info, &s, &RenderRequest { overlay: o, ..RenderRequest::fit(80, 40) }).image;
-        assert_eq!(img2.data[in_r], plain.data[in_r], "hidden right mask not painted");
+        assert_eq!(img2.data[in_r], [0, 0, 0, 255], "hidden right mask is not part of the union");
         assert_eq!(img2.data[in_l], [255; 4], "visible left mask still painted");
+        // with no visible mask the photo is left alone
+        s.masks[0].visible = false;
+        assert_eq!(render(&src, &info, &s, &RenderRequest { overlay: o, ..RenderRequest::fit(80, 40) }).image, plain);
+        s.masks[0].visible = true;
         // parts round trip and a stable, distinct cache key
         let (k, v) = o.to_parts();
         assert_eq!(Overlay::from_parts(k, v), o);
