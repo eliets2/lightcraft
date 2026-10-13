@@ -4,7 +4,7 @@
 use lightcraft_catalog::{Album, AlbumId, ColorLabel, CopyrightStatus, Filter, Flag, GroupBy, Op, PhotoId, Sort, SortKey};
 use serde_json::{Value, json};
 
-use super::{CommandSpec, always, bad, bool_or, cmd, has_active, has_library_selection, has_selection, ok, str_param};
+use super::{CommandSpec, always, bad, bool_or, cmd, has_active, has_library_selection, has_selection, ok, recipe_param, str_param};
 use crate::{LibrarySource, Result, Selection, Session};
 
 fn select_after_deletion(s: &mut Session, before: &[PhotoId]) {
@@ -47,6 +47,10 @@ pub struct ImportRequest {
 /// worker thread, with the same options).
 pub fn import_params(s: &Session, p: &Value) -> Result<ImportRequest> {
     let paths = strs(p, "paths");
+    let disk = bool_or(p, "disk", false);
+    for path in &paths {
+        check_import_source(path, disk, "library.import")?;
+    }
     let mode = match str_param(p, "mode").unwrap_or("add") {
         "add" => crate::import::ImportMode::Add,
         "copy" => crate::import::ImportMode::Copy,
@@ -98,9 +102,31 @@ pub fn import_params(s: &Session, p: &Value) -> Result<ImportRequest> {
         metadata_preset,
         convert_dng: bool_or(p, "dng", false),
         local: bool_or(p, "local", false),
+        recipe: recipe_param(p, "library.import")?,
     };
     let album_name = str_param(p, "albumName").map(str::trim).filter(|n| !n.is_empty()).map(str::to_string);
     Ok(ImportRequest { paths, opts, album, album_name })
+}
+
+/// Refuse a whole-volume import source unless the caller asked for it (`disk: true`): a walk of a
+/// whole disk or share is never started by accident. The startup disk (`/`) is always refused — its
+/// path covers every other disk — and a folder whose children are whole disks (`/Volumes`, `/mnt`…)
+/// needs `disk: true` too. Ordinary folders (and individual files) pass unchanged.
+pub(crate) fn check_import_source(path: &str, disk: bool, c: &str) -> Result<()> {
+    let path = path.trim();
+    if path.is_empty() {
+        return Ok(());
+    }
+    if lightcraft_catalog::folders::is_startup_disk(path) {
+        return Err(bad(c, format!("{path} is the whole startup disk: choose a folder or another disk")));
+    }
+    if disk {
+        return Ok(());
+    }
+    if lightcraft_catalog::folders::is_disk_root(path) || crate::devices::is_mount_parent(std::path::Path::new(path)) {
+        return Err(bad(c, format!("{path} is a whole disk or share: pass `disk: true` to import it")));
+    }
+    Ok(())
 }
 
 /// After a batch of an import was committed: the album (a new one named `album_name` when there
@@ -591,6 +617,15 @@ pub fn specs() -> Vec<CommandSpec> {
         cmd!(query "library.devices", "Cameras and Cards", [], None, "{} → [{name, path (its DCIM folder), root}] — mounted volumes with a DCIM folder", always, |_, _| {
             Ok(serde_json::to_value(crate::devices::devices_now()).unwrap_or_default())
         }),
+        cmd!(
+            query "library.volumes",
+            "Disks and Volumes",
+            [],
+            None,
+            "{} → [{name, root}] — the machine's mounted volumes (disks, shares, cards) that a whole-volume import can start from, listed without reading their contents; empty on the web. Pass one's `root` as `library.importPreview`/`library.import` `paths` with `disk: true`",
+            always,
+            |_, _| Ok(serde_json::to_value(crate::devices::volumes()).unwrap_or_default())
+        ),
         cmd!(query "photo.copyMetadata", "Copy Metadata", ["Photo"], None, "{} — title, caption, copyright (notice, status, usage terms, info URL), creator, location and keywords of the active photo", has_active, |s, _| {
             let id = s.active().ok_or_else(|| bad("photo.copyMetadata", "no active photo"))?;
             let m = &s.catalog.photo(id).ok_or_else(|| bad("photo.copyMetadata", "no photo"))?.meta;
@@ -1352,16 +1387,28 @@ pub fn specs() -> Vec<CommandSpec> {
             "Review Import",
             [],
             None,
-            "{paths: [file or folder (recursive)]} → {candidates: [{path, name, format, kind, width, height, fileSize, captured, duplicate?: path|content, existing?, error?, previewOnly?: why a raw can only be shown from its embedded preview}], duplicates, scanned} — nothing is added",
+            "{paths: [file or folder (recursive)], disk?: bool (a whole disk or share: see library.volumes; the startup disk is always refused)} → {candidates: [{path, name, format, kind, width, height, fileSize, captured, duplicate?: path|content, existing?, error?, previewOnly?: why a raw can only be shown from its embedded preview}], duplicates, scanned, truncated: bool (a walk stopped at a depth/entry bound), skipped: {unreadable, unsupported} (folders that couldn't be listed, files of an unsupported type)} — nothing is added",
             always,
             |s, p| {
                 let paths = strs(p, "paths");
                 if paths.is_empty() {
                     return Err(bad("library.importPreview", "no paths"));
                 }
-                let c = crate::import::scan(s, &paths);
-                let dups = c.iter().filter(|c| c.duplicate.is_some()).count();
-                Ok(json!({"scanned": c.len(), "duplicates": dups, "candidates": c}))
+                let disk = bool_or(p, "disk", false);
+                for path in &paths {
+                    check_import_source(path, disk, "library.importPreview")?;
+                }
+                let (input, paths) = crate::import::ScanInput::new(s, &paths);
+                let out = crate::import::scan_with(input, &paths, &crate::import::ScanProgress::default());
+                s.import_probes = out.probes;
+                let dups = out.candidates.iter().filter(|c| c.duplicate.is_some()).count();
+                Ok(json!({
+                    "scanned": out.candidates.len(),
+                    "duplicates": dups,
+                    "candidates": out.candidates,
+                    "truncated": out.truncated,
+                    "skipped": {"unreadable": out.unreadable, "unsupported": out.unsupported},
+                }))
             }
         ),
         cmd!(
@@ -1369,7 +1416,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Import Photos",
             ["File"],
             Some("Cmd+Shift+I"),
-            "{paths: [file or folder (recursive)], mode?: add|copy|move (add = reference the files in place; copy = into the library's Originals/YYYY/YYYY-MM-DD/; move = as copy, then each original and its XMP sidecars are removed from the source — only after the copy is verified (a hard link on the same volume, else copied, synced and compared byte for byte) and its catalog record is saved; failed, duplicate and unchecked files keep their sources; a taken name gets -1, -2…; undo removes the photos from the library but leaves the files at the destination), destination?: folder for copies / moves, organize?: date (YYYY/YYYY-MM-DD) | month (YYYY/YYYY-MM) | flat | a folder template, e.g. `{date:%Y}/{date:%Y%m%d}` → 2026/20260114 (the template's `/` make the folders, each level expanded with the rename tokens and made a safe folder name: never outside the destination; must be relative, no `..`; a level with missing metadata is `unknown`) — dated by capture time, else the import time, rename?: file-name template for copies, original extension added (tokens: {name} {num} {seq} {seq:N} {date} {date:%Y%m%d} {folder} {camera} {lens} {iso} {rating} {title} {creator} {ext}; photo.renameTokens explains each; blank = keep names), renameStart?: 1, metadataPreset?: name, dng?: bool (copy raws as DNG; copy only), local?: bool (browsing: the photos stay out of the library, like library.browse; not with move), album?: albumId, albumName?: new album, preset?: presetId, keywords?: [..], onDeleted?: restore|skip|fresh (a file that is in Recently Deleted: restore (default) = bring the photo back with its edits — relinked to the file when its own is gone, skip = leave it there and say so, fresh = delete the trashed record and import the file as new)} → {imported, duplicates: [{path, existing, reason, existingDeleted?}], restored?: [photoId], failed, warnings?: [{path, code: cameraProfile|uprightGeometry|unmappedXmp, profile?, mode?: off|auto|level|vertical|full|guided|unknown, fields?}], moved?: [{from, to, sidecars?}], kept?: [{path, reason}] (move: sources left in place and why), album?}",
+            "{paths: [file or folder (recursive)], mode?: add|copy|move (add = reference the files in place; copy = into the library's Originals/YYYY/YYYY-MM-DD/; move = as copy, then each original and its XMP sidecars are removed from the source — only after the copy is verified (a hard link on the same volume, else copied, synced and compared byte for byte) and its catalog record is saved; failed, duplicate and unchecked files keep their sources; a taken name gets -1, -2…; undo removes the photos from the library but leaves the files at the destination), destination?: folder for copies / moves, organize?: date (YYYY/YYYY-MM-DD) | month (YYYY/YYYY-MM) | flat | a folder template, e.g. `{date:%Y}/{date:%Y%m%d}` → 2026/20260114 (the template's `/` make the folders, each level expanded with the rename tokens and made a safe folder name: never outside the destination; must be relative, no `..`; a level with missing metadata is `unknown`) — dated by capture time, else the import time, rename?: file-name template for copies, original extension added (tokens: {name} {num} {seq} {seq:N} {date} {date:%Y%m%d} {folder} {camera} {lens} {iso} {rating} {title} {creator} {ext}; photo.renameTokens explains each; blank = keep names), renameStart?: 1, metadataPreset?: name, dng?: bool (copy raws as DNG; copy only), local?: bool (browsing: the photos stay out of the library, like library.browse; not with move), album?: albumId, albumName?: new album, preset?: presetId, recipe?: [{id: a develop control (develop.controls), value}] applied to every imported photo after its sidecar, camera default and preset as one History step (only the named controls change), keywords?: [..], disk?: bool (a path that is a whole disk or share — see library.volumes — needs this; the startup disk is always refused), onDeleted?: restore|skip|fresh (a file that is in Recently Deleted: restore (default) = bring the photo back with its edits — relinked to the file when its own is gone, skip = leave it there and say so, fresh = delete the trashed record and import the file as new)} → {imported, duplicates: [{path, existing, reason, existingDeleted?}], restored?: [photoId], failed, warnings?: [{path, code: cameraProfile|uprightGeometry|unmappedXmp, profile?, mode?: off|auto|level|vertical|full|guided|unknown, fields?}], moved?: [{from, to, sidecars?}], kept?: [{path, reason}] (move: sources left in place and why), album?}",
             always,
             |s, p| {
                 let req = import_params(s, p)?;

@@ -30,6 +30,24 @@ fn groups_param(p: &Value) -> Option<Vec<SettingsGroup>> {
     p.get("groups").and_then(|g| serde_json::from_value(g.clone()).ok())
 }
 
+/// The leaves of `a` that differ from `b` (same shape), as a partial JSON object: `None` when they
+/// are equal. Used to store only what a batch-edit recipe changed, so applying the saved preset
+/// later never overrides the settings the recipe doesn't name.
+fn partial_diff(a: &Value, b: &Value) -> Option<Value> {
+    match (a, b) {
+        (Value::Object(x), Value::Object(y)) => {
+            let mut out = serde_json::Map::new();
+            for (k, v) in x {
+                if let Some(d) = partial_diff(v, y.get(k).unwrap_or(&Value::Null)) {
+                    out.insert(k.clone(), d);
+                }
+            }
+            (!out.is_empty()).then_some(Value::Object(out))
+        }
+        (x, y) => (x != y).then(|| x.clone()),
+    }
+}
+
 fn crop_dims(s: &Session, id: PhotoId) -> (f64, f64) {
     let p = s.catalog.photo(id);
     let (w, h) = p.map(|p| (p.width.max(1) as f64, p.height.max(1) as f64)).unwrap_or((3.0, 2.0));
@@ -988,6 +1006,35 @@ pub fn specs() -> Vec<CommandSpec> {
             s.presets.push(Preset::from_settings(&pid, name, group, &d, &groups));
             Ok(json!({"id": pid}))
         }),
+        cmd!(
+            "preset.saveRecipe",
+            "Save Import Recipe as Preset",
+            [],
+            None,
+            "{name, group?, recipe: [{id: a develop control (develop.controls), value}]} — save a batch-edit recipe as a user preset so it can be reused from the Preset list; only the settings the recipe names are stored, so applying it later never overrides the rest",
+            always,
+            |s, p| {
+                const C: &str = "preset.saveRecipe";
+                let name = str_param(p, "name").map(str::trim).filter(|n| !n.is_empty()).ok_or_else(|| bad(C, "missing name"))?.to_string();
+                let group = str_param(p, "group").map(str::trim).filter(|g| !g.is_empty()).unwrap_or("Import Recipes").to_string();
+                let recipe = super::recipe_param(p, C)?;
+                if recipe.is_empty() {
+                    return Err(bad(C, "the recipe is empty"));
+                }
+                let mut d = DevelopSettings::default();
+                for (id, v) in &recipe {
+                    // a temperature/tint is a custom white balance, as the slider does it
+                    if id == "wb.temp" || id == "wb.tint" {
+                        d.wb.mode = lightcraft_develop::WbMode::Custom;
+                    }
+                    controls::set(&mut d, id, *v);
+                }
+                let settings = partial_diff(&d.to_json(), &DevelopSettings::default().to_json()).unwrap_or_else(|| json!({}));
+                let pid = format!("user.{}.{}", s.presets.len(), name.to_lowercase().replace(' ', "-"));
+                s.presets.push(Preset { id: pid.clone(), name: name.clone(), group, settings, favorite: false, builtin: false });
+                Ok(json!({"id": pid, "name": name}))
+            }
+        ),
         cmd!("preset.delete", "Delete Preset", [], None, "{id}", always, |s, p| {
             let pid = str_param(p, "id").ok_or_else(|| bad("preset.delete", "missing id"))?;
             let i = s.presets.iter().position(|x| x.id == pid).ok_or_else(|| bad("preset.delete", "unknown preset"))?;

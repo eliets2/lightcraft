@@ -176,6 +176,7 @@ pub const UI_COMMANDS: &[UiCommand] = &[
     ("file.addFolder", "Import from Folder…", None, "File"),
     ("file.importLightroom", "Import Lightroom Catalog…", None, "File"),
     ("file.addFromDevice", "Import from Device", None, ""),
+    ("file.addDisk", "Import from Disk", None, ""),
     ("file.findMissing", "Find Missing Photos…", None, "File"),
     ("file.backupLibrary", "Back Up Library…", None, "File"),
     ("file.restoreLibrary", "Restore Library from Backup…", None, "File"),
@@ -1477,6 +1478,18 @@ pub fn run_ui_command(app: &mut LightcraftApp, id: &str, p: &Value) -> Option<Re
                 t.copy = true;
             }
             r
+        }
+        "file.addDisk" => {
+            // a whole disk or share (chosen from the menu, not a folder picker): review it
+            // recursively; the walk stays on that volume and the import is told `disk: true`
+            let root = match p.get("root").and_then(Value::as_str) {
+                Some(x) => x.to_string(),
+                None => match lightcraft_engine::devices::volumes().into_iter().next() {
+                    Some(v) => v.root,
+                    None => return Some(Err("no disk or volume found".into())),
+                },
+            };
+            crate::import::open_disk(app, root)
         }
         "file.addFolder" => {
             // a folder (searched recursively) into the import review

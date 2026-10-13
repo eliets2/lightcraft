@@ -1195,9 +1195,9 @@ fn expand_stops_at_the_walk_limits() {
     let top = [d.to_string_lossy().to_string()];
     let (all, cut) = crate::import::expand_within(&top, None, crate::walk::Limits::default());
     assert_eq!((all.len(), cut), (8, false));
-    let (some, cut) = crate::import::expand_within(&top, None, crate::walk::Limits { max_depth: 3, max_entries: 1000 });
+    let (some, cut) = crate::import::expand_within(&top, None, crate::walk::Limits { max_depth: 3, max_entries: 1000, cross_devices: false });
     assert_eq!((some.len(), cut), (2, true), "{some:?}");
-    let (few, cut) = crate::import::expand_within(&top, None, crate::walk::Limits { max_depth: 32, max_entries: 5 });
+    let (few, cut) = crate::import::expand_within(&top, None, crate::walk::Limits { max_depth: 32, max_entries: 5, cross_devices: false });
     assert!(cut && few.len() < 8, "{few:?}");
     let _ = std::fs::remove_dir_all(&d);
 }
@@ -1570,5 +1570,82 @@ fn upper_and_mixed_case_extensions_are_found_by_import_browse_and_sidecar_lookup
     for n in ["a.JPG", "b.Jpg", "c.JPEG", "d.PNG", "e.NEF"] {
         assert!(shown.iter().any(|f| f == n), "{n} not shown: {shown:?}");
     }
+    let _ = std::fs::remove_dir_all(&src);
+}
+
+/// A batch-edit recipe changes the imported photos' actual develop settings (not just an option
+/// label), renders, is one undo step, and can be saved as a preset that stores only what it names.
+#[test]
+fn a_batch_edit_recipe_changes_imported_photos() {
+    let src = temp_dir("recipe");
+    write_png(&src.join("a.png"), 1);
+    write_png(&src.join("b.png"), 2);
+    let mut s = Session::new().with_fs();
+    let r = s
+        .execute(
+            "library.import",
+            &json!({
+                "paths": [src.to_string_lossy()],
+                "recipe": [{"id": "light.exposure", "value": 0.5}, {"id": "color.vibrance", "value": 20}],
+            }),
+        )
+        .unwrap();
+    assert_eq!(ids(&r, "imported"), 2, "{r}");
+    for p in s.catalog.photos() {
+        assert_eq!(p.develop.light.exposure, 0.5, "{}", p.file_name);
+        assert_eq!(p.develop.color.vibrance, 20.0, "{}", p.file_name);
+        assert!(p.history.iter().any(|h| h.label == "Import adjustments"), "{}", p.file_name);
+    }
+    // the edit really renders (the recipe is applied to the settings, not only recorded)
+    let id = s.catalog.photos().next().unwrap().id;
+    assert!(s.render_now(id, 32, 32).is_ok());
+    // saving the recipe as a preset keeps only the settings it names
+    let p = s.execute("preset.saveRecipe", &json!({"name": "Warm Trip", "recipe": [{"id": "light.exposure", "value": 0.5}]})).unwrap();
+    let saved = s.presets.iter().find(|x| x.id == p["id"].as_str().unwrap()).unwrap();
+    assert_eq!(saved.settings.pointer("/light/exposure"), Some(&json!(0.5)), "{}", saved.settings);
+    assert!(saved.settings.get("color").is_none(), "an unnamed group is not stored: {}", saved.settings);
+    // one undo step for the whole import
+    s.execute("edit.undo", &json!({})).unwrap();
+    assert_eq!(s.catalog.len(), 0);
+    let _ = std::fs::remove_dir_all(&src);
+}
+
+/// A malformed recipe, or one naming an unknown control, is refused before anything is imported.
+#[test]
+fn a_bad_recipe_is_refused() {
+    let mut s = Session::new().with_fs();
+    let err = s.execute("library.import", &json!({"paths": ["/nonexistent-lc"], "recipe": [{"id": "nope.nope", "value": 1}]})).unwrap_err();
+    assert!(format!("{err}").contains("unknown recipe control"), "{err}");
+    let err = s.execute("library.import", &json!({"paths": ["/nonexistent-lc"], "recipe": "x"})).unwrap_err();
+    assert!(format!("{err}").contains("recipe"), "{err}");
+    assert_eq!(s.catalog.len(), 0);
+}
+
+/// A whole disk or share is never walked without `disk: true`, and the startup disk is always
+/// refused (its path covers every other disk).
+#[test]
+fn a_whole_disk_needs_the_disk_flag() {
+    use crate::cmd::library::check_import_source;
+    assert!(check_import_source("/", false, "t").is_err(), "the startup disk is refused");
+    assert!(check_import_source("/", true, "t").is_err(), "even with disk: true");
+    assert!(check_import_source("/Volumes/card", false, "t").is_err(), "a mounted disk needs the flag");
+    assert!(check_import_source("/Volumes/card", true, "t").is_ok());
+    let folder = std::env::temp_dir().join("lc-import-not-a-disk");
+    assert!(check_import_source(&folder.to_string_lossy(), false, "t").is_ok(), "an ordinary folder passes");
+}
+
+/// `library.volumes` lists the machine's mounted volumes (an array, possibly empty), and
+/// `library.importPreview` reports its walk diagnostics.
+#[test]
+fn volumes_and_preview_diagnostics() {
+    let mut s = Session::new().with_fs();
+    assert!(s.execute("library.volumes", &json!({})).unwrap().is_array());
+    let src = temp_dir("preview-diag");
+    write_png(&src.join("a.png"), 1);
+    std::fs::write(src.join("notes.txt"), b"not a photo").unwrap();
+    let r = s.execute("library.importPreview", &json!({"paths": [src.to_string_lossy()]})).unwrap();
+    assert_eq!(r["scanned"], 1, "{r}");
+    assert_eq!(r["truncated"], false, "{r}");
+    assert_eq!(r["skipped"]["unsupported"], 1, "the .txt is reported as skipped: {r}");
     let _ = std::fs::remove_dir_all(&src);
 }

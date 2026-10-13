@@ -48,6 +48,70 @@ fn mount_parents() -> Vec<std::path::PathBuf> {
     out
 }
 
+/// A mounted volume (a disk, share or card) a whole-volume import can start from, listed by
+/// `library.volumes`. Unlike [`Device`], a volume needs no `DCIM` folder: it is any mounted root
+/// the user may point an import at.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct Volume {
+    /// The volume's name ("D:", "TOKYO", "EOS_DIGITAL").
+    pub name: String,
+    /// Where it is mounted (a drive root, `/Volumes/TOKYO`, `/media/me/usb`).
+    pub root: String,
+}
+
+/// The mounted volumes of this machine, without reading their contents: the children of the
+/// platform's mount folders ([`mount_parents`]) plus, on Windows, the drive letters that exist.
+/// A volume that can't be listed is left out. Web builds have no volumes: the list is empty.
+pub fn volumes() -> Vec<Volume> {
+    volumes_in(&mount_parents(), windows_drive_roots())
+}
+
+/// The drive roots to consider on Windows (`D:`…`Z:`); empty elsewhere.
+fn windows_drive_roots() -> Vec<std::path::PathBuf> {
+    if cfg!(windows) && std::env::var_os("LIGHTCRAFT_DEVICE_ROOTS").is_none() {
+        (b'D'..=b'Z').map(|c| std::path::PathBuf::from(format!("{}:\\", c as char))).collect()
+    } else {
+        Vec::new()
+    }
+}
+
+/// Volumes among the children of `parents`, plus the roots `extra`: a root is a volume when it is
+/// a folder. Named by its last path element (a drive root keeps its `D:\` spelling). Duplicate
+/// spellings are collapsed, and the order is stable (parents in order, then `extra`).
+pub fn volumes_in(parents: &[std::path::PathBuf], extra: Vec<std::path::PathBuf>) -> Vec<Volume> {
+    let mut roots: Vec<std::path::PathBuf> = Vec::new();
+    for parent in parents {
+        if let Ok(rd) = std::fs::read_dir(parent) {
+            let mut v: Vec<_> = rd.flatten().map(|e| e.path()).collect();
+            v.sort();
+            // the startup disk shows up in /Volumes as a symlink to /
+            roots.extend(v.into_iter().filter(|p| !p.is_symlink()));
+        }
+    }
+    roots.extend(extra);
+    let mut out: Vec<Volume> = Vec::new();
+    for root in roots {
+        if !root.is_dir() {
+            continue;
+        }
+        let shown = root.to_string_lossy().to_string();
+        if out.iter().any(|v| v.root == shown) {
+            continue;
+        }
+        let name = root.file_name().map(|n| n.to_string_lossy().to_string()).filter(|n| !n.is_empty()).unwrap_or_else(|| shown.clone());
+        out.push(Volume { name, root: shown });
+    }
+    out
+}
+
+/// Whether `path` is one of the platform's mount folders (`/Volumes`, `/media`, `/mnt`…): a folder
+/// whose children are whole disks, so walking it would cover every volume at once.
+pub fn is_mount_parent(path: &std::path::Path) -> bool {
+    let p = path.to_string_lossy();
+    let p = p.trim_end_matches(['/', '\\']);
+    mount_parents().iter().any(|m| m.to_string_lossy().trim_end_matches(['/', '\\']) == p)
+}
+
 type Scanner = dyn Fn() -> Vec<Device> + Send + Sync;
 type Notify = dyn Fn() + Send + Sync;
 
@@ -222,6 +286,25 @@ mod tests {
             let p = std::path::Path::new(&x.path);
             assert!(p.is_dir() && p.file_name().is_some_and(|n| n.eq_ignore_ascii_case("DCIM")), "{x:?}");
         }
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    /// `library.volumes` lists every mounted root (a folder under a mount parent), not only cards:
+    /// a plain disk with no `DCIM` folder is a volume too. Duplicates collapse, missing extras are
+    /// left out, and the platform's mount folders are recognised as mount parents.
+    #[test]
+    fn volumes_list_mounted_roots_without_needing_a_dcim_folder() {
+        let base = std::env::temp_dir().join(format!("lc-volumes-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(base.join("TOKYO/Photos")).unwrap();
+        std::fs::create_dir_all(base.join("Backup")).unwrap();
+        std::fs::write(base.join("note.txt"), b"x").unwrap(); // a file, not a volume
+        let v = volumes_in(std::slice::from_ref(&base), Vec::new());
+        let names: Vec<&str> = v.iter().map(|x| x.name.as_str()).collect();
+        assert_eq!(names, ["Backup", "TOKYO"], "{v:?}");
+        let v = volumes_in(std::slice::from_ref(&base), vec![base.join("TOKYO"), base.join("missing")]);
+        assert_eq!(v.len(), 2, "duplicates collapse, missing extras are left out: {v:?}");
+        assert!(!is_mount_parent(std::path::Path::new("/")), "the startup root is not a mount folder");
         let _ = std::fs::remove_dir_all(&base);
     }
 

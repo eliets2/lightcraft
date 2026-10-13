@@ -109,6 +109,11 @@ pub struct ImportOptions {
     pub metadata_preset: Option<String>,
     /// Copy: raws are copied as DNG (Copy as DNG).
     pub convert_dng: bool,
+    /// A batch-edit recipe: develop control id / value pairs (e.g. `light.exposure` → 0.5),
+    /// applied to every imported photo *after* its XMP sidecar, camera default and import preset,
+    /// as one more History step (`Import adjustments`). Only the named controls change; the recipe
+    /// is a snapshot taken when the import starts, so editing a preset afterwards cannot change it.
+    pub recipe: Vec<(String, f64)>,
 }
 
 /// How copies are filed in the destination. The date is the capture time, else the time of the
@@ -371,6 +376,23 @@ pub fn is_supported(path: &Path) -> bool {
     path.extension().is_some_and(|e| EXTENSIONS.contains(&e.to_string_lossy().to_lowercase().as_str()))
 }
 
+/// What expanding import sources found, with the diagnostics a whole-disk review needs
+/// ([`expand_report`]). Unsupported files, unreadable folders and a walk that stopped at a bound
+/// are reported rather than silently dropped.
+#[derive(Clone, Debug, Default)]
+pub struct Expansion {
+    /// Supported files, folders walked recursively and deduplicated by path, in walk order.
+    pub files: Vec<String>,
+    /// A walk stopped at a depth or entry bound: there may be more files.
+    pub truncated: bool,
+    /// Folders whose contents couldn't be listed (permissions, a vanished or offline folder).
+    pub unreadable: usize,
+    /// Files listed but skipped as an unsupported type.
+    pub unsupported: usize,
+    /// Folders left unentered because they are on another mounted volume (never crossed by default).
+    pub crossed: usize,
+}
+
 /// Expand files and folders (recursively) into supported files. `skip` (e.g. the library folder)
 /// is never descended into. Each folder's walk is bounded ([`crate::walk::Limits::default`]); a
 /// walk that stops at a bound is logged.
@@ -380,8 +402,14 @@ pub fn expand(paths: &[String], skip: Option<&Path>) -> Vec<String> {
 
 /// [`expand`] with the walk bounded by `limits` → (files, whether a walk stopped at a bound).
 pub fn expand_within(paths: &[String], skip: Option<&Path>, limits: crate::walk::Limits) -> (Vec<String>, bool) {
-    let mut out = Vec::new();
-    let mut truncated = false;
+    let e = expand_report(paths, skip, limits);
+    (e.files, e.truncated)
+}
+
+/// [`expand_within`] with the diagnostics kept (unsupported files, unreadable folders, a truncated
+/// walk, folders on another volume that were not crossed).
+pub fn expand_report(paths: &[String], skip: Option<&Path>, limits: crate::walk::Limits) -> Expansion {
+    let mut out = Expansion::default();
     for p in paths {
         let p = Path::new(p);
         if skip.is_some_and(|s| p == s) {
@@ -398,16 +426,19 @@ pub fn expand_within(paths: &[String], skip: Option<&Path>, limits: crate::walk:
                     limits.max_depth
                 );
             }
-            truncated |= w.truncated;
-            out.extend(w.files.into_iter().map(|f| f.to_string_lossy().to_string()));
+            out.truncated |= w.truncated;
+            out.unreadable = out.unreadable.saturating_add(w.unreadable);
+            out.unsupported = out.unsupported.saturating_add(w.skipped);
+            out.crossed = out.crossed.saturating_add(w.crossed);
+            out.files.extend(w.files.into_iter().map(|f| f.to_string_lossy().to_string()));
         } else {
             // explicitly named files are attempted even with an unknown extension (sniffed)
-            out.push(p.to_string_lossy().to_string());
+            out.files.push(p.to_string_lossy().to_string());
         }
     }
     let mut seen = std::collections::HashSet::new();
-    out.retain(|p| seen.insert(p.clone()));
-    (out, truncated)
+    out.files.retain(|p| seen.insert(p.clone()));
+    out
 }
 
 /// What a path given on the command line at launch becomes ([`launch_path`]).
@@ -560,6 +591,12 @@ pub struct ScanProgress {
 pub struct ScanOutput {
     pub candidates: Vec<ImportCandidate>,
     pub probes: HashMap<String, ProbeInfo>,
+    /// A walk stopped at a depth or entry bound: there may be more files (see [`Expansion`]).
+    pub truncated: bool,
+    /// Folders whose contents couldn't be listed (permissions, a vanished or offline folder).
+    pub unreadable: usize,
+    /// Files listed but skipped as an unsupported type.
+    pub unsupported: usize,
 }
 
 impl ScanInput {
@@ -606,7 +643,8 @@ pub fn scan(s: &mut Session, paths: &[String]) -> Vec<ImportCandidate> {
 /// has) when `progress.cancel` is set.
 pub fn scan_with(mut input: ScanInput, paths: &[String], progress: &ScanProgress) -> ScanOutput {
     use std::sync::atomic::Ordering::Relaxed;
-    let files = expand(paths, input.skip.as_deref());
+    let expansion = expand_report(paths, input.skip.as_deref(), crate::walk::Limits::default());
+    let files = expansion.files;
     let todo: Vec<String> = files.iter().filter(|f| !input.by_path.contains_key(Path::new(f))).cloned().collect();
     progress.total.store(todo.len(), Relaxed);
     // probes from a preceding `scan` are reused when the file is unchanged (same size)
@@ -660,7 +698,7 @@ pub fn scan_with(mut input: ScanInput, paths: &[String], progress: &ScanProgress
         }
         out.push(c);
     }
-    ScanOutput { candidates: out, probes: kept }
+    ScanOutput { candidates: out, probes: kept, truncated: expansion.truncated, unreadable: expansion.unreadable, unsupported: expansion.unsupported }
 }
 
 /// Import files/folders. See the module docs.
@@ -1336,6 +1374,22 @@ pub fn commit_prepared(s: &mut Session, opts: &ImportOptions, now: &str, prepare
                     p.develop = d.clone();
                     p.edited = Some(now.clone());
                     p.history.push(lightcraft_catalog::HistoryStep { label, settings: d });
+                }
+                // the batch-edit recipe goes on top of everything above (sidecar, camera default,
+                // preset): only the controls it names change, through the same specs the sliders use
+                if !opts.recipe.is_empty() {
+                    let mut d = (*p.develop).clone();
+                    for (id, v) in &opts.recipe {
+                        // a temperature/tint is a custom white balance, as the slider does it
+                        if id == "wb.temp" || id == "wb.tint" {
+                            d.wb.mode = lightcraft_develop::WbMode::Custom;
+                        }
+                        lightcraft_develop::controls::set(&mut d, id, *v);
+                    }
+                    let d = std::sync::Arc::new(d);
+                    p.develop = d.clone();
+                    p.edited = Some(now.clone());
+                    p.history.push(lightcraft_catalog::HistoryStep { label: "Import adjustments".into(), settings: d });
                 }
                 report.imported.push(id.0);
                 p.local = opts.local;

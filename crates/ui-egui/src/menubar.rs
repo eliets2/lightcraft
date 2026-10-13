@@ -68,6 +68,7 @@ const LAYOUT: &[(&str, &[&str])] = &[
             "file.addPhotos",
             "file.addFolder",
             "@Import from Device",
+            "@Import from Disk",
             "---",
             "app.newLibrary",
             "app.openLibrary",
@@ -586,6 +587,14 @@ fn expanded(app: &LightcraftApp, name: &str) -> Option<Vec<MenuNode>> {
                 vec![item("file.addFromDevice", Value::Null, "No Camera or Card Found", None, false, None)]
             } else {
                 devices.into_iter().map(|d| item("file.addFromDevice", json!({"path": d.path}), format!("{}…", d.name), None, true, None)).collect()
+            }
+        }
+        "Import from Disk" => {
+            let volumes = lightcraft_engine::devices::volumes();
+            if volumes.is_empty() {
+                vec![item("file.addDisk", Value::Null, "No Disk Found", None, false, None)]
+            } else {
+                volumes.into_iter().map(|v| item("file.addDisk", json!({"root": v.root}), format!("{}…", v.name), None, true, None)).collect()
             }
         }
         "Metadata Preset" => {

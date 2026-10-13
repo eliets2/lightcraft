@@ -18,11 +18,15 @@ pub struct Limits {
     pub max_depth: usize,
     /// Directory entries looked at in all (files and folders, hidden ones included).
     pub max_entries: usize,
+    /// Descend into a folder on another mounted volume (a disk mounted inside the tree, e.g. under
+    /// `/Volumes` or `/media`). Off by default: a walk never crosses into another volume — and so
+    /// never scans a whole other disk — unless a caller explicitly asks for it.
+    pub cross_devices: bool,
 }
 
 impl Default for Limits {
     fn default() -> Self {
-        Limits { max_depth: MAX_DEPTH, max_entries: MAX_ENTRIES }
+        Limits { max_depth: MAX_DEPTH, max_entries: MAX_ENTRIES, cross_devices: false }
     }
 }
 
@@ -41,10 +45,37 @@ pub struct Walked {
     pub truncated: bool,
     /// Directory entries looked at.
     pub entries: usize,
+    /// Folders whose contents couldn't be listed (permissions, a vanished or offline folder): the
+    /// walk skipped them and carried on.
+    pub unreadable: usize,
+    /// Files the walk listed but `keep` refused (an unsupported type, for an import).
+    pub skipped: usize,
+    /// Folders left unentered because they are on another mounted volume ([`Limits::cross_devices`]).
+    pub crossed: usize,
 }
 
 fn hidden(p: &Path) -> bool {
     p.file_name().is_some_and(|n| n.to_string_lossy().starts_with('.'))
+}
+
+/// A folder's file-system identity, when the platform can tell them apart: a different id means a
+/// different mounted volume. `None` where it can't (the web, or a file system that reports none),
+/// which is treated as "same volume" so a walk never stops early for want of an answer.
+#[cfg(unix)]
+fn device_id(m: &std::fs::Metadata) -> Option<u64> {
+    use std::os::unix::fs::MetadataExt;
+    Some(m.dev())
+}
+
+#[cfg(windows)]
+fn device_id(m: &std::fs::Metadata) -> Option<u64> {
+    use std::os::windows::fs::MetadataExt;
+    m.volume_serial_number().map(u64::from)
+}
+
+#[cfg(not(any(unix, windows)))]
+fn device_id(_: &std::fs::Metadata) -> Option<u64> {
+    None
 }
 
 /// The files below folder `root` that `keep` accepts. Hidden entries (names starting with `.`)
@@ -57,12 +88,16 @@ pub fn files_in(root: &Path, skip: Option<&Path>, limits: Limits, mut keep: impl
     if let Ok(c) = std::fs::canonicalize(root) {
         linked.insert(c);
     }
+    // the starting folder's volume, so a walk never crosses into another unless asked
+    let root_device = std::fs::metadata(root).ok().and_then(|m| device_id(&m));
     // (path, depth of the folder it is in, is a folder); popped in path order
     let mut stack: Vec<(PathBuf, usize, bool)> = vec![(root.to_path_buf(), 0, true)];
     while let Some((path, depth, is_dir)) = stack.pop() {
         if !is_dir {
             if keep(&path) {
                 out.files.push(path);
+            } else {
+                out.skipped = out.skipped.saturating_add(1);
             }
             continue;
         }
@@ -73,7 +108,19 @@ pub fn files_in(root: &Path, skip: Option<&Path>, limits: Limits, mut keep: impl
             out.truncated = true;
             continue;
         }
-        let Ok(rd) = std::fs::read_dir(&path) else { continue };
+        // another mounted volume (a disk inside the tree): not entered unless asked for
+        if !limits.cross_devices
+            && let Some(root_device) = root_device
+            && let Ok(m) = std::fs::metadata(&path)
+            && device_id(&m).is_some_and(|d| d != root_device)
+        {
+            out.crossed = out.crossed.saturating_add(1);
+            continue;
+        }
+        let Ok(rd) = std::fs::read_dir(&path) else {
+            out.unreadable = out.unreadable.saturating_add(1);
+            continue;
+        };
         let mut children: Vec<(PathBuf, bool)> = Vec::new();
         for e in rd.flatten() {
             if out.entries >= limits.max_entries {
@@ -154,14 +201,27 @@ mod tests {
             std::fs::write(wide.join(format!("{i:02}.jpg")), b"x").unwrap();
         }
         let all = |_: &Path| true;
-        let w = files_in(&d.join("deep"), None, Limits { max_depth: 5, max_entries: 1000 }, all);
+        let w = files_in(&d.join("deep"), None, Limits { max_depth: 5, max_entries: 1000, cross_devices: false }, all);
         assert!(w.files.is_empty() && w.truncated, "{w:?}");
-        let w = files_in(&d.join("deep"), None, Limits { max_depth: 13, max_entries: 1000 }, all);
+        let w = files_in(&d.join("deep"), None, Limits { max_depth: 13, max_entries: 1000, cross_devices: false }, all);
         assert_eq!((w.files.len(), w.truncated), (1, false), "{w:?}");
-        let w = files_in(&wide, None, Limits { max_depth: 5, max_entries: 20 }, all);
+        let w = files_in(&wide, None, Limits { max_depth: 5, max_entries: 20, cross_devices: false }, all);
         assert_eq!((w.files.len(), w.entries, w.truncated), (20, 20, true));
         let w = files_in(&wide, None, Limits::default(), all);
         assert_eq!((w.files.len(), w.truncated), (50, false));
+        let _ = std::fs::remove_dir_all(&d);
+    }
+
+    /// Files the caller's `keep` refuses are counted (an import reports them as unsupported), not
+    /// silently dropped from the diagnostics.
+    #[test]
+    fn unkept_files_are_counted_as_skipped() {
+        let d = tmp("skipped");
+        for f in ["a.jpg", "b.txt", "c.png"] {
+            std::fs::write(d.join(f), b"x").unwrap();
+        }
+        let w = files_in(&d, None, Limits::default(), |p| p.extension().is_some_and(|e| e == "jpg"));
+        assert_eq!((w.files.len(), w.skipped), (1, 2), "{w:?}");
         let _ = std::fs::remove_dir_all(&d);
     }
 

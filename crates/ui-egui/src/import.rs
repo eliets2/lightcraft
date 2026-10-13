@@ -69,6 +69,13 @@ pub struct ImportDialog {
     pub new_album: String,
     /// Preset id ("" = none).
     pub preset: String,
+    /// An optional batch-edit recipe: develop control id → value (only non-default controls are
+    /// kept), applied to every imported photo on top of its sidecar, camera default and preset.
+    pub recipe: std::collections::BTreeMap<String, f64>,
+    /// Name typed for "Save as Preset" (the recipe saved for reuse).
+    pub recipe_name: String,
+    /// The source is a whole disk or share: `library.import` is told `disk: true`.
+    pub disk: bool,
     /// Comma-separated keywords.
     pub keywords: String,
     /// Copy: destination folder ("" = the library's Originals/).
@@ -410,6 +417,8 @@ pub struct ScanTask {
     rx: std::sync::mpsc::Receiver<ScanOutput>,
     /// Open the review with "copy into the library" checked (a camera / card).
     pub copy: bool,
+    /// The source is a whole disk or share: the import is told `disk: true`.
+    pub disk: bool,
     /// Browsing a folder (Local): the photos are read in place instead of opening the review.
     browse: bool,
     /// What is being scanned (the review's source).
@@ -432,6 +441,17 @@ pub(crate) fn busy_synchronizing(app: &LightcraftApp) -> Result<(), String> {
 
 /// Scan `paths` in the background, then open the review dialog (see [`poll_scan`]).
 pub fn open(app: &mut LightcraftApp, paths: Vec<String>) -> Result<Value, String> {
+    open_with(app, paths, false)
+}
+
+/// Open the review for a whole disk or share: the source is a volume root (from `library.volumes`),
+/// so the import is told `disk: true`. The walk stays on that volume (it never crosses into another
+/// mounted one) and reports what it couldn't read.
+pub fn open_disk(app: &mut LightcraftApp, root: String) -> Result<Value, String> {
+    open_with(app, vec![root], true)
+}
+
+fn open_with(app: &mut LightcraftApp, paths: Vec<String>, disk: bool) -> Result<Value, String> {
     if app.scan.is_some() {
         return Err("a scan is already running".into());
     }
@@ -448,7 +468,7 @@ pub fn open(app: &mut LightcraftApp, paths: Vec<String>) -> Result<Value, String
     #[cfg(target_arch = "wasm32")]
     job();
     let guard = scan_guard(app, &progress, false);
-    app.scan = Some(ScanTask { progress, rx, copy: false, browse: false, sources, guard });
+    app.scan = Some(ScanTask { progress, rx, copy: false, disk, browse: false, sources, guard });
     Ok(json!({"scanning": true}))
 }
 
@@ -510,7 +530,7 @@ pub fn browse(app: &mut LightcraftApp, path: &str, subfolders: Option<bool>) -> 
     #[cfg(target_arch = "wasm32")]
     job();
     let guard = scan_guard(app, &progress, true);
-    app.scan = Some(ScanTask { progress, rx, copy: false, browse: true, sources: Vec::new(), guard });
+    app.scan = Some(ScanTask { progress, rx, copy: false, disk: false, browse: true, sources: Vec::new(), guard });
     app.renderer.forget_imports();
     Ok(json!({"path": dir_s, "subfolders": subfolders, "scanning": true}))
 }
@@ -572,6 +592,7 @@ pub fn poll_scan(app: &mut LightcraftApp, ctx: &egui::Context) {
         .collect();
     d.set_trashed(trashed);
     d.copy = task.copy;
+    d.disk = task.disk;
     d.sources = task.sources;
     app.ui.dialog = Some(crate::state::Dialog::Import { opts: Box::new(d) });
 }
@@ -602,6 +623,13 @@ pub fn start(app: &mut LightcraftApp, d: &ImportDialog) -> Result<Value, String>
         (true, true) => "move",
     };
     let mut params = json!({"mode": mode, "keywords": d.keywords()});
+    if !d.recipe.is_empty() {
+        let items: Vec<Value> = d.recipe.iter().map(|(id, v)| json!({"id": id, "value": v})).collect();
+        params["recipe"] = json!(items);
+    }
+    if d.disk {
+        params["disk"] = json!(true);
+    }
     if !d.on_deleted.is_empty() {
         params["onDeleted"] = json!(d.on_deleted);
     }
@@ -1243,6 +1271,100 @@ pub fn body(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDialog) {
     field(ui, "Keywords", |ui| {
         let r = ui.add(egui::TextEdit::singleline(&mut d.keywords).hint_text(crate::i18n::tr("comma, separated")).desired_width(f32::INFINITY));
         register(ui.ctx(), "field:importKeywords", r.rect);
+    });
+    recipe_section(app, ui, d);
+}
+
+/// The control ids offered in the import review's optional batch-edit recipe: the everyday
+/// adjustments, not a second editor. Anything else is reached by selecting or saving a preset.
+const RECIPE_CONTROLS: &[&str] = &[
+    "wb.temp",
+    "wb.tint",
+    "light.exposure",
+    "light.contrast",
+    "light.highlights",
+    "light.shadows",
+    "light.whites",
+    "light.blacks",
+    "color.vibrance",
+    "color.saturation",
+    "effects.clarity",
+    "effects.texture",
+    "effects.dehaze",
+    "detail.sharpenAmount",
+    "grain.amount",
+    "vignette.amount",
+];
+
+/// The optional "Batch edits" section of the import review: a small recipe of develop controls
+/// applied to every newly imported photo, on top of its XMP sidecar, camera default and the chosen
+/// preset. The recipe lives only in the dialog until the import runs, so cancelling changes neither
+/// the catalog nor the preset collections; "Save as Preset" is the explicit way to reuse one.
+fn recipe_section(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDialog) {
+    let t = Tokens::get(ui.ctx());
+    let open_id = egui::Id::new("import-recipe-open");
+    let mut open = ui.ctx().data(|m| m.get_temp::<bool>(open_id)).unwrap_or(false);
+    field(ui, "Batch edits", |ui| {
+        ui.spacing_mut().item_spacing.x = 4.0;
+        let label = if open { crate::i18n::tr("Hide adjustments") } else { crate::i18n::tr("Adjust…") };
+        if crate::widgets::text_button(ui, "importRecipeToggle", label, open).clicked() {
+            open = !open;
+        }
+        let n = d.recipe.len();
+        let summary = if n == 0 {
+            crate::i18n::tr("None").to_string()
+        } else {
+            crate::i18n::tr_format!("{n} adjustment{s} to apply", n = n, s = if n == 1 { "" } else { "s" })
+        };
+        ui.label(egui::RichText::new(summary).color(if n == 0 { t.text_dim } else { t.text_label }));
+    });
+    ui.ctx().data_mut(|m| m.insert_temp(open_id, open));
+    if !open {
+        return;
+    }
+    ui.label(
+        egui::RichText::new(crate::i18n::tr(
+            "Applied to every photo imported now, after its own settings, its XMP sidecar and the preset above. Nothing is saved unless you save it as a preset.",
+        ))
+        .color(t.text_dim)
+        .small(),
+    );
+    for &id in RECIPE_CONTROLS {
+        let Some(spec) = lightcraft_develop::controls::find(id) else { continue };
+        let v = d.recipe.get(id).copied().unwrap_or(spec.default);
+        let out = crate::widgets::slider(ui, spec, v, true, None);
+        if let Some(nv) = out.value {
+            if (nv - spec.default).abs() < 1e-9 {
+                d.recipe.remove(id);
+            } else {
+                d.recipe.insert(id.to_string(), nv);
+            }
+        }
+    }
+    field(ui, "Recipe", |ui| {
+        ui.spacing_mut().item_spacing.x = 4.0;
+        let r = ui.add(egui::TextEdit::singleline(&mut d.recipe_name).hint_text(crate::i18n::tr("name for a saved preset")).desired_width(160.0));
+        register(ui.ctx(), "field:importRecipeName", r.rect);
+        let can = !d.recipe.is_empty() && !d.recipe_name.trim().is_empty();
+        let b = ui.add_enabled(can, egui::Button::new(crate::i18n::tr("Save as Preset")));
+        register(ui.ctx(), "button:importRecipeSave", b.rect);
+        if b.clicked() {
+            let items: Vec<Value> = d.recipe.iter().map(|(id, v)| json!({"id": id, "value": v})).collect();
+            let name = d.recipe_name.trim().to_string();
+            match app.session.execute("preset.saveRecipe", &json!({"name": name, "recipe": items})) {
+                Ok(v) => {
+                    if let Some(id) = v["id"].as_str() {
+                        d.preset = id.to_string();
+                    }
+                    let ctx = app.tasks.repaint.clone().unwrap_or_default();
+                    app.toast(&ctx, crate::i18n::tr_format!("Saved “{name}” as a preset", name = name));
+                }
+                Err(e) => {
+                    let ctx = app.tasks.repaint.clone().unwrap_or_default();
+                    app.toast(&ctx, crate::i18n::tr_format!("Could not save the preset: {e}", e = e));
+                }
+            }
+        }
     });
 }
 

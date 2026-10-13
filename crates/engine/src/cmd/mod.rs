@@ -199,6 +199,26 @@ pub(crate) fn bool_or(p: &Value, key: &str, d: bool) -> bool {
 pub(crate) fn ok() -> Result<Value> {
     Ok(Value::Null)
 }
+
+/// A batch-edit recipe from a command's params: `[{id, value}, …]`, each `id` a develop control
+/// (see `develop.controls`). Empty when absent or null. A malformed item, or an unknown control, is
+/// an error, so a typo is refused rather than silently ignored.
+pub(crate) fn recipe_param(p: &Value, cmd: &str) -> Result<Vec<(String, f64)>> {
+    let Some(v) = p.get("recipe").filter(|v| !v.is_null()) else { return Ok(Vec::new()) };
+    let Some(items) = v.as_array() else {
+        return Err(bad(cmd, "`recipe` must be a list of {id, value}"));
+    };
+    let mut out = Vec::new();
+    for it in items {
+        let id = it.get("id").and_then(Value::as_str).filter(|s| !s.is_empty()).ok_or_else(|| bad(cmd, "each recipe item needs an `id`"))?;
+        let value = it.get("value").and_then(Value::as_f64).ok_or_else(|| bad(cmd, format!("recipe `{id}` needs a numeric `value`")))?;
+        if lightcraft_develop::controls::find(id).is_none() {
+            return Err(bad(cmd, format!("unknown recipe control `{id}`")));
+        }
+        out.push((id.to_string(), value));
+    }
+    Ok(out)
+}
 pub(crate) fn point(p: &Value, key: &str) -> Option<lightcraft_geom::Point> {
     let a = p.get(key)?.as_array()?;
     Some(lightcraft_geom::Point::new(a.first()?.as_f64()?, a.get(1)?.as_f64()?))
