@@ -598,7 +598,7 @@ pub fn push_dabs_counted(dabs: &mut Vec<Point>, emitted: &mut usize, prev: Optio
         let n = (dist / dab_spacing(r)).ceil();
         // a hostile or degenerate segment (huge) gets no in-between dabs rather than a huge
         // allocation: 1 M dabs is far more than any on-screen stroke needs
-        let n = if n.is_finite() { n.clamp(0.0, 1_000_000.0) as usize } else { 0 };
+        let n = if n.is_finite() && n <= 1_000_000.0 { n.max(0.0) as usize } else { 0 };
         // the in-between dabs and `q` together fit what is left of the stroke's budget
         let n = n.min(room);
         for k in 1..n {
@@ -739,3 +739,27 @@ fn rasterize_brush(strokes: &[BrushStroke], frame: &Frame, w: usize, h: usize, i
 
 #[cfg(test)]
 mod tests;
+
+/// Tests from "LR-MASK-BRUSH: checkpoint bounded dab interpolation" that the new base
+/// did not move into masks/tests.rs.
+#[cfg(test)]
+mod dab_budget_tests {
+    use super::*;
+
+    #[test]
+    fn oversized_brush_segments_skip_intermediate_dabs() {
+        let mut dabs = vec![Point::new(10.0, 10.0)];
+        let far = Point::new(10_000_000.0, 10.0);
+        assert!(push_dabs(&mut dabs, Some(Point::new(10.0, 10.0)), far, 2.0));
+        assert_eq!(dabs.len(), 2, "an extreme segment must not allocate a million intermediate dabs");
+        assert_eq!(dabs.last(), Some(&far));
+
+        // Ordinary feathered-brush paths still get overlapping dabs and their endpoint.
+        let mut regular = vec![Point::new(10.0, 10.0)];
+        let end = Point::new(30.0, 10.0);
+        assert!(push_dabs(&mut regular, Some(Point::new(10.0, 10.0)), end, 4.0));
+        assert_eq!(regular.len(), 21);
+        assert_eq!(regular.last(), Some(&end));
+        assert!(regular.windows(2).all(|pair| pair[0].dist(pair[1]) <= dab_spacing(4.0)));
+    }
+}
