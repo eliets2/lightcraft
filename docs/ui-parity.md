@@ -1,6 +1,6 @@
 # UI parity
 
-> **Last reviewed:** 2026-10-11 · **Last updated:** 2026-10-24 · **Change:** minor (KEYC-METADATA: ⌘⌥⇧C / ⌘⌥⇧V Copy / Paste Metadata; KEYC-RATING: ⌘L Enable Filters; context menus: a right-click elsewhere on the same widget moves its open menu instead of flashing it, issue #1877; Reference Escape, catalog-local pins and deleted-photo handling verified on Windows; KEYC-RATING: `\` shows / hides the Filter Bar in the grids; earlier: zoom row soft proofing sharp at 1:1, canvas tools by keyboard, focus-order test, ~50 unnamed hand-drawn widgets named; KEYC-METADATA: ⌥0 / ⌥⇧0 next / previous keyword set; KEYC-RATING: ⌘L Enable Filters; context menus: a right-click elsewhere on the same widget moves its open menu instead of flashing it, issue #1877; Reference Escape, catalog-local pins and deleted-photo handling verified on Windows; KEYC-RATING: `\` shows / hides the Filter Bar in the grids; earlier: zoom row soft proofing sharp at 1:1, canvas tools by keyboard, focus-order test, ~50 unnamed hand-drawn widgets named; KEYC-METADATA: ⌘K Add Keywords; KEYC-RATING: ⌘L Enable Filters; context menus: a right-click elsewhere on the same widget moves its open menu instead of flashing it, issue #1877; Reference Escape, catalog-local pins and deleted-photo handling verified on Windows; KEYC-RATING: `\` shows / hides the Filter Bar in the grids; earlier: zoom row soft proofing sharp at 1:1, canvas tools by keyboard, focus-order test, ~50 unnamed hand-drawn widgets named) · **Target:** Adobe Lightroom Classic 15.5 / Lightroom 9.6
+> **Last reviewed:** 2026-10-11 · **Last updated:** 2026-10-24 · **Change:** minor (KEYC-METADATA: ⌘⌥⇧C / ⌘⌥⇧V Copy / Paste Metadata; KEYC-RATING: ⌘L Enable Filters; context menus: a right-click elsewhere on the same widget moves its open menu instead of flashing it, issue #1877; Reference Escape, catalog-local pins and deleted-photo handling verified on Windows; KEYC-RATING: `\` shows / hides the Filter Bar in the grids; earlier: zoom row soft proofing sharp at 1:1, canvas tools by keyboard, focus-order test, ~50 unnamed hand-drawn widgets named; KEYC-METADATA: ⌥0 / ⌥⇧0 next / previous keyword set; KEYC-RATING: ⌘L Enable Filters; context menus: a right-click elsewhere on the same widget moves its open menu instead of flashing it, issue #1877; Reference Escape, catalog-local pins and deleted-photo handling verified on Windows; KEYC-RATING: `\` shows / hides the Filter Bar in the grids; earlier: zoom row soft proofing sharp at 1:1, canvas tools by keyboard, focus-order test, ~50 unnamed hand-drawn widgets named; KEYC-METADATA: ⌘K Add Keywords; KEYC-RATING: ⌘L Enable Filters; context menus: a right-click elsewhere on the same widget moves its open menu instead of flashing it, issue #1877; Reference Escape, catalog-local pins and deleted-photo handling verified on Windows; KEYC-RATING: `\` shows / hides the Filter Bar in the grids; earlier: zoom row soft proofing sharp at 1:1, canvas tools by keyboard, focus-order test, ~50 unnamed hand-drawn widgets named; F1 opens the shortcuts dialog; H toggles mask pins while masking) · **Target:** Adobe Lightroom Classic 15.5 / Lightroom 9.6
 
 How LightCraft's interaction compares with Lightroom's: views, panels, tools and handles, modifier
 keys, shortcuts, zoom, context menus and feel. Rows for individual menu items and shortcuts live in
@@ -79,6 +79,12 @@ under the UI command that wraps it (a no-op error); the UI command now wins.
 **Still missing / broken:**
 - Tab / ⇧Tab (hide the side panels / all panels): Tab moves the keyboard focus here (accessibility), so it is
   not bound; F5 (hide the top panel) is not bound either.
+- F1 opens the keyboard-shortcuts dialog (a second key for ⌘/). There is no in-app help page beyond it; Help ▸ LightCraft Help
+  opens the docs on GitHub and has no shortcut (verify the rest of the old list: full screen, settings, stacks,
+  visualize spots and merges have commands now).
+- `H` toggles the mask pins while the Masking panel is open (the same switch as View → Show Mask Pins) and opens Remove everywhere
+  else; Lightroom (Classic) uses it to hide the pins of every local tool. ⇧H still cycles the Tool Overlay (#224), which hides
+  the Remove tool's spot pins that way.
 - ⌘M / ⌘H / ⌘Q / ⌘W rely on the platform window defaults (unverified).
 
 
@@ -165,6 +171,7 @@ establish OS keyboard delivery or cross-platform acceptance.
 | 2026-10-13 | minor | Library culling: backtick cycles the flag; ⌘↑ / ⌘↓ raise / lower flag status |
 | 2026-10-13 | minor | KEYC-COMPARE: `=` / `-` grid thumbnail size keys noted in the shortcuts section |
 | 2026-10-13 | minor | Shortcuts: Home / End and Shift+Left / Right in the two library grids, Cmd+O (Open Library…) and Shift+H (Visualize HDR) get bindings and keyboard tests; percentages and the dated counts above are unchanged |
+| 2026-10-13 | minor | Shortcuts: F1 opens the keyboard-shortcuts dialog (no longer the docs page); H toggles the mask pins while Masking is open and still opens Remove elsewhere |
 | 2026-10-14 | minor | Zoom row: soft proofing gets zoom windows; LR-VIEW-ZOOM gap closed |
 | 2026-10-12 | minor | Accessibility: an AccessKit tree audit test over every view, Develop tool and 13 dialogs; unnamed fields, slider ranges and the Auto Stack slider fixed; 30% → 55%; UI remaining 40–70 h → 34–58 h |
 | 2026-10-21 | minor | Reference Escape exits to Detail; catalog-local pins and missing/deleted reference handling verified with regressions and native Windows smoke |
