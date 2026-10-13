@@ -1041,8 +1041,12 @@ fn curve_editor(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId, d: &Dev
                 x = x.min(hi);
             } else if i + 1 == v.len() {
                 x = x.max(lo);
-            } else {
+            } else if lo <= hi {
                 x = x.clamp(lo, hi);
+            } else {
+                // Neighbours less than 0.02 apart (an imported curve can have them) leave no room between
+                // the two margins, and `f64::clamp` panics when its bounds cross: keep the x.
+                x = v[i].x;
             }
             v[i] = Point::new(x, y);
             new_pts = Some(v);
