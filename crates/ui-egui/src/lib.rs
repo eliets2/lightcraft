@@ -118,6 +118,8 @@ mod tests_guided_guides;
 #[cfg(test)]
 mod tests_histogram_drag;
 #[cfg(test)]
+mod tests_import_recipe;
+#[cfg(test)]
 mod tests_info_dialogs;
 #[cfg(test)]
 mod tests_keymap;
