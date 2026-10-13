@@ -3,10 +3,11 @@
 //! a grid of thumbnails with checkboxes (duplicates marked and unchecked; Shift-click sets a
 //! range), the destination (add in place / copy or move into the library's `Originals/` or a
 //! chosen folder, filed by day, by month, into one folder or by a custom folder template,
-//! optionally renamed), an album (existing or new), a preset and keywords to apply. Importing
-//! runs on a worker thread (files are probed, copied or moved there) and its batches join the
-//! catalog between frames, with a row and ✕ in the activity stack (issue #345); the whole import is
-//! one undo step.
+//! optionally renamed), an album (existing or new), a preset and keywords to apply. When the scan
+//! left something out (a walk cut at its limit, folders it couldn't read, files that are not
+//! photos) one line under the count says so ([`scan_note`]). Importing runs on a worker thread
+//! (files are probed, copied or moved there) and its batches join the catalog between frames, with
+//! a row and ✕ in the activity stack (issue #345); the whole import is one undo step.
 
 use egui::{Align2, Color32, Rect, Sense, Stroke, StrokeKind, Vec2, pos2, vec2};
 use lightcraft_engine::import::{
@@ -88,6 +89,13 @@ pub struct ImportDialog {
     /// What to do with those: `restore` (the default: the photo comes back with its edits), `fresh`
     /// (imported as a new photo, the old record deleted) or "" (leave them) — the `onDeleted` param.
     pub on_deleted: String,
+    /// The scan's folder walk stopped at a depth or entry limit: there may be more photos than the
+    /// review lists ([`ScanOutput::truncated`]).
+    pub truncated: bool,
+    /// Folders the scan couldn't list ([`ScanOutput::unreadable`]).
+    pub unreadable: usize,
+    /// Files in the scanned folders that are not a supported photo type ([`ScanOutput::unsupported`]).
+    pub unsupported: usize,
     /// The candidate clicked last: where a Shift-click range starts ([`ImportDialog::click`]).
     #[serde(skip)]
     pub last_clicked: Option<usize>,
@@ -626,6 +634,7 @@ pub fn poll_scan(app: &mut LightcraftApp, ctx: &egui::Context) {
     }
     app.renderer.forget_imports();
     let mut d = ImportDialog::new(out.candidates);
+    (d.truncated, d.unreadable, d.unsupported) = (out.truncated, out.unreadable, out.unsupported);
     let trashed = d
         .candidates
         .iter()
@@ -1054,6 +1063,24 @@ fn dup_counts(d: &ImportDialog) -> (usize, usize, usize) {
     (dups, in_source, trashed)
 }
 
+/// The one line that says what the scan left out, for the review's header: a folder walk that
+/// stopped at its limit, folders it couldn't read, files that are not a supported photo type.
+/// `None` when it left nothing out (the review then shows no line at all).
+pub(crate) fn scan_note(d: &ImportDialog) -> Option<String> {
+    let plural = |n: usize| if n == 1 { "" } else { "s" };
+    let mut parts: Vec<String> = Vec::new();
+    if d.truncated {
+        parts.push(crate::i18n::tr("Stopped at the scan limit: there may be more photos").to_string());
+    }
+    if d.unreadable > 0 {
+        parts.push(crate::i18n::tr_format!("{n} folder{} could not be read", plural(d.unreadable), n = d.unreadable));
+    }
+    if d.unsupported > 0 {
+        parts.push(crate::i18n::tr_format!("{n} file{} skipped (not a supported photo type)", plural(d.unsupported), n = d.unsupported));
+    }
+    (!parts.is_empty()).then(|| parts.join(" · "))
+}
+
 /// The dialog body: options, then the candidate grid.
 pub fn body(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDialog) {
     let t = Tokens::get(ui.ctx());
@@ -1083,6 +1110,11 @@ pub fn body(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDialog) {
             }
         });
     });
+    // what the scan left out, when it left something out
+    if let Some(note) = scan_note(d) {
+        let r = ui.label(egui::RichText::new(note).color(t.caution).small());
+        register(ui.ctx(), "label:importScanNote", r.rect);
+    }
     // with more than one file type: a toggle per type checks or unchecks all of its files
     let types = d.file_types();
     if types.len() > 1 {
