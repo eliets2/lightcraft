@@ -313,7 +313,12 @@ pub fn nr_params(s: &DevelopSettings, src_long: usize, out_long: usize) -> (Opti
     let scale = (out_long as f32 / src_long.max(1) as f32).clamp(0.05, 1.0);
     let l = (lum > 0.0).then(|| {
         let detail = (s.detail.nr_detail / 100.0) as f32;
-        NrLum { sigma: (1.0 + 2.5 * lum) * scale.max(0.4), eps: 0.002 + lum * lum * 0.25 * (1.0 - 0.7 * detail), k: lum.sqrt() }
+        let contrast = (s.detail.nr_contrast / 100.0) as f32;
+        // Contrast protects mid/coarse local structure (2-4 px) from over-smoothing.
+        // It acts as a keep factor in 0..1: structure is preserved, not sharpened.
+        // This is implemented by reducing eps for structure at the contrast scale.
+        let eps = 0.002 + lum * lum * 0.25 * (1.0 - 0.7 * detail) * (1.0 - 0.5 * contrast);
+        NrLum { sigma: (1.0 + 2.5 * lum) * scale.max(0.4), eps, k: lum.sqrt() }
     });
     let c = (col > 0.0).then(|| {
         let sigma = (1.5 + 6.0 * col) * scale.max(0.35) * (1.0 + (s.detail.nr_color_smoothness / 100.0) as f32);
