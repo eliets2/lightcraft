@@ -1,6 +1,6 @@
 # Lightroom parity checklist
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-14 · **Change:** minor (integration batch 36: slideshow module, print-ready PDF fixes, local adjustment presets, Layout Image loupe overlay, Delete in an album removes from it, new languages Czech, Polish, Italian-ready catalogs; many rows' notes updated by their PRs) · **Target:** Adobe Lightroom Classic 15.5 / Lightroom 9.6
+> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-14 · **Change:** minor (KEY-HELP, KEYC-HELP, KEY-HIDEPINS: F1 opens the shortcuts dialog, H toggles mask pins while masking; integration batch 36: slideshow module, print-ready PDF fixes, local adjustment presets, Layout Image loupe overlay, Delete in an album removes from it, new languages Czech, Polish, Italian-ready catalogs; many rows' notes updated by their PRs) · **Target:** Adobe Lightroom Classic 15.5 / Lightroom 9.6
 
 The measured, row-by-row checklist: one row per Lightroom feature, menu item and shortcut, what we
 have and what is missing. It answers *does the feature exist?* (feature breadth). Whether it is good
@@ -677,12 +677,12 @@ From `06-shortcuts.md` part 1. Evidence is our binding; conflicts are explained 
 | KEY-SLIDER-TYPE | Type a slider value | P1 | ✅ | `crates/ui-egui/src/widgets.rs` (`typed_value`), `crates/ui-egui/src/text_field.rs`, `crates/ui-egui/src/widgets/tests_numeric_entry.rs` (`opening_release_honors_return_and_escape_immediately`), `crates/ui-egui/src/tests_keymap.rs` (`opening_numeric_release_keeps_keys_in_the_editor`) | click the value next to any slider's name and type one (`1.5`, `+0,25`, `-20`, `5600 K`): Return or clicking away applies it on the control's steps and range as one undo step, Esc keeps the old value; issue #322; Return/Escape take effect on the opening release, retaining the stored value on Escape; typing stays in the editor without triggering global shortcuts |
 | KEY-SLIDER-SCRUB | Scrub a slider value — drag the number | P1 | ✅ | `crates/ui-egui/src/widgets.rs` (`slider`, `SCRUB_START`), `crates/ui-egui/src/widgets/tests_numeric_entry.rs` (`dragging_the_value_sideways_scrubs_it_like_the_thumb`, `scrubbing_back_and_with_shift`, `a_press_that_barely_moves_still_types`) | drag the value next to any slider's name sideways: it moves as dragging the thumb would (the pointer's travel over the track's width, ⇧ a tenth as far), on the control's steps and range, as one undo step; a press that moves less than 3 points sideways stays a click that types a value (KEY-SLIDER-TYPE); the pointer over the value is the horizontal-resize cursor, as Lightroom's scrubby value |
 | KEY-SHORTCUTS | Shortcut list — ⌘/ | P1 | ✅ | `cmd:app.shortcuts` | |
-| KEY-HELP | Help — F1 | P2 | ✅ | `cmd:app.help` | |
+| KEY-HELP | Help — F1 (opens the keyboard-shortcuts dialog) | P2 | ✅ | `cmd:app.shortcuts`, `cmd:app.help`, `crates/ui-egui/src/tests_keymap.rs` (`f1_opens_the_shortcuts_dialog`, `f1_does_not_open_the_docs_page_but_the_help_menu_item_does`) | F1 is a second key for Keyboard Shortcuts (⌘/); it no longer opens the docs page, which stays in Help ▸ LightCraft Help without a shortcut; no in-app help page beyond the shortcut list |
 | KEY-VIDEO-PLAY | Play/pause video — Space | P1 | ⬜ | | |
 | KEY-ESC | Leave tool / view — Esc | P0 | ✅ | `cmd:view.back`, `crates/ui-egui/src/icons.rs` (`navigation_arrowheads_have_both_halves`), `crates/ui-egui/src/tests_crop_tool.rs` | top-bar navigation arrowheads render both halves at 1× and 2× scale; in the crop tool Esc closes the tool first (the crop stays), the next Esc goes back to the grid; Esc that ends an edit in a text field does nothing else |
 | KEY-COMMIT | Commit tool — Return | P1 | ✅ | `cmd:tool.done` | Return closes Crop / Remove / Red Eye / Masking back to Edit (edits apply live, as in Lightroom) |
 | KEY-DELETE-PIN | Delete selected pin — ⌫ | P0 | ✅ | `cmd:mask.delete`, `cmd:spot.delete` | ⌫ deletes the active mask (Masking) or the selected spot (Remove), never the photo while retouching |
-| KEY-HIDEPINS | Hide pins — H | P2 | ✅ | `cmd:view.toolOverlay`, `crates/ui-egui/src/tests_tool_overlay.rs` | ⇧H cycles the Tool Overlay (Auto → Always → Selected → Never) for spot and mask pins, since H opens Remove; also View ▸ Tool Overlay and the Remove / Masking panels (#224) |
+| KEY-HIDEPINS | Hide pins — H | P2 | ✅ | `cmd:view.toolOverlay`, `cmd:view.maskPins`, `cmd:panel.remove`, `crates/ui-egui/src/shortcuts.rs`, `crates/ui-egui/src/tests_tool_overlay.rs`, `crates/ui-egui/src/tests_keymap.rs` (`h_toggles_the_mask_pins_while_masking`, `h_while_masking_does_not_open_remove`, `h_opens_remove_when_another_panel_is_active`) | ⇧H cycles the Tool Overlay (Auto → Always → Selected → Never) for spot and mask pins, since H opens Remove; also View ▸ Tool Overlay and the Remove / Masking panels (#224). In the Masking panel H itself toggles the mask pins (the same switch as View ▸ Show Mask Pins) and does not open Remove; from the other panels H still opens Remove |
 
 ## Lightroom Classic extras
 
@@ -783,7 +783,7 @@ From `08-lightroom-classic-extras.md` (Classic-only features) and part 2 of `06-
 | KEYC-METADATA | Classic keyword/metadata keys (⌘K, ⌘S, ⌘⌥⇧C/V…) | P2 | 🟡 | `cmd:photo.saveMetadataToFile` | ⌘S saves metadata; no keyword sets, metadata copy/paste |
 | KEYC-DEVELOP | Classic develop keys (V, ⌘U, ⇧⌘U, R, Q, K, M, ⇧M, ⇧W, ⇧J, ⇧Q…) | P2 | 🟡 | `cmd:develop.treatment`, `cmd:develop.reset`, `cmd:crop.reset` | V, ⇧⌘R, ⌥⌘R, W, J, Y, ⇧Y, \ match; R/K/M/⇧M differ; no Classic keymap layer |
 | KEYC-MODULE-OUTPUT | Book / slideshow / print / map / web keys | P2 | ⬜ | | modules not implemented |
-| KEYC-HELP | Classic help keys (⌘/, F1) | P2 | 🟡 | `cmd:app.shortcuts` | ⌘/ only |
+| KEYC-HELP | Classic help keys (⌘/, F1) | P2 | 🟡 | `cmd:app.shortcuts` | ⌘/ and F1 both open the keyboard-shortcuts dialog; no in-app help page (Help ▸ LightCraft Help opens the docs on GitHub) |
 
 ### Japanese text watermarks
 
@@ -797,37 +797,7 @@ Latin stays upright. Advanced Japanese composition remains open. Regression cove
 
 | Date | Change | Summary |
 |---|---|---|
-| 2026-10-12 | minor | LR-EDIT-OPTICS-PROFILE: Sony ARW shading, CA and distortion tables decoded with settings and provenance (raw IFD, `SR2SubIFD` fallback); applied corrections unchanged (ILCE-7RM4A and ILCE-7RM6 distortion); status unchanged (🟡) |
-| 2026-10-14 | minor | LR-IMP-CAMERA-COVERAGE: Camera-coverage sweep (#1327): 30 models verified on 40 CC0 files (coverage.py 515 → 545 verified); sensor verification does not establish colour parity (#1277); status unchanged (🟡) |
-| 2026-10-13 | minor | LR-MERGE-PANO: a panorama's DNG takes its `AsShotNeutral` from the median of its frames' vendor white-balance multipliers (CR2, NEF, ARW…) instead of the first frame's tags, and frames now carry the multipliers (issue #1144); status unchanged (✅) |
-| 2026-10-13 | minor | LR-MERGE-HDR: an HDR merge's DNG takes its `AsShotNeutral` from the median of its inputs' vendor white-balance multipliers instead of the reference frame's tags (issue #1144); status unchanged (🟡) |
-| 2026-10-13 | minor | LR-VIEW-FOCUSPOINT (new, 🟡): the camera's focus point from Sony α1 / A7S III maker notes, drawn in Detail, Compare and Survey, the Info panel's Focus row, and Z zooming to it; photos already in the library read in the background, header only (#1480) |
-| 2026-10-14 | patch | LR-MERGE-HDR: the merge no longer depends on the order of its frames, and pixels next to clipped photosites lose their weight with them (no magenta fringes along clipped windows); status unchanged (🟡) |
-| 2026-10-14 | minor | LR-IMP-CAMERA-COVERAGE: 17 uncompressed Olympus and Samsung Adobe models verified on one CC0 file each; status unchanged (🟡) |
-| 2026-10-13 | minor | LR-EDIT-SECTION-SOLO: Solo Mode for Edit sections (Window ▸ Edit Sections, section-header menu, ⌥-click); KEYC-PANELS notes it |
-| 2026-10-14 | minor | LR-MERGE-HDR ✅ → 🟡: tested on real 67 MP Sony brackets; moving clipped highlights (black-hole stars) and dark-sky ghosts fixed, merge memory cut ~25 %; AI Denoise on merged DNGs, JPEG response curves and per-frame memory remain (gap 29). LR-MERGE-HEADLESS, MENU-PHOTO-MERGE: HDR for Each Bracket Set (`merge.hdrBatch`) |
-| 2026-10-15 | patch | LR-VIEW-BEFOREAFTER: side by side and stacked panes share click-zoom animation for whole-frame images, window tiles and input; render requests keep the final target (#1821); status unchanged |
-| 2026-10-14 | patch | LR-META-XMP: automatic sidecar writes that fail (folder offline or read-only) wait and are written again once the files are reachable, with a notice (`cmd:library.retrySidecars`); status unchanged |
-| 2026-10-13 | minor | LR-BEHAV-WINDOW (new, 🟡): the desktop app's window opens at the size it was left at, zoomed / maximized if it was; full screen and the place on the desktop are not remembered |
-| 2026-10-14 | minor | LR-IMP-CAMERA-COVERAGE: Nikon D600, D610 and D5000 NEFs drop the filler and noise columns on the right (a band), and the D600 and D610 measure their white level inside the image (#1627); status unchanged (🟡) |
-| 2026-10-15 | patch | LR-VIEW-BEFOREAFTER: side by side and stacked panes share click-zoom animation for whole-frame images, window tiles and input; render requests keep the final target (#1821); status unchanged |
-| 2026-10-14 | patch | LR-MASK-BRUSH: ⇧-click with the brush draws a straight stroke from where the last stroke ended, tapering when the brush changed in between (`cmd:mask.brushStroke` `connect`); status unchanged |
-| 2026-10-14 | minor | LR-VIEW-ZOOM 🟡 → ✅: soft proofing gets zoom windows (mask overlays already had them; row text corrected), 1:1 pixels tested equal to the full-size export, slider-drag latency at 1:1 measured on Linux |
-| 2026-10-13 | patch | LR-VIEW-COMPARE, LRC-LIB-COMPARE: ⌘/Ctrl- and Shift-clicks on the filmstrip in Compare change the selection as in the grid; the two photos shown stay selected and the active photo is unchanged (#187); statuses unchanged |
-| 2026-10-13 | minor | KEYC-SELECTONLYACTIVE: Edit → Select Only Active Photo (⌘⇧D) lands as a new row; status 🟡 (headless-tested, native macOS menu path unverified) |
-| 2026-10-13 | patch | LRC-LIB-CATALOG-IMPORT: a catalog whose tables are all still in its `-wal` file (main file schema format 0) opens instead of failing as an unsupported schema format; status unchanged |
-| 2026-10-14 | patch | LR-REM-HEAL, LR-REM-CLONE: zero-feather edges preserve exact-radius pixels; zero-opacity regression covers all spot modes and image corners. Statuses and feature counts unchanged. |
-| 2026-10-13 | patch | LR-EXP-DIM: an enlarged export stops at 512 megapixels and is refused when it needs more memory than the computer has, instead of aborting the app; status unchanged |
-| 2026-10-13 | minor | LR-PROF-CAMERACOLOR: bundled ILCA-99M2 profile with its held-out measurement |
-| 2026-10-12 | minor | LR-MASK-EFFECTS (new, ✅): local adjustment (effect / brush) presets: Effect menu, New Effect Preset dialog, Manage window, groups and favorites; imports Lightroom Classic local `.lrtemplate`, Camera Raw local `.xmp`, `.lceffect` and `.zip`. LR-IMP-PROFILES and LR-MASK-SLIDERS notes updated |
-| 2026-10-14 | minor | LR-IMP-CAMERA-COVERAGE: 21 Sony and Leica Adobe models verified on one CC0 file each; status unchanged (🟡) |
-| 2026-10-13 | minor | KEY-HIDEPINS ⬜ → ✅: Tool Overlay (Auto / Always / Selected / Never, `view.toolOverlay`, ⇧H cycles; H stays Remove) for the Remove tool's spot pins and the mask pins (issue #224); LR-MASK-PINS loses its "no Auto mode" note, LR-REM-SPOT-EDIT notes the modes |
-| 2026-10-13 | minor | LR-EDIT-DETAIL-NR, LR-EDIT-DETAIL-CNR: noise-reduction radii in the original's pixels, so previews at any size and smaller exports look like the full-size render scaled down (issue #960); status unchanged |
-| 2026-10-13 | minor | KEYC-RATING: backtick cycles the flag (`photo.cycleFlag`), ⌘↑ / ⌘↓ raise / lower it (`photo.increaseFlag`, `photo.decreaseFlag`); status unchanged (🟡) |
-| 2026-10-13 | patch | LR-MASK-LUMRANGE / LR-MASK-COLORRANGE: range drags keep the grabbed endpoint; colour samples use the render's enabled sections and HDR/SDR settings; regression coverage, status unchanged |
-| 2026-10-13 | minor | LR-IMP-DEVICE: Settings → Import → Cameras and Cards can open the import review when a camera or card is connected; status unchanged (✅) |
-| 2026-10-13 | minor | KEY-SLIDER-SCRUB: drag a slider's value sideways to scrub it, as in Lightroom (new row) |
-| 2026-10-13 | minor | KEY-SLIDER-RESET: hovering a slider's name or thumb says a double-click resets it; a double-click on the thumb is one undo step, not two; a disabled slider's name doesn't reset it (issue #1436); status unchanged (✅) |
+| 2026-10-13 | minor | KEY-HELP and KEYC-HELP: F1 opens the keyboard-shortcuts dialog and no longer the docs page, with regression references; KEY-HIDEPINS: H toggles the mask pins while the Masking panel is open, on top of ⇧H's Tool Overlay cycle; status unchanged (✅) |
 | 2026-10-11 | minor | LR-MERGE-HDR: HDR and panorama merges of raws without colour matrices (CR2, NEF, ARW…) write the colour they open with as DNG tags (issue #965); status unchanged |
 | 2026-10-12 | minor | LR-META-XMP: Read Metadata from File no longer auto-writes the sidecar it has just read, which added `lc:settings` and hid another app's later `crs:` edits (#934); status unchanged (✅) |
 | 2026-10-12 | patch | LR-IMP-CAMERA-COVERAGE: CR2 white level from the active area, not the saturated masked rows above it (issue #1272); status unchanged (🟡) |
