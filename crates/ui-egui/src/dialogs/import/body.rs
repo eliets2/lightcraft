@@ -387,7 +387,7 @@ pub fn body(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDialog) {
 /// adjustments, not a second editor. Each must be one a recipe may name (`library.import` refuses
 /// the others: no white balance, geometry or crop); a test holds the list to that. Anything else is
 /// reached by choosing or saving a preset.
-const RECIPE_CONTROLS: &[&str] = &[
+pub(super) const RECIPE_CONTROLS: &[&str] = &[
     "light.exposure",
     "light.contrast",
     "light.highlights",
@@ -410,7 +410,7 @@ pub(super) fn recipe_items(recipe: &std::collections::BTreeMap<String, f64>) -> 
 }
 
 /// Record a slider's new value in the recipe: a control back at its default is no longer named.
-fn note_recipe_value(recipe: &mut std::collections::BTreeMap<String, f64>, spec: &lightcraft_develop::controls::ControlSpec, value: f64) {
+pub(super) fn note_recipe_value(recipe: &mut std::collections::BTreeMap<String, f64>, spec: &lightcraft_develop::controls::ControlSpec, value: f64) {
     if (value - spec.default).abs() < 1e-9 {
         recipe.remove(spec.id);
     } else {
