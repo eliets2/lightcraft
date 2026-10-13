@@ -3,7 +3,8 @@
 //! a grid of thumbnails with checkboxes (duplicates marked and unchecked; Shift-click sets a
 //! range), the destination (add in place / copy or move into the library's `Originals/` or a
 //! chosen folder, filed by day, by month, into one folder or by a custom folder template,
-//! optionally renamed), an album (existing or new), a preset and keywords to apply. Importing
+//! optionally renamed), an album (existing or new), a preset, an optional batch-edit recipe
+//! ("Batch edits": develop controls set on every new photo) and keywords to apply. Importing
 //! runs on a worker thread (files are probed, copied or moved there) and its batches join the
 //! catalog between frames, with a row and ✕ in the activity stack (issue #345); the whole import is
 //! one undo step.
@@ -31,6 +32,7 @@ pub(crate) use body::grid_height;
 #[cfg(test)]
 use body::{DEFAULT_BELOW_GRID, badge_rect, dup_counts};
 pub use body::{DEFAULT_FOLDER_TEMPLATE, body, example_destination, source_summary};
+use body::recipe_items;
 pub(crate) use body::{DIALOG_SIZE, note_dialog_bottom};
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use scan::cards_seen;
@@ -58,6 +60,12 @@ pub struct ImportDialog {
     pub new_album: String,
     /// Preset id ("" = none).
     pub preset: String,
+    /// An optional batch-edit recipe: develop control id → value (only controls moved off their
+    /// default are kept), set on every photo this import adds, on top of its sidecar, camera
+    /// default and preset (the `recipe` param of `library.import`).
+    pub recipe: std::collections::BTreeMap<String, f64>,
+    /// Name typed for "Save as Preset" (the recipe saved for reuse).
+    pub recipe_name: String,
     /// Comma-separated keywords.
     pub keywords: String,
     /// Copy: destination folder ("" = the library's Originals/).
