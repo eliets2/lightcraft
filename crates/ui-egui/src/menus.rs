@@ -58,6 +58,9 @@ pub const UI_COMMANDS: &[UiCommand] = &[
     ("view.squareGrid", "Square Grid", None, "View"),
     // G: Photo Grid ↔ Square Grid (from other views: the photo grid)
     ("view.gridToggle", "Grid", Some("G"), ""),
+    ("view.gridThumbnailsLarger", "Larger Grid Thumbnails", Some("="), "View"),
+    ("view.gridThumbnailsSmaller", "Smaller Grid Thumbnails", Some("-"), "View"),
+    ("library.selectOnlyActive", "Select Only Active Photo", Some("Cmd+Shift+D"), "Edit"),
     ("tool.guidedUpright", "Guided Upright", Some("Shift+G"), "Window>Tools"),
     ("view.detail", "Detail", Some("D"), "View"),
     ("view.compare", "Compare", Some("Shift+C"), "View"),
@@ -477,6 +480,18 @@ pub fn run_ui_command(app: &mut LightcraftApp, id: &str, p: &Value) -> Option<Re
         }
         "view.appearance" => appearance_command(app, p),
         "view.theme" => theme_command(app, p),
+        "view.gridThumbnailsLarger" | "view.gridThumbnailsSmaller" => {
+            if !crate::shortcuts::library_grid(app) {
+                return Some(Err("grid thumbnail sizing requires a library grid".into()));
+            }
+            let step = if id == "view.gridThumbnailsLarger" { 20.0 } else { -20.0 };
+            app.ui.thumb_size = (app.ui.thumb_size + step).clamp(90.0, 480.0);
+            Ok(json!({"thumbnailSize": app.ui.thumb_size}))
+        }
+        "library.selectOnlyActive" => {
+            let Some(active) = app.session.active() else { return Some(Err("no active photo".into())) };
+            app.run("library.select", json!({"ids": [active.0], "active": active.0}))
+        }
         "view.gridToggle" => {
             app.ui.view = if app.ui.view == ViewMode::PhotoGrid { ViewMode::SquareGrid } else { ViewMode::PhotoGrid };
             Ok(Value::Null)
@@ -1847,6 +1862,8 @@ pub fn run_ui_command(app: &mut LightcraftApp, id: &str, p: &Value) -> Option<Re
 
 pub fn ui_enabled(app: &LightcraftApp, id: &str) -> bool {
     match id {
+        "view.gridThumbnailsLarger" | "view.gridThumbnailsSmaller" => crate::shortcuts::library_grid(app),
+        "library.selectOnlyActive" => app.session.active().is_some(),
         "dialog.contactSheet" | "app.contactSheet" => !cfg!(target_arch = "wasm32") && app.session.active().is_some() && app.export.is_none(),
         s if s.starts_with("panel.") || s.starts_with("tool.") || s.starts_with("section.") => app.session.active().is_some() || s == "panel.close",
         "app.export" | "dialog.export" | "dialog.createPreset" | "dialog.rename" | "dialog.captureTime" | "dialog.copySettings" => {

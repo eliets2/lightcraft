@@ -359,6 +359,7 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context) {
     ctx.input(|i| {
         for b in bindable() {
             if let Some(sc) = binding(keymap, b.id, b.default)
+                && (grid || !matches!(b.id, "view.gridThumbnailsLarger" | "view.gridThumbnailsSmaller"))
                 && let Some((m, k)) = parse(sc)
                 && !native(sc)
                 && !(k == Key::Escape && popup_open)
@@ -609,6 +610,73 @@ mod tests {
     fn key(h: &mut crate::headless::Headless, key: &str, shift: bool) {
         let r = h.request("ui.key", json!({"key": key, "shift": shift}), std::time::Duration::from_secs(20));
         assert_eq!(r["ok"], true, "{r}");
+    }
+
+    #[test]
+    fn grid_thumbnail_keys_resize_only_grids_and_respect_keymap() {
+        use crate::state::ViewMode;
+        for view in [ViewMode::PhotoGrid, ViewMode::SquareGrid] {
+            let mut h = library();
+            h.app.ui.view = view;
+            let initial = h.app.ui.thumb_size;
+            key(&mut h, "=", false);
+            assert_eq!(h.app.ui.thumb_size, initial + 20.0);
+            key(&mut h, "-", false);
+            assert_eq!(h.app.ui.thumb_size, initial);
+            h.app.ui.thumb_size = 475.0;
+            key(&mut h, "=", false);
+            assert_eq!(h.app.ui.thumb_size, 480.0);
+            h.app.ui.thumb_size = 95.0;
+            key(&mut h, "-", false);
+            assert_eq!(h.app.ui.thumb_size, 90.0);
+            super::assign(&mut h.app.ui.settings.keymap, "view.gridThumbnailsLarger", None).unwrap();
+            key(&mut h, "=", false);
+            assert_eq!(h.app.ui.thumb_size, 90.0);
+            super::assign(&mut h.app.ui.settings.keymap, "view.gridThumbnailsLarger", Some("F9")).unwrap();
+            key(&mut h, "F9", false);
+            assert_eq!(h.app.ui.thumb_size, 110.0);
+            h.app.ui.view = ViewMode::Detail;
+            key(&mut h, "F9", false);
+            key(&mut h, "-", false);
+            assert_eq!(h.app.ui.thumb_size, 110.0);
+            assert!(!crate::menus::ui_enabled(&h.app, "view.gridThumbnailsLarger"));
+        }
+    }
+
+    #[test]
+    fn select_only_active_preserves_photo_edits_and_text_input_owns_grid_keys() {
+        use lightcraft_catalog::PhotoId;
+        let mut h = library();
+        h.app.session.execute("library.select", &json!({"ids": [1, 2, 3], "active": 2})).unwrap();
+        h.app.session.execute("photo.rate", &json!({"rating": 4})).unwrap();
+        let r = h.request("ui.key", json!({"key": "D", "cmd": true, "shift": true}), std::time::Duration::from_secs(20));
+        assert_eq!(r["ok"], true, "{r}");
+        assert_eq!(h.app.session.selection.ids, vec![PhotoId(2)]);
+        assert_eq!(h.app.session.active(), Some(PhotoId(2)));
+        // Selection and layout changes do not replace the last photo-edit undo step.
+        key(&mut h, "=", false);
+        h.app.session.execute("edit.undo", &json!({})).unwrap();
+        for id in 1..=3 {
+            assert_eq!(h.app.session.catalog.photo(PhotoId(id)).unwrap().rating, 0);
+        }
+        h.app.session.execute("library.select", &json!({"ids": [1, 2], "active": 2})).unwrap();
+        let r = h.request("ui.clickWidget", json!({"id": "field:search"}), std::time::Duration::from_secs(20));
+        assert_eq!(r["ok"], true, "{r}");
+        let size = h.app.ui.thumb_size;
+        key(&mut h, "=", false);
+        key(&mut h, "-", false);
+        let _ = h.request("ui.key", json!({"key": "D", "cmd": true, "shift": true}), std::time::Duration::from_secs(20));
+        assert_eq!(h.app.ui.thumb_size, size);
+        assert_eq!(h.app.session.selection.ids, vec![PhotoId(1), PhotoId(2)]);
+    }
+
+    #[test]
+    fn select_only_active_without_active_photo_does_not_change_selection() {
+        let mut h = library();
+        h.app.session.execute("library.selectNone", &json!({})).unwrap();
+        assert!(!crate::menus::ui_enabled(&h.app, "library.selectOnlyActive"));
+        assert!(h.app.run("library.selectOnlyActive", json!({})).is_err());
+        assert!(h.app.session.selection.ids.is_empty());
     }
 
     #[test]

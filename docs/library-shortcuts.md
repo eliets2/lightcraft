@@ -4,6 +4,8 @@ Select photos in Photo Grid or Square Grid, then use:
 
 | Key | Action |
 |---|---|
+| `=` / `-` | Increase / decrease thumbnail size in Photo Grid and Square Grid |
+| `Cmd+Shift+D` (macOS) / `Ctrl+Shift+D` (Windows/Linux) | Select only the active photo |
 | `0` | Clear the star rating |
 | `1`–`5` | Set the star rating |
 | `[` / `]` | Decrease / increase each selected photo's rating by one, within 0–5 |
@@ -12,6 +14,10 @@ Select photos in Photo Grid or Square Grid, then use:
 | `X` | Flag as rejected |
 | `U` | Clear the flag |
 | `Shift` + `0`–`9`, `P`, `X` or `U` | Apply the action and select the next photo |
+
+Thumbnail sizing stays within the same 90–480 point range as the grid's size control. It does not
+change loupe zoom, selection or photo edits. Both sizing commands and Select Only Active Photo can
+be reassigned or disabled in Help → Keyboard Shortcuts. Text fields and dialogs keep these keys.
 
 Purple and clearing a colour label are available in Photo → Set Color Label and the photo context
 menu. Purple has no default number key, matching Lightroom Classic. Rejection marks a photo for

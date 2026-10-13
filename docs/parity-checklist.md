@@ -1,6 +1,6 @@
 # Lightroom parity checklist
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-11 · **Change:** minor (LR-MERGE-HDR: merges of raws without colour matrices keep their colour (#965); rapid slider entry; LR-PROF-CAMERACOLOR: tone curve from black-and-white camera JPEGs; LR-VIEW-ZOOM, LR-VIEW-COMPARE: Compare and Reference zoom windows; LR-IMP-FORMATS, LR-IMP-CAMERA-COVERAGE: EOS R5 Mark II CR3 decodes; renamed from `parity.md`; Top gaps moved to gaps.md, shortcut notes to ui-parity.md; filesystem history retry/Undo/Redo evidence; renamed from `parity.md`; Top gaps moved to gaps.md, shortcut notes to ui-parity.md) · **Target:** Adobe Lightroom Classic 15.5 / Lightroom 9.6
+> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-13 · **Change:** minor (LR-MERGE-HDR: merges of raws without colour matrices keep their colour (#965); rapid slider entry; LR-PROF-CAMERACOLOR: tone curve from black-and-white camera JPEGs; LR-VIEW-ZOOM, LR-VIEW-COMPARE: Compare and Reference zoom windows; LR-IMP-FORMATS, LR-IMP-CAMERA-COVERAGE: EOS R5 Mark II CR3 decodes; renamed from `parity.md`; Top gaps moved to gaps.md, shortcut notes to ui-parity.md; filesystem history retry/Undo/Redo evidence; renamed from `parity.md`; Top gaps moved to gaps.md, shortcut notes to ui-parity.md) · **Target:** Adobe Lightroom Classic 15.5 / Lightroom 9.6
 
 The measured, row-by-row checklist: one row per Lightroom feature, menu item and shortcut, what we
 have and what is missing. It answers *does the feature exist?* (feature breadth). Whether it is good
@@ -610,6 +610,8 @@ From `06-shortcuts.md` part 1. Evidence is our binding; conflicts are explained 
 | KEY-ZOOM | Zoom in / out — ⌘= / ⌘− | P0 | ✅ | `cmd:view.zoomIn`, `cmd:view.zoomOut`, `crates/ui-egui/src/tests_zoom_keys.rs` | the keys zoom the photo only: egui's own interface zoom on ⌘= / ⌘− / ⌘0 (Ctrl on Windows and Linux, where no native menu bar took the keys first) is off (issue #566) |
 | KEY-SELECTALL | Select all — ⌘A | P0 | ✅ | `cmd:library.selectAll` | |
 | KEY-SELECTNONE | Select none — ⌘D | P0 | ✅ | `cmd:library.selectNone` | secondary binding (primary ⌘⇧A) |
+| KEYC-SELECTONLYACTIVE | Select only active photo — ⌘⇧D / Ctrl+Shift+D | P1 | 🟡 | `cmd:library.selectOnlyActive` | Reuses library selection, preserves the active photo and edit undo; text fields retain their keys; regression tests added, validation pending |
+| KEYC-GRID-THUMBSIZE | Grid thumbnail size — `=` / `-` | P1 | 🟡 | `cmd:view.gridThumbnailsLarger`, `cmd:view.gridThumbnailsSmaller` | Photo Grid / Square Grid only; same bounds as the size control; rebindable; validation pending |
 | KEY-PASTESELECTED | Paste selected — ⇧⌘V | P0 | ✅ | `cmd:dialog.pasteSettings` | |
 | KEY-PREFS | Settings — ⌘, | P0 | ✅ | `cmd:app.settings` | |
 | KEY-SEARCH | Search — ⌘F | P0 | ✅ | `cmd:view.focusSearch` | |
