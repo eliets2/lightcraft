@@ -47,14 +47,30 @@ fn nrw_black(mn: Option<&makernote::MakerNote>, bits: u32) -> Option<f32> {
 
 /// Nikon CropArea is `[left, top, width, height]` in sensor pixels (maker-note tag documentation).
 /// Keep the active area/CFA origin unchanged: the default crop is applied after demosaicing.
-fn default_crop(mn: Option<&makernote::MakerNote>, w: usize, h: usize) -> Rect {
+fn default_crop(mn: Option<&makernote::MakerNote>, w: usize, h: usize, model: &str) -> Rect {
     let fallback = Rect::new(0, 0, w, h);
-    let Some(values) = mn.and_then(|m| m.ifd.u64s(CROP_AREA)) else { return fallback };
+    let Some(values) = mn.and_then(|m| m.ifd.u64s(CROP_AREA)) else {
+        // No CropArea tag: for D7100 full frame, use the camera JPEG frame (6000×4000 at 18,10 in 6036×4020 sensor).
+        if model.trim() == "NIKON D7100" && w == 6036 && h == 4020 {
+            return Rect::new(18, 10, 6000, 4000);
+        }
+        return fallback;
+    };
     let [x, y, width, height] = values.as_slice() else { return fallback };
     if *width == 0 || *height == 0 || x.checked_add(*width).is_none_or(|v| v > w as u64) || y.checked_add(*height).is_none_or(|v| v > h as u64) {
         return fallback;
     }
-    Rect::new(*x as usize, *y as usize, *width as usize, *height as usize)
+    let crop = Rect::new(*x as usize, *y as usize, *width as usize, *height as usize);
+    // D7100 1.3× crop mode: the CropArea tag gives the CropHiSpeed area (4812×3212), but Lightroom's
+    // frame is 6 px inset from that on each side (4800×3200). Apply the inset when the crop is
+    // clearly a crop mode (smaller than the full sensor).
+    if model.trim() == "NIKON D7100" && (crop.width < w || crop.height < h) {
+        let inset = 6;
+        if crop.width > 2 * inset && crop.height > 2 * inset {
+            return Rect::new(crop.x + inset, crop.y + inset, crop.width - 2 * inset, crop.height - 2 * inset);
+        }
+    }
+    crop
 }
 
 /// A body that records no CropArea, measured on its own files: the image area inside the sensor data (where the
@@ -160,7 +176,8 @@ pub(crate) fn decode(bytes: &[u8], mode: Mode) -> Result<RawImage> {
         (Some([2, 2]), Some(p)) if p.len() == 4 && p.iter().all(|&c| c <= 2) => Cfa { width: 2, height: 2, pattern: p.to_vec() },
         _ => Cfa::bayer_static("RGGB"),
     };
-    let body = measured_body(&ifd0.string(t::MODEL).unwrap_or_default(), w, h, bits);
+    let model = ifd0.string(t::MODEL).unwrap_or_default();
+    let body = measured_body(&model, w, h, bits);
     let active_w = trailing_masked_columns(samples, w, bits);
     // the white level is measured from the whole image (or known for a measured body); the probe (no samples in its
     // result) takes the nominal one
@@ -171,7 +188,7 @@ pub(crate) fn decode(bytes: &[u8], mode: Mode) -> Result<RawImage> {
     };
     let crop = match body {
         Some(&MeasuredBody { crop: (x, y, cw, ch), .. }) if x + cw <= active_w && y + ch <= h => Rect::new(x, y, cw, ch),
-        _ => default_crop(mn.as_ref(), active_w, h),
+        _ => default_crop(mn.as_ref(), active_w, h, &model),
     };
     let mut metadata = lightcraft_meta::from_tiff(&tiff);
     metadata.width = Some(crop.width as u32);
