@@ -36,6 +36,8 @@ pub struct Frame {
     pub metadata: Metadata,
     /// Raw files: the source's `BaselineExposure` (EV), carried into the output.
     pub baseline_exposure: f64,
+    /// Raw files: as-shot white-balance multipliers from vendor maker notes (green = 1), when known.
+    pub wb_multipliers: Option<[f32; 3]>,
 }
 
 impl Frame {
@@ -53,6 +55,7 @@ impl Frame {
             orientation: Orientation::Normal,
             metadata: Metadata::default(),
             baseline_exposure: 0.0,
+            wb_multipliers: None,
         }
     }
 
@@ -133,6 +136,7 @@ pub fn load_frame(bytes: &[u8], max_edge: Option<usize>, orient: bool) -> Result
             orientation: raw.orientation,
             metadata: if raw.metadata == Metadata::default() { metadata } else { raw.metadata.clone() },
             baseline_exposure: raw.color.baseline_exposure,
+            wb_multipliers: raw.wb_multipliers,
         };
         if f.exposure.is_none() {
             f.exposure = exif_exposure(&f.metadata);
@@ -163,6 +167,7 @@ pub fn load_frame(bytes: &[u8], max_edge: Option<usize>, orient: bool) -> Result
         orientation: Orientation::from_exif(d.orientation),
         metadata,
         baseline_exposure: 0.0,
+        wb_multipliers: None,
     };
     if orient {
         f.orient();

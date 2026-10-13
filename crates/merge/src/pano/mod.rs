@@ -98,6 +98,27 @@ fn fov(frames: &[Frame], cams: &[Option<Camera>]) -> (f64, f64) {
     ((tmax - tmin).to_degrees(), (pmax - pmin).to_degrees())
 }
 
+/// Compute a consensus white balance from frames that have it.
+/// Returns the median R/G and B/G multipliers (green = 1).
+fn compute_consensus_wb(frames: &[Frame], used: &[usize]) -> Option<[f32; 3]> {
+    let mut rgs = Vec::new();
+    let mut bgs = Vec::new();
+    for &i in used {
+        if let Some(wb) = frames[i].wb_multipliers {
+            if wb[0] > 0.0 && wb[1] > 0.0 && wb[2] > 0.0 && wb[0].is_finite() && wb[1].is_finite() && wb[2].is_finite() {
+                rgs.push(wb[0]);
+                bgs.push(wb[2]);
+            }
+        }
+    }
+    if rgs.is_empty() || bgs.is_empty() {
+        return None;
+    }
+    rgs.sort_by(f32::total_cmp);
+    bgs.sort_by(f32::total_cmp);
+    Some([rgs[rgs.len() / 2], 1.0, bgs[bgs.len() / 2]])
+}
+
 /// Points along an image's border.
 fn border(w: usize, h: usize, per_edge: usize) -> Vec<(f64, f64)> {
     let (w, h) = (w as f64, h as f64);
@@ -360,6 +381,16 @@ pub fn stitch(frames: Vec<Frame>, opts: &PanoOptions, progress: &Progress) -> Re
     };
     if opts.fill_edges {
         image = finish::fill_edges(&image, &alpha);
+    }
+    // Compute consensus white balance from used frames that have it
+    let consensus_wb = compute_consensus_wb(&frames, &used);
+    let mut color = frames[used[0]].color.clone();
+    if let Some(wb) = consensus_wb {
+        if let FrameColor::Camera(ref mut cd) = color {
+            // Convert vendor multipliers (G=1) to DNG AsShotNeutral (reciprocal)
+            cd.as_shot_neutral = Some([1.0 / wb[0] as f64, 1.0, 1.0 / wb[2] as f64]);
+            cd.as_shot_white_xy = None;
+        }
     }
     let r = &frames[used[0]];
     Ok(PanoResult {
