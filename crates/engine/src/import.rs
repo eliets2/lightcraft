@@ -428,10 +428,43 @@ pub(crate) fn expand_noting(
     paths: &[String],
     skip: Option<&Path>,
     limits: crate::walk::Limits,
-    mut note: Option<crate::walk::NoteFolder>,
+    note: Option<crate::walk::NoteFolder>,
 ) -> (Vec<String>, bool) {
-    let mut out = Vec::new();
-    let mut truncated = false;
+    let e = expand_report_noting(paths, skip, limits, note);
+    (e.files, e.truncated)
+}
+
+/// What expanding import sources found, and what the walks left out ([`expand_report`]), so a
+/// review can say that it did not see everything.
+#[derive(Clone, Debug, Default)]
+pub struct Expansion {
+    /// Supported files, folders walked recursively and deduplicated by path, in walk order.
+    pub files: Vec<String>,
+    /// A walk stopped at a depth or entry bound: there may be more files.
+    pub truncated: bool,
+    /// Folders whose contents couldn't be listed (permissions, a folder that vanished or went offline).
+    pub unreadable: usize,
+    /// Files found inside the folders walked that are not a supported type (see [`is_supported`]).
+    /// A file named directly is attempted whatever its extension and is never counted here. Both
+    /// counts add up over the sources, so a folder named twice (or inside another source) counts twice.
+    pub unsupported: usize,
+}
+
+/// [`expand_within`] keeping the walks' diagnostics. A walk that stops at a bound is logged here
+/// (once per folder), as it always was.
+pub fn expand_report(paths: &[String], skip: Option<&Path>, limits: crate::walk::Limits) -> Expansion {
+    expand_report_noting(paths, skip, limits, None)
+}
+
+/// ([`expand_report`], handing the listing of every folder that is walked to `note`, as
+/// [`expand_noting`] does.)
+fn expand_report_noting(
+    paths: &[String],
+    skip: Option<&Path>,
+    limits: crate::walk::Limits,
+    mut note: Option<crate::walk::NoteFolder>,
+) -> Expansion {
+    let mut out = Expansion::default();
     for p in paths {
         let p = Path::new(p);
         if skip.is_some_and(|s| p == s) {
@@ -451,16 +484,18 @@ pub(crate) fn expand_noting(
                     limits.max_depth
                 );
             }
-            truncated |= w.truncated;
-            out.extend(w.files.into_iter().map(|f| f.to_string_lossy().to_string()));
+            out.truncated |= w.truncated;
+            out.unreadable = out.unreadable.saturating_add(w.unreadable);
+            out.unsupported = out.unsupported.saturating_add(w.skipped);
+            out.files.extend(w.files.into_iter().map(|f| f.to_string_lossy().to_string()));
         } else {
             // explicitly named files are attempted even with an unknown extension (sniffed)
-            out.push(p.to_string_lossy().to_string());
+            out.files.push(p.to_string_lossy().to_string());
         }
     }
     let mut seen = std::collections::HashSet::new();
-    out.retain(|p| seen.insert(p.clone()));
-    (out, truncated)
+    out.files.retain(|p| seen.insert(p.clone()));
+    out
 }
 
 /// What a path given on the command line at launch becomes ([`launch_path`]).
@@ -677,6 +712,12 @@ pub struct ScanProgress {
 pub struct ScanOutput {
     pub candidates: Vec<ImportCandidate>,
     pub probes: HashMap<String, ProbeInfo>,
+    /// A folder walk stopped at a depth or entry bound: there may be more photos ([`Expansion`]).
+    pub truncated: bool,
+    /// Folders whose contents couldn't be listed.
+    pub unreadable: usize,
+    /// Files inside the folders that are not a supported photo type.
+    pub unsupported: usize,
 }
 
 impl ScanInput {
@@ -704,20 +745,32 @@ impl ScanInput {
 /// against the library and earlier candidates). Nothing is added; the probes are kept for the
 /// import that follows.
 pub fn scan(s: &mut Session, paths: &[String]) -> Vec<ImportCandidate> {
+    scan_report(s, paths).candidates
+}
+
+/// [`scan`] keeping what the walks left out. The probes are already kept in the session for the
+/// import that follows, so `probes` of the output is empty.
+pub fn scan_report(s: &mut Session, paths: &[String]) -> ScanOutput {
     let (input, paths) = ScanInput::new(s, paths);
-    let out = scan_with(input, &paths, &ScanProgress::default());
-    s.import_probes = out.probes;
-    out.candidates
+    let mut out = scan_with(input, &paths, &ScanProgress::default());
+    s.import_probes = std::mem::take(&mut out.probes);
+    out
 }
 
 /// [`scan`] without the session, so it can run on a worker thread. Stops early (returning what it
 /// has) when `progress.cancel` is set.
 pub fn scan_with(input: ScanInput, paths: &[String], progress: &ScanProgress) -> ScanOutput {
-    let files = expand(paths, input.skip.as_deref());
-    scan_files(input, files, progress)
+    let expansion = expand_report(paths, input.skip.as_deref(), crate::walk::Limits::default());
+    let mut out = scan_files(input, expansion.files, progress);
+    out.truncated = expansion.truncated;
+    out.unreadable = expansion.unreadable;
+    out.unsupported = expansion.unsupported;
+    out
 }
 
-/// [`scan_with`] for files that were found already (`paths` expanded, [`expand`]).
+/// [`scan_with`] for files that were found already (`paths` expanded, [`expand`]). The walks'
+/// diagnostics ([`ScanOutput::truncated`] and friends) are left empty: who expanded the paths has
+/// them ([`expand_report`]).
 pub(crate) fn scan_files(mut input: ScanInput, files: Vec<String>, progress: &ScanProgress) -> ScanOutput {
     use std::sync::atomic::Ordering::Relaxed;
     let by_path = library_files(&input.library, &files);
@@ -784,7 +837,8 @@ pub(crate) fn scan_files(mut input: ScanInput, files: Vec<String>, progress: &Sc
         }
         out.push(c);
     }
-    ScanOutput { candidates: out, probes: kept }
+    // (the walks' diagnostics are [`scan_with`]'s: these files were found already)
+    ScanOutput { candidates: out, probes: kept, truncated: false, unreadable: 0, unsupported: 0 }
 }
 
 /// Import files/folders. See the module docs.
