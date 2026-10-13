@@ -108,12 +108,14 @@ fn save_as_preset_needs_a_name_and_a_recipe() {
     dialog(&mut h).recipe_name = "Warm trip".into();
     click(&mut h, "button:importRecipeSave");
     assert_eq!(h.app.session.presets.len(), presets0, "a name alone saves nothing");
+    assert_eq!(toast(&h), "", "the button is off: pressing it does not even ask the engine (which would refuse with a message)");
 
     let d = dialog(&mut h);
     d.recipe_name = "  ".into();
     d.recipe.insert("light.exposure".into(), 0.5);
     click(&mut h, "button:importRecipeSave");
     assert_eq!(h.app.session.presets.len(), presets0, "a recipe alone saves nothing");
+    assert_eq!(toast(&h), "", "the button is off without a name too");
 
     dialog(&mut h).recipe_name = " Warm trip ".into();
     click(&mut h, "button:importRecipeSave");
