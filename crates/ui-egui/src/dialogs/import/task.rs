@@ -16,7 +16,7 @@ pub struct ImportTask {
     queue: Vec<String>,
     pub total: usize,
     pub done: usize,
-    params: Value,
+    pub(super) params: Value,
     pub imported: usize,
     /// Brought back from Recently Deleted (`onDeleted: restore`).
     pub restored: usize,
