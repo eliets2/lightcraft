@@ -594,14 +594,17 @@ impl Gpu {
 
     /// Submit `enc`, then read back the first `len` 32-bit values of `src`.
     ///
-    /// A failed readback (device lost, map error, timeout) fails the render ([`FailKind::Fatal`])
-    /// and returns zeros, which the caller discards; after an earlier failure in the same render
-    /// nothing more is submitted.
+    /// A failed readback (device lost, map error, timeout) or a `len` past the buffer's end fails
+    /// the render ([`FailKind::Fatal`]) and returns zeros, which the caller discards; after an
+    /// earlier failure in the same render nothing more is submitted. `T` is always a 32-bit type
+    /// at the call sites (the copy and the readback tail are defined in 32-bit words).
     pub fn finish_and_read<T: bytemuck::Pod>(&self, mut enc: wgpu::CommandEncoder, src: &Buf, len: usize) -> Vec<T> {
         let zeros = || vec![<T as bytemuck::Zeroable>::zeroed(); len];
         // a zero-length readback would issue a `copy_buffer_to_buffer` of size 0, which wgpu
-        // rejects as an invalid copy: early-return zeros instead
+        // rejects as an invalid copy: submit the (possibly staged) work untouched and return
+        // zeros instead, so an earlier failure in the same render stays detectable
         if len == 0 {
+            self.submit([enc.finish()]);
             return zeros();
         }
         if len > src.len {
