@@ -349,6 +349,11 @@ pub struct UiState {
     pub status: String,
     #[serde(skip)]
     pub dialog: Option<Dialog>,
+    /// The last app version whose startup dialog was shown; `None` = never run / pre-feature
+    /// settings. Newer versions serialize this; older versions omit it and deserialize it as
+    /// `None` (first-run semantics).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub seen_version: Option<String>,
     /// The Print dialog's page, selection and drag.
     #[serde(skip)]
     pub print: crate::print_view::PrintUi,
@@ -490,6 +495,7 @@ impl Default for UiState {
             #[cfg(test)]
             find_missing_test_delay: None,
             rechecked_library: None,
+            seen_version: None,
             status: String::new(),
             dialog: None,
             print: Default::default(),
@@ -584,6 +590,15 @@ impl UiState {
             StartupView::Detail => self.view = ViewMode::Detail,
         }
         self
+    }
+
+    /// Record that the startup dialog for the running version has been presented.
+    ///
+    /// Record-on-show semantics: `seen_version` is set to the current version as soon as the
+    /// dialog is shown, so a crash while the dialog is open does not re-trigger it on every
+    /// subsequent launch.
+    pub fn record_startup_dialog_seen(&mut self) {
+        self.seen_version = Some(env!("CARGO_PKG_VERSION").to_string());
     }
 }
 
