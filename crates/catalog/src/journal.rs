@@ -269,10 +269,12 @@ fn newer(what: String) -> CatalogError {
 /// The record's CRC must match, so damage is never mistaken for it.
 fn resync(line: &[u8], last: u64) -> Option<(usize, (u64, Op))> {
     const START: &[u8] = b"{\"seq\":";
-    (1..line.len().saturating_sub(START.len() - 1)).filter(|&i| line[i..].starts_with(START)).find_map(|i| {
-        let rec = std::str::from_utf8(&line[i..]).ok().map(|l| l.trim_end_matches('\r')).and_then(decode_record)?;
-        (rec.0 <= last.saturating_add(1)).then_some((i, rec))
-    })
+    // Only the retry record can follow a torn fragment, so only the LAST occurrence of the start
+    // marker can match; searching every occurrence made a hostile line quadratic in its length.
+    // Requiring i > 0 keeps the invariant that a fragment precedes the record.
+    let i = line.windows(START.len()).rposition(|w| w == START).filter(|&i| i > 0)?;
+    let rec = std::str::from_utf8(&line[i..]).ok().map(|l| l.trim_end_matches('\r')).and_then(decode_record)?;
+    (rec.0 <= last.saturating_add(1)).then_some((i, rec))
 }
 
 /// Write `catalog.snap` for the state after op `seq`, streaming the JSON into the store (no
