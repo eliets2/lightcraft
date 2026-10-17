@@ -67,6 +67,14 @@ fn decode_saved_ui(bytes: &[u8]) -> Result<(UiState, bool), String> {
     if recovered {
         fields.remove("docking");
     }
+    // A settings file from before the startup dialog existed has no `seenVersion` key: the file
+    // is there, so this is an installation that has been run, due What's New — never the
+    // first-run tour. A file this version saved before the dialog was presented carries an
+    // explicit `null` instead (that is why `None` serializes) and is not migrated, and no file
+    // at all stays a first run.
+    if !fields.contains_key("seenVersion") {
+        fields.insert("seenVersion".into(), serde_json::json!(lightcraft_ui_egui::startup::LEGACY_SEEN_VERSION));
+    }
     let ui = serde_json::from_value(saved).map_err(|error| error.to_string())?;
     Ok((ui, recovered))
 }

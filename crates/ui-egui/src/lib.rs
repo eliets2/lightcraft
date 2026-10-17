@@ -32,6 +32,7 @@ pub mod render;
 pub mod shortcuts;
 pub mod sidebar;
 pub mod softpaint;
+pub mod startup;
 pub mod state;
 pub mod sync;
 pub mod tasks;
