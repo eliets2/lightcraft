@@ -391,6 +391,38 @@ fn core_tools_have_hints_and_reject_unknown_keys() {
         for key in lightcraft_engine::export::OPTION_PARAMS.iter().chain(lightcraft_engine::export::TARGET_PARAMS) {
             assert!(export["inputSchema"]["properties"].get(*key).is_some(), "missing export argument {key}");
         }
+        // every helper's exact annotation quadruple (overwriting an agent-supplied path is destructive)
+        let hints: &[(&str, bool, bool, bool)] = &[
+            ("command_list", true, false, true),
+            ("command_run", false, true, false),
+            ("command_batch", false, true, false),
+            ("list_commands", true, false, true),
+            ("run_command", false, true, false),
+            ("doc_inspect", true, false, true),
+            ("render_preview", true, false, true),
+            ("query_photos", true, false, true),
+            ("import", false, true, false),
+            ("select_photos", false, true, false),
+            ("list_controls", true, false, true),
+            ("get_develop", true, false, true),
+            ("set_develop", false, true, false),
+            ("apply_preset", false, true, false),
+            ("crop", false, true, false),
+            ("render_photo", false, true, true),
+            ("export", false, true, false),
+        ];
+        for &(name, ro, destructive, idem) in hints {
+            let t = tools.iter().find(|t| t["name"] == name).unwrap_or_else(|| panic!("missing helper tool {name}"));
+            assert_eq!(t["annotations"]["readOnlyHint"], ro, "{name} readOnlyHint");
+            assert_eq!(t["annotations"]["destructiveHint"], destructive, "{name} destructiveHint");
+            assert_eq!(t["annotations"]["idempotentHint"], idem, "{name} idempotentHint");
+        }
+        // `screenshot` is a UI tool: only present when a desktop app is attached
+        if let Some(t) = tools.iter().find(|t| t["name"] == "screenshot") {
+            assert_eq!(t["annotations"]["readOnlyHint"], false, "screenshot readOnlyHint");
+            assert_eq!(t["annotations"]["destructiveHint"], true, "screenshot destructiveHint");
+            assert_eq!(t["annotations"]["idempotentHint"], true, "screenshot idempotentHint");
+        }
         let before = rpc(&mut s, 2, "resources/read", json!({"uri":"lightcraft://library"}));
         let image = rpc(&mut s, 2, "tools/call", json!({"name":"render_preview","arguments":{"max_side":64}}));
         assert_eq!(image["result"]["isError"], false, "{image}");
