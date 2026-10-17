@@ -3372,35 +3372,45 @@ mod tests {
     /// A panic in `progress` (or `placer.place`) inside `std::thread::scope` used to leave the
     /// lane threads waiting on `Queue::cv` forever — the scope's implicit join never returned.
     /// `StopOnDrop` stops the queue on *any* scope exit so the panic propagates quickly instead of
-    /// hanging.
+    /// hanging. Four photos with two lanes make that hang actually reachable: once `result(0)` has
+    /// set `placed = 1` a lane drains the run-ahead photos 1 and 2 and then parks at `next = 3`
+    /// (`3 < placed + ahead` needs `placed >= 2`, and `progress` panics before `result(1)` can
+    /// set it) — so at the moment of the panic a lane really is parked on the condvar, which two
+    /// photos never achieved (a lane always drained and exited by itself). The batch runs on its
+    /// own thread behind a `recv_timeout` so unfixed code fails this test in seconds instead of
+    /// hanging CI forever.
     #[test]
     fn panicking_progress_does_not_hang_export() {
         let mut s = crate::Session::with_demo();
-        let ids: Vec<_> = s.visible().iter().copied().take(2).collect();
+        let ids: Vec<_> = s.visible().iter().copied().take(4).collect();
         let o = ExportOptions::from_json(&json!({"format": "png", "width": 64}));
         let items = prepare_batch(&mut s, &ids, &o).unwrap();
         let to = Destination { dir: "out".into(), exact: None };
         let mut written = Vec::new();
-        let mut write = |_p: &str, _b: &[u8]| { written.push(()); Ok(()) };
+        let mut write = move |_p: &str, _b: &[u8]| {
+            written.push(());
+            Ok(())
+        };
         let mut progress = |i: usize, _name: &str| -> bool {
-            if i == 1 { panic!("export progress injected panic"); }
+            if i == 1 {
+                panic!("export progress injected panic");
+            }
             true
         };
-        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            run_batch_with(
-                items,
-                &mut Placer::new(&o, &to, &mut write, &|_| false, false),
-                &mut progress,
-                2,
-            )
-        }));
-        // The test finishing at all is the hang-freedom assertion; the injected panic payload is
-        // preserved (guard::catch is for per-photo work on lane threads — this panic escapes the
-        // calling thread through `std::thread::scope` after the lanes are stopped by `StopOnDrop`).
-        let payload = r.unwrap_err();
-        let msg = if let Some(s) = payload.downcast_ref::<&str>() { s.to_string() }
-        else if let Some(s) = payload.downcast_ref::<String>() { s.clone() }
-        else { "unknown panic".into() };
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            // The panic escapes the calling thread through `std::thread::scope` (guard::catch is
+            // for per-photo work on the lane threads); catching it here keeps it out of the test
+            // thread so the payload can be asserted after the bounded wait below.
+            let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                run_batch_with(items, &mut Placer::new(&o, &to, &mut write, &|_| false, false), &mut progress, 2)
+            }));
+            let _ = tx.send(r);
+        });
+        // Finishing within the bound *is* the hang-freedom assertion.
+        let r =
+            rx.recv_timeout(std::time::Duration::from_secs(10)).expect("export hung: a panicking `progress` left a lane thread parked on the queue");
+        let msg = crate::guard::panic_message(r.unwrap_err().as_ref());
         assert_eq!(msg, "export progress injected panic");
     }
 
