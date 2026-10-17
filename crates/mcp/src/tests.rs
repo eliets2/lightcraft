@@ -417,12 +417,6 @@ fn core_tools_have_hints_and_reject_unknown_keys() {
             assert_eq!(t["annotations"]["destructiveHint"], destructive, "{name} destructiveHint");
             assert_eq!(t["annotations"]["idempotentHint"], idem, "{name} idempotentHint");
         }
-        // `screenshot` is a UI tool: only present when a desktop app is attached
-        if let Some(t) = tools.iter().find(|t| t["name"] == "screenshot") {
-            assert_eq!(t["annotations"]["readOnlyHint"], false, "screenshot readOnlyHint");
-            assert_eq!(t["annotations"]["destructiveHint"], true, "screenshot destructiveHint");
-            assert_eq!(t["annotations"]["idempotentHint"], true, "screenshot idempotentHint");
-        }
         let before = rpc(&mut s, 2, "resources/read", json!({"uri":"lightcraft://library"}));
         let image = rpc(&mut s, 2, "tools/call", json!({"name":"render_preview","arguments":{"max_side":64}}));
         assert_eq!(image["result"]["isError"], false, "{image}");
@@ -436,6 +430,23 @@ fn core_tools_have_hints_and_reject_unknown_keys() {
         let r = rpc(&mut s, 4, "tools/call", json!({"name":"command_batch","arguments":{"steps":[{"id":"no.such"},{"id":"catalog.stats"}]}}));
         assert_eq!(r["result"]["structuredContent"]["completed"], 0);
         assert_eq!(r["result"]["structuredContent"]["results"].as_array().unwrap().len(), 1);
+    }
+    // with a desktop app attached, the UI helpers appear; `screenshot` writes a file at an
+    // agent-supplied path, the rest are read-only
+    let mut ui = Server::new(Box::new(Recorder(vec![])));
+    let list = rpc(&mut ui, 10, "tools/list", json!({}));
+    let ui_tools = list["result"]["tools"].as_array().unwrap();
+    for (name, ro, dest, idem) in [
+        ("screenshot", false, true, true),
+        ("ui_screenshot", true, false, true),
+        ("ui_inspect", true, false, true),
+        ("inspect_ui", true, false, true),
+        ("list_widgets", true, false, true),
+    ] {
+        let t = ui_tools.iter().find(|t| t["name"] == name).unwrap_or_else(|| panic!("missing ui tool {name}"));
+        assert_eq!(t["annotations"]["readOnlyHint"], ro, "{name} readOnlyHint");
+        assert_eq!(t["annotations"]["destructiveHint"], dest, "{name} destructiveHint");
+        assert_eq!(t["annotations"]["idempotentHint"], idem, "{name} idempotentHint");
     }
 }
 
