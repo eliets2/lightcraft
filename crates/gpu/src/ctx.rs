@@ -421,8 +421,12 @@ impl Gpu {
     }
 
     /// Submit command buffers, then make the buffers this thread dropped before reusable.
+    /// Nothing is submitted once this render has failed: the render is discarded and recomputed
+    /// on the CPU, and the failure contract says no further GPU work runs after a fatal failure.
     pub fn submit(&self, cmds: impl IntoIterator<Item = wgpu::CommandBuffer>) {
-        self.queue.submit(cmds);
+        if !failed() {
+            self.queue.submit(cmds);
+        }
         let retired = take_retired();
         self.pool(retired);
     }
@@ -594,22 +598,25 @@ impl Gpu {
 
     /// Submit `enc`, then read back the first `len` 32-bit values of `src`.
     ///
-    /// A failed readback (device lost, map error, timeout) fails the render ([`FailKind::Fatal`])
-    /// and returns zeros, which the caller discards; after an earlier failure in the same render
-    /// nothing more is submitted.
+    /// A failed readback (device lost, map error, timeout) or a `len` past the buffer's end fails
+    /// the render ([`FailKind::Fatal`]) and returns zeros, which the caller discards; after an
+    /// earlier failure in the same render nothing more is submitted. `T` is always a 32-bit type
+    /// at the call sites (the copy and the readback tail are defined in 32-bit words).
     pub fn finish_and_read<T: bytemuck::Pod>(&self, mut enc: wgpu::CommandEncoder, src: &Buf, len: usize) -> Vec<T> {
         let zeros = || vec![<T as bytemuck::Zeroable>::zeroed(); len];
+        if failed() {
+            return zeros();
+        }
         // a zero-length readback would issue a `copy_buffer_to_buffer` of size 0, which wgpu
-        // rejects as an invalid copy: early-return zeros instead
+        // rejects as an invalid copy: submit the (possibly staged) work untouched and return
+        // zeros instead
         if len == 0 {
+            self.submit([enc.finish()]);
             return zeros();
         }
         if len > src.len {
             // a caller bug would read past the buffer: fail this render over to the CPU
             fail(FailKind::Fatal, format!("readback of {len} values from a buffer of {}", src.len));
-            return zeros();
-        }
-        if failed() {
             return zeros();
         }
         let size = (len * 4) as u64;
