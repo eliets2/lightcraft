@@ -2,6 +2,8 @@
 //!
 //! Pure Rust (std + serde_json; flate2/brotli for the web bundle). External tools (`cargo`, `curl`, `tar`) are
 //! invoked through `std::process::Command`.
+#![forbid(unsafe_code)]
+#![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
 mod assets;
 mod bench;
@@ -9,6 +11,7 @@ mod ci_report;
 mod ico;
 mod layers;
 mod parity;
+mod roots;
 mod stats;
 mod version;
 mod web;
@@ -56,6 +59,7 @@ fn main() -> ExitCode {
         Some("ico") => ico::run(&rest),
         Some("version") => version::run(&root(), &rest),
         Some("layers") => cmd_layers(),
+        Some("roots") => roots::run(),
         Some("assets") => assets::run(&root()),
         Some("bench") => bench::run(&root(), &rest),
         Some("parity") => parity::run(&root(), rest.contains(&"--write")),
@@ -100,6 +104,7 @@ pub fn root() -> PathBuf {
     // when the checkout moves and the cached xtask binary isn't rebuilt
     let dir = std::env::var_os("CARGO_MANIFEST_DIR").map(PathBuf::from).filter(|d| d.join("Cargo.toml").is_file());
     let dir = dir.unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")));
+    #[allow(clippy::expect_used)] // the workspace manifest always sits one level under its parent
     dir.parent().expect("xtask has a parent dir").to_path_buf()
 }
 
@@ -363,6 +368,7 @@ fn cmd_ci(args: &[&str]) -> Result<(), String> {
     steps.push(("parity", Box::new(|| parity::run(&root, false))));
     steps.push(("layers", Box::new(cmd_layers)));
     steps.push(("assets", Box::new(|| assets::run(&root))));
+    steps.push(("roots", Box::new(roots::run)));
     steps.push(("wasm", Box::new(cmd_wasm)));
 
     let mut results = Vec::new();
