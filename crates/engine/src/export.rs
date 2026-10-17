@@ -2020,6 +2020,9 @@ fn run_batch_with(
                 break;
             }
         }
+        // A panic from `progress` or `placer.place` unwinds through this scope; without stopping
+        // the queue the lane threads stay in `cv.wait` forever and the scope's join never returns.
+        let _stop_guard = StopOnDrop(&queue);
         let placed = || {
             for (i, (photo, name, guard, source_dir)) in heads.into_iter().enumerate() {
                 if !progress(i, &name) {
@@ -2043,6 +2046,17 @@ fn run_gated(item: PreparedExport) -> Result<Exported, String> {
     let _held = crate::memory::export_gate().acquire(item.weight);
     let what = format!("exporting {}", item.file_name);
     crate::guard::catch(&what, || item.run()).and_then(|r| r)
+}
+
+/// Stops the batch's lane queue on drop, so lane threads waiting on `Queue::cv` are always
+/// released — even when `progress` or `placer.place` panics inside `std::thread::scope` and the
+/// scope's implicit join would otherwise never return.
+struct StopOnDrop<'a>(&'a Queue);
+
+impl<'a> Drop for StopOnDrop<'_> {
+    fn drop(&mut self) {
+        self.0.stop();
+    }
 }
 
 /// The photos of a batch shared by its lanes: each lane takes the next one, at most
@@ -3353,6 +3367,41 @@ mod tests {
         };
         let files = run_batch_with(items, &mut Placer::new(o, &to, &mut write, &|_| false, stop_on_error), &mut progress, lanes);
         (files, written, seen)
+    }
+
+    /// A panic in `progress` (or `placer.place`) inside `std::thread::scope` used to leave the
+    /// lane threads waiting on `Queue::cv` forever — the scope's implicit join never returned.
+    /// `StopOnDrop` stops the queue on *any* scope exit so the panic propagates quickly instead of
+    /// hanging.
+    #[test]
+    fn panicking_progress_does_not_hang_export() {
+        let mut s = crate::Session::with_demo();
+        let ids: Vec<_> = s.visible().iter().copied().take(2).collect();
+        let o = ExportOptions::from_json(&json!({"format": "png", "width": 64}));
+        let items = prepare_batch(&mut s, &ids, &o).unwrap();
+        let to = Destination { dir: "out".into(), exact: None };
+        let mut written = Vec::new();
+        let mut write = |_p: &str, _b: &[u8]| { written.push(()); Ok(()) };
+        let mut progress = |i: usize, _name: &str| -> bool {
+            if i == 1 { panic!("export progress injected panic"); }
+            true
+        };
+        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            run_batch_with(
+                items,
+                &mut Placer::new(&o, &to, &mut write, &|_| false, false),
+                &mut progress,
+                2,
+            )
+        }));
+        // The test finishing at all is the hang-freedom assertion; the injected panic payload is
+        // preserved (guard::catch is for per-photo work on lane threads — this panic escapes the
+        // calling thread through `std::thread::scope` after the lanes are stopped by `StopOnDrop`).
+        let payload = r.unwrap_err();
+        let msg = if let Some(s) = payload.downcast_ref::<&str>() { s.to_string() }
+        else if let Some(s) = payload.downcast_ref::<String>() { s.clone() }
+        else { "unknown panic".into() };
+        assert_eq!(msg, "export progress injected panic");
     }
 
     /// The files of a batch without their byte counts: a GPU render (when another test turns the
