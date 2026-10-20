@@ -263,6 +263,12 @@ fn newer(what: String) -> CatalogError {
     CatalogError::Newer(format!("{what}; this version reads catalog format v{VERSION} and older"))
 }
 
+#[cfg(test)]
+thread_local! {
+    /// Start markers that `resync` decoded on this thread (test builds only; see the cost test).
+    pub(crate) static RESYNC_CANDIDATES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
 /// A line that doesn't decode but ends with a whole record: a fragment of a failed append followed
 /// by the record that retried it (the retry re-encodes the same ops with the same `seq`s). Returns
 /// the fragment's length and the record, if that record continues the log (`seq <= last + 1`).
@@ -273,6 +279,8 @@ fn resync(line: &[u8], last: u64) -> Option<(usize, (u64, Op))> {
     // marker can match; searching every occurrence made a hostile line quadratic in its length.
     // Requiring i > 0 keeps the invariant that a fragment precedes the record.
     let i = line.windows(START.len()).rposition(|w| w == START).filter(|&i| i > 0)?;
+    #[cfg(test)]
+    RESYNC_CANDIDATES.with(|c| c.set(c.get() + 1));
     let rec = std::str::from_utf8(&line[i..]).ok().map(|l| l.trim_end_matches('\r')).and_then(decode_record)?;
     (rec.0 <= last.saturating_add(1)).then_some((i, rec))
 }
