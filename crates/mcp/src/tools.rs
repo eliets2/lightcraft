@@ -214,7 +214,7 @@ pub fn helper_tools(has_ui: bool) -> Vec<Value> {
         tool(
             "render_photo",
             "Render photo",
-            "Render a photo with its current develop settings (cropped) and return it as an image so you can look at the result. `path`, when given, is overwritten with the rendered file.",
+            "Render a photo with its current develop settings (cropped) and return it as an image so you can look at the result. `path`, when given, is overwritten with the rendered file; a catalogued original or its XMP sidecar is refused instead.",
             json!({
                 "id": {"type": "integer", "description": "Photo id (default: the active photo); selection is unchanged"},
                 "size": {"type": "integer", "description": "Long edge in pixels (default 1024, max 4096)"},
@@ -279,7 +279,7 @@ pub fn helper_tools(has_ui: bool) -> Vec<Value> {
             tool(
                 "screenshot",
                 "Screenshot",
-                "Capture the LightCraft window (after pending renders finish) and return it as an image. `path`, when given, is overwritten with the screenshot file.",
+                "Capture the LightCraft window (after pending renders finish) and return it as an image. `path`, when given, is overwritten with the screenshot file; a catalogued original or its XMP sidecar is refused instead.",
                 json!({"maxSize": {"type": "integer", "description": "Downscale so the long edge is at most this (default 1600)"}, "format": {"type": "string", "enum": ["png", "jpeg"]}, "path": {"type": "string", "description": "Also save the screenshot here"}}),
                 &[],
             ),
