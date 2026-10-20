@@ -2053,7 +2053,7 @@ fn run_gated(item: PreparedExport) -> Result<Exported, String> {
 /// scope's implicit join would otherwise never return.
 struct StopOnDrop<'a>(&'a Queue);
 
-impl<'a> Drop for StopOnDrop<'_> {
+impl Drop for StopOnDrop<'_> {
     fn drop(&mut self) {
         self.0.stop();
     }
