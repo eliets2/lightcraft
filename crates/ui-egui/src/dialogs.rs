@@ -52,6 +52,12 @@ pub const ABOUT_TABS: &[(&str, &str)] = &[("about", "About"), ("contributors", "
 /// Help ▸ What's New (docs/whats-new.md).
 pub const WHATS_NEW: &str = include_str!("../../../docs/whats-new.md");
 
+/// The tour's window title and the labels of its next and last-page buttons: translated in every
+/// catalog, with the pages' text (the test that pins it reads these).
+pub(crate) const WELCOME_TITLE: &str = "Welcome";
+pub(crate) const WELCOME_NEXT: &str = "Next";
+pub(crate) const WELCOME_START: &str = "Get Started";
+
 /// The first-run tour's pages: (title, what it does, where to find it). Every menu path names a
 /// real command (`file.addPhotos`, `view.photoGrid`, `view.detail`, `dialog.cull`, `dialog.export`,
 /// `dialog.print`); `›` paints (the menu triangle `▸` does not).
@@ -84,7 +90,7 @@ pub(crate) const WELCOME_PAGES: [(&str, &str, &str); 6] = [
     (
         "Put agents to work",
         "Everything in LightCraft is a command, so AI agents can drive the running app over MCP: culling, editing, exporting on your word.",
-        "lightcraft-cli mcp --connect attaches one to this app.",
+        "Start the app with --control 7980 (or LIGHTCRAFT_CONTROL_PORT), then lightcraft-cli mcp --connect attaches one to it.",
     ),
 ];
 
@@ -130,7 +136,7 @@ fn welcome_body(ui: &mut egui::Ui, t: &Tokens, page: &mut usize, close: &mut boo
     use crate::button::{Button, Kind};
     let back = Button::new(crate::i18n::tr("Back")).widget("button:welcomeBack").enabled(*page > 0).min_width(72.0);
     let skip = Button::new(crate::i18n::tr("Skip")).kind(Kind::Ghost).widget("button:welcomeSkip").min_width(72.0);
-    let next_label = if *page == last { crate::i18n::tr("Get Started") } else { crate::i18n::tr("Next") };
+    let next_label = if *page == last { crate::i18n::tr(WELCOME_START) } else { crate::i18n::tr(WELCOME_NEXT) };
     let next = Button::new(next_label).kind(Kind::Primary).widget("button:welcomeNext").min_width(84.0);
     let gap = ui.spacing().item_spacing.x;
     let row_w = ui.available_width().max(ui.min_rect().width()).max(1.0);
@@ -411,7 +417,7 @@ fn dialog_title(app: &LightcraftApp, dlg: &Dialog) -> String {
         Dialog::FaceModel { info, .. } if info["download"].is_string() => "Download Face Model",
         Dialog::FaceModel { .. } => "Add Face Model",
         Dialog::WhatsNew => "What's New",
-        Dialog::Welcome { .. } => "Welcome",
+        Dialog::Welcome { .. } => WELCOME_TITLE,
         Dialog::Cull { .. } => "Assisted Culling",
         Dialog::SmartRules { id: None, .. } => "New Smart Album",
         Dialog::SmartRules { .. } => "Edit Smart Album",
