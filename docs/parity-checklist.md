@@ -319,10 +319,10 @@ differences and missing bindings are in [ui-parity.md](ui-parity.md#shortcuts).
 
 | Id | Feature | Tier | Status | Evidence | Missing / notes |
 |---|---|---|---|---|---|
-| LR-PRE-PANEL | Presets panel | P0 | ✅ | `cmd:panel.presets`, `cmd:preset.apply`, `crates/ui-egui/src/panels/presets.rs` | grouped list with amount; resting on a preset previews it in the loupe (no history entry); optional live thumbnails (⋯ → Show Thumbnails); presets compose on the photo's original state — each covered group is computed there and replaces the photo's own, so a second preset restores what an earlier one changed in the groups it styles (issue #2159) |
+| LR-PRE-PANEL | Presets panel | P0 | ✅ | `cmd:panel.presets`, `cmd:preset.apply`, `crates/ui-egui/src/panels/presets.rs` | grouped list with amount; resting on a preset previews it in the loupe (no history entry); optional live thumbnails (⋯ → Show Thumbnails); a preset changes only the settings it names: each is computed on the photo's import state (or on its current settings when no default preset recorded one), and every setting it does not name keeps the photo's value, so a second preset restores what an earlier one changed in the settings it names (issue #2159) |
 | LR-PRE-CREATE | Create preset | P0 | ✅ | `cmd:dialog.createPreset`, `cmd:preset.create` (`groups`) | name, group and a checklist of settings groups (crop, masks, remove, red eye off by default; All / None) |
 | LR-PRE-MANAGE | Manage presets | P1 | ✅ | `cmd:preset.delete`, `cmd:preset.favorite`, `cmd:preset.import`, `cmd:preset.export`, `cmd:preset.rename`, `cmd:preset.update`, `cmd:preset.move` | rename, update with current settings, move to a group (existing or new); no hiding of groups |
-| LR-PRE-AMOUNT | Preset amount | P1 | ✅ | `cmd:preset.apply` (`amount` 0–200) | |
+| LR-PRE-AMOUNT | Preset amount | P1 | ✅ | `cmd:preset.apply` (`amount` 0–200) | each named setting moves from the photo's import look (or, when none is recorded, from its current value) towards the preset's value; 0 % gives the import look's value for the settings the preset names, and the current value when no look is recorded |
 | LR-PRE-ADAPTIVE | Adaptive presets | P2 | ⬜ | | |
 | LR-PRE-PREMIUM | Built-in presets (own) | P2 | ✅ | `crates/engine/src/presets.rs` | 41 own-authored presets in 10 groups (Color, Film, B&W incl. toners, Portrait, Landscape, Urban, Food, Seasons, Vintage, Style) |
 | LR-PRE-RECOMMENDED | Community recommendations | OOS | 🚫 | | |
@@ -891,3 +891,4 @@ Latin stays upright. Advanced Japanese composition remains open. Regression cove
 | 2026-10-13 | minor | LRC-LIB-CATALOG-IMPORT review: offline Local promotion and result dismissal across library switches covered; redundant operation/settings copies removed. Status and summary counts unchanged. |
 | 2026-10-14 | patch | LRC-LIB-CATALOG-IMPORT: reconciled with upstream phased progress, cancellation kinds, WAL-only import, translations and current progress tracking. Status and summary counts unchanged. |
 | 2026-10-13 | minor | KEYC-COMPARE: `=` / `-` (also `+`) increase / decrease the grid thumbnail size (`view.thumbSizeUp` / `view.thumbSizeDown`, View menu), grids only; status unchanged (🟡) |
+| 2026-10-20 | patch | LR-PRE-PANEL, LR-PRE-AMOUNT: a preset changes only the settings it names; each is measured from the photo's import look when one is recorded, otherwise from its current value (issue #2159). Statuses and feature counts unchanged. |
