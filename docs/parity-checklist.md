@@ -1,6 +1,6 @@
 # Lightroom parity checklist
 
-> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-20 · **Change:** patch (LR-MASK-BRUSH: oversized brush segments skip intermediate dabs) and minor (LRC-PRINT-PAGE: Print Page Options) · **Target:** Adobe Lightroom Classic 15.5 / Lightroom 9.6
+> **Last reviewed:** 2026-10-10 · **Last updated:** 2026-10-20 · **Change:** patch (LR-MASK-BRUSH: extreme brush segments skip the intermediate dabs) · **Target:** Adobe Lightroom Classic 15.5 / Lightroom 9.6
 
 The measured, row-by-row checklist: one row per Lightroom feature, menu item and shortcut, what we
 have and what is missing. It answers *does the feature exist?* (feature breadth). Whether it is good
