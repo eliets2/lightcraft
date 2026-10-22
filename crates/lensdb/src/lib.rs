@@ -263,8 +263,8 @@ fn maker_matches(a: &[String], b: &[String]) -> bool {
 
 /// How well a database name matches the EXIF name, 0..1. Every number in the database name (focal lengths,
 /// apertures) must appear in the EXIF name and vice versa; the maker's words are ignored on both sides (EXIF
-/// often omits them). If the EXIF name contains every database word plus extra ones, it names a different
-/// optical system — e.g. a teleconverter suffix such as `Z TC` — not this profile.
+/// often omits them). Extra EXIF words only lower the score; they name a different lens only when they mark
+/// a teleconverter, a different optical system than the bare lens.
 fn name_score(db: &[String], exif: &[String], maker: &[String]) -> f64 {
     let db: Vec<&String> = db.iter().filter(|t| !maker.contains(t)).collect();
     let exif: Vec<&String> = exif.iter().filter(|t| !maker.contains(t)).collect();
@@ -280,13 +280,6 @@ fn name_score(db: &[String], exif: &[String], maker: &[String]) -> f64 {
     let db_tc = db.iter().any(|t| is_teleconverter_marker(t.as_str()));
     let exif_tc = exif.iter().any(|t| is_teleconverter_marker(t.as_str()));
     if db_tc != exif_tc {
-        return 0.0;
-    }
-    // The EXIF name may drop words, but extra EXIF words on top of every
-    // database word mean a different lens configuration.
-    let db_missing = db.iter().any(|t| !exif.contains(t));
-    let exif_missing = exif.iter().any(|t| !db.contains(t));
-    if !db_missing && exif_missing {
         return 0.0;
     }
     let common = db.iter().filter(|t| exif.contains(t)).count() as f64;
