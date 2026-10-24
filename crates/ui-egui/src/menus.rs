@@ -1162,6 +1162,9 @@ pub fn run_ui_command(app: &mut LightcraftApp, id: &str, p: &Value) -> Option<Re
                 if !app.ui.hidden_locations.iter().any(|h| crate::panels::left::same_folder(h, path)) {
                     app.ui.hidden_locations.push(path.to_string());
                 }
+                // removing from Local drops the folder from the kept roots permanently;
+                // clearing hidden locations must not bring it back (issue #2114)
+                app.ui.local_roots.retain(|r| !crate::panels::left::same_folder(r, path));
                 Ok(json!({"hidden": app.ui.hidden_locations}))
             }
             None => Err("local.hide needs a path".into()),
