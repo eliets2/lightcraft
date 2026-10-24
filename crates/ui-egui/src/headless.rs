@@ -3060,6 +3060,30 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir2);
     }
 
+    /// Local: Remove from Local drops a kept folder from Local's roots permanently (nothing on
+    /// disk changes). `local.hide` only adds the folder to `hidden_locations` and leaves it in
+    /// `local_roots`, so clearing hidden locations brings it back — issue #2114.
+    #[test]
+    fn local_location_can_be_removed_from_roots() {
+        let size = [1300.0, 900.0];
+        let mut h = demo(size);
+        let t = Duration::from_secs(10);
+        let dir = std::env::temp_dir().join(format!("lc-ui-remove-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.to_string_lossy().to_string();
+        h.hide_home_above(&dir);
+        // keep the folder in Local
+        let r = h.request("engine.execute", json!({"command": "local.addRoot", "params": {"path": path}}), t);
+        assert_eq!(r["ok"], true, "{r}");
+        assert!(h.app.ui.local_roots.iter().any(|root| crate::panels::left::same_folder(root, &path)), "kept: {:?}", h.app.ui.local_roots);
+        // remove it from Local: it must leave the roots, not only be hidden
+        let r = h.request("engine.execute", json!({"command": "local.hide", "params": {"path": path}}), t);
+        assert_eq!(r["ok"], true, "{r}");
+        assert!(!h.app.ui.local_roots.iter().any(|root| crate::panels::left::same_folder(root, &path)), "still a root: {:?}", h.app.ui.local_roots);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     /// Local: a kept folder stays a root while its subfolders (and other locations) are
     /// browsed — the subfolder is highlighted inside its tree, its siblings stay listed — and
     /// the kept folders survive a save/load of the UI state (a restart).
