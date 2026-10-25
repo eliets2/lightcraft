@@ -370,11 +370,12 @@ pub fn apply_import_defaults(s: &Session, p: &mut Photo) {
     }
 }
 
+/// An XMP sidecar (`.xmp`, any letter case): read with its photo on import, never a photo itself.
+fn is_xmp_sidecar(path: &Path) -> bool {
+    path.extension().is_some_and(|e| e.eq_ignore_ascii_case("xmp"))
+}
+
 pub fn is_supported(path: &Path) -> bool {
-    /// An XMP sidecar (`.xmp`, any letter case): read with its photo on import, never a photo itself.
-    fn is_xmp_sidecar(path: &Path) -> bool {
-        path.extension().is_some_and(|e| e.eq_ignore_ascii_case("xmp"))
-    }
     path.extension().is_some_and(|e| EXTENSIONS.contains(&e.to_string_lossy().to_lowercase().as_str()))
 }
 
