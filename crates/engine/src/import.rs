@@ -371,22 +371,11 @@ pub fn apply_import_defaults(s: &Session, p: &mut Photo) {
 }
 
 pub fn is_supported(path: &Path) -> bool {
+    /// An XMP sidecar (`.xmp`, any letter case): read with its photo on import, never a photo itself.
+    fn is_xmp_sidecar(path: &Path) -> bool {
+        path.extension().is_some_and(|e| e.eq_ignore_ascii_case("xmp"))
+    }
     path.extension().is_some_and(|e| EXTENSIONS.contains(&e.to_string_lossy().to_lowercase().as_str()))
-}
-
-            // XMP sidecars are read with their photos, not skipped: they are left out of the count
-            let mut sidecars = 0usize;
-            let keep = |f: &Path| {
-                let keep = is_supported(f);
-                if !keep && is_xmp_sidecar(f) {
-                    sidecars = sidecars.saturating_add(1);
-                }
-                keep
-            };
-            let w = match note.as_mut() {
-                Some(note) => crate::walk::files_in_noting(p, skip, limits, keep, &mut **note),
-                None => crate::walk::files_in(p, skip, limits, keep),
-            };
 }
 
 /// Expand files and folders (recursively) into supported files. `skip` (e.g. the library folder)
@@ -438,12 +427,7 @@ pub fn expand_report(paths: &[String], skip: Option<&Path>, limits: crate::walk:
 
 /// ([`expand_report`], handing the listing of every folder that is walked to `note`, as
 /// [`expand_noting`] does.)
-fn expand_report_noting(
-    paths: &[String],
-    skip: Option<&Path>,
-    limits: crate::walk::Limits,
-    mut note: Option<crate::walk::NoteFolder>,
-) -> Expansion {
+fn expand_report_noting(paths: &[String], skip: Option<&Path>, limits: crate::walk::Limits, mut note: Option<crate::walk::NoteFolder>) -> Expansion {
     let mut out = Expansion::default();
     for p in paths {
         let p = Path::new(p);
