@@ -10,7 +10,6 @@ workspace = true
 
 [dependencies]
 serde = { workspace = true }
-lightcraft-geom = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }

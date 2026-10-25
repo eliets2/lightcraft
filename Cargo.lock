@@ -3180,7 +3180,6 @@ dependencies = [
 name = "lightcraft-color"
 version = "0.14.0"
 dependencies = [
- "lightcraft-geom",
  "proptest",
  "serde",
 ]
