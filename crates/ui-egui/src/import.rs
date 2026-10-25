@@ -1114,7 +1114,7 @@ pub fn body(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDialog) {
     // what the scan left out, when it left something out
     if let Some(note) = scan_note(d) {
         let r = ui.label(egui::RichText::new(note).color(t.caution).small());
-        register(ui.ctx(), "label:importScanNote", r.rect);
+        register(ui, "label:importScanNote", r.rect);
     }
     // with more than one file type: a toggle per type checks or unchecks all of its files
     let types = d.file_types();
