@@ -30,9 +30,9 @@ mod task;
 #[cfg(test)]
 pub(crate) use body::grid_height;
 #[cfg(test)]
-use body::{DEFAULT_BELOW_GRID, badge_rect, dup_counts};
-#[cfg(test)]
 pub(crate) use body::scan_note;
+#[cfg(test)]
+use body::{DEFAULT_BELOW_GRID, badge_rect, dup_counts};
 pub use body::{DEFAULT_FOLDER_TEMPLATE, body, example_destination, source_summary};
 pub(crate) use body::{DIALOG_SIZE, note_dialog_bottom};
 #[cfg(not(target_arch = "wasm32"))]
