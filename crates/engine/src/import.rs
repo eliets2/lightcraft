@@ -370,6 +370,42 @@ pub fn apply_import_defaults(s: &Session, p: &mut Photo) {
     }
 }
 
+/// The web file picker's accept list, derived from [`EXTENSIONS`]. Each extension
+/// is listed in both cases: browsers' `accept` matching is case-insensitive per
+/// spec, but some implementations (e.g. Windows/Edge) match case-sensitively and
+/// rejected uppercase `.NEF` files, so a lowercase-only list silently hid raws
+/// such as CR3, NRW, RAF, ORF, RW2, RWL, RAW, PEF and SRW from the picker.
+///
+/// The picker only offers files this build can actually import: `.avif` has no
+/// AV1 decoder in any build, and `.heic`/`.heif` decode only when the codecs'
+/// `heif` feature is enabled ([`lightcraft_codecs::Format::Heif::can_decode`]).
+/// [`EXTENSIONS`] itself stays complete — files on disk are still recognised,
+/// and import reports them as failed, saying why.
+pub fn accept_list() -> String {
+    let heif_decodable = lightcraft_codecs::Format::Heif.can_decode();
+    let mut out = String::new();
+    for &ext in EXTENSIONS {
+        // Skip extensions a web user could pick but this build could not import.
+        let pickable = match ext {
+            "avif" => false,
+            "heic" | "heif" => heif_decodable,
+            _ => true,
+        };
+        if !pickable {
+            continue;
+        }
+        if !out.is_empty() {
+            out.push(',');
+        }
+        out.push('.');
+        out.push_str(ext);
+        out.push(',');
+        out.push('.');
+        out.push_str(&ext.to_uppercase());
+    }
+    out
+}
+
 /// An XMP sidecar (`.xmp`, any letter case): read with its photo on import, never a photo itself.
 fn is_xmp_sidecar(path: &Path) -> bool {
     path.extension().is_some_and(|e| e.eq_ignore_ascii_case("xmp"))
