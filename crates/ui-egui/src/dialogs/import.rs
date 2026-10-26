@@ -29,13 +29,13 @@ mod task;
 
 #[cfg(test)]
 pub(crate) use body::grid_height;
+use body::recipe_items;
 #[cfg(test)]
 use body::{DEFAULT_BELOW_GRID, badge_rect, dup_counts};
 pub use body::{DEFAULT_FOLDER_TEMPLATE, body, example_destination, source_summary};
-use body::recipe_items;
+pub(crate) use body::{DIALOG_SIZE, note_dialog_bottom};
 #[cfg(test)]
 use body::{RECIPE_CONTROLS, note_recipe_value};
-pub(crate) use body::{DIALOG_SIZE, note_dialog_bottom};
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use scan::cards_seen;
 pub use scan::{ScanTask, browse, open, poll_scan, running};
@@ -420,5 +420,4 @@ mod tests {
         let params = app.import.take().map(|t| t.params).unwrap();
         assert_eq!(params["recipe"], json!([{"id": "color.vibrance", "value": -20.0}, {"id": "light.exposure", "value": 0.5}]), "{params}");
     }
-
 }
