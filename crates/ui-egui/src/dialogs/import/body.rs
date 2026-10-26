@@ -424,7 +424,7 @@ pub(super) fn note_recipe_value(recipe: &mut std::collections::BTreeMap<String, 
 /// catalog nor the preset collections; "Save as Preset" is the explicit way to keep one for reuse.
 fn recipe_section(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDialog) {
     let t = Tokens::get(ui.ctx());
-    let open_id = egui::Id::new("import-recipe-open");
+    let open_id = egui::Id::unique("import-recipe-open");
     let mut open = ui.ctx().data(|m| m.get_temp::<bool>(open_id)).unwrap_or(false);
     field(ui, "Batch edits", |ui| {
         ui.spacing_mut().item_spacing.x = 4.0;
