@@ -470,8 +470,7 @@ fn recipe_section(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDial
             }
         }
     });
- }
- 
+}
 
 /// Draw one import-dialog candidate cell: register `import:{i}`, request the cell's thumbnail,
 /// paint the selection checkbox, and label duplicates, unreadable or trashed files. A click on an
