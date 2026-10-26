@@ -7,8 +7,8 @@ use std::time::Duration;
 
 use serde_json::json;
 
-use crate::headless::Headless;
 use crate::dialogs::import::ImportDialog;
+use crate::headless::Headless;
 use crate::state::{Dialog, ViewMode};
 use crate::{LightcraftApp, Services};
 
