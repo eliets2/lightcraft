@@ -157,8 +157,8 @@ fn skip_block_comment(b: &[u8], mut i: usize) -> usize {
 /// Collect the (package name, root source path) pairs for every workspace lib/bin target.
 /// `src_path` from the package metadata is absolute and is used as it is; without it, libs default to the
 /// manifest's `src/lib.rs` and binaries to `src/main.rs`.
-/// Library kinds include `rlib`/`cdylib` so roots like the web build's `crate-type =
-/// ["cdylib", "rlib"]` are covered.
+/// Library kinds include `lib`, `rlib`, `dylib`, `cdylib`, `staticlib` and `proc-macro`, so
+/// roots like the web build's `crate-type = ["cdylib", "rlib"]` and proc-macro crates are covered.
 pub fn root_paths(meta: &serde_json::Value) -> Result<Vec<(String, PathBuf)>, String> {
     let pkgs = meta["packages"].as_array().ok_or("metadata: no packages array")?;
     let mut out: Vec<(String, PathBuf)> = Vec::new();
@@ -170,7 +170,7 @@ pub fn root_paths(meta: &serde_json::Value) -> Result<Vec<(String, PathBuf)>, St
             .to_path_buf();
         for t in p["targets"].as_array().into_iter().flatten() {
             let kinds: Vec<&str> = t["kind"].as_array().into_iter().flatten().filter_map(|k| k.as_str()).collect();
-            let is_lib = kinds.iter().any(|&k| matches!(k, "lib" | "rlib" | "dylib" | "cdylib" | "staticlib"));
+            let is_lib = kinds.iter().any(|&k| matches!(k, "lib" | "rlib" | "dylib" | "cdylib" | "staticlib" | "proc-macro"));
             let is_bin = kinds.contains(&"bin");
             if is_lib || is_bin {
                 let fallback = if is_lib { "src/lib.rs" } else { "src/main.rs" };
@@ -264,6 +264,18 @@ mod tests {
         assert_eq!(paths[0].1, std::path::Path::new("/ws/bin-only/src/main.rs"));
         assert_eq!(paths[1].1, std::path::Path::new("/ws/meta/src/lib.rs"));
         assert_eq!(paths[2].1, std::path::Path::new("/ws/web/src/lib.rs"));
+    }
+
+    #[test]
+    fn root_paths_collects_proc_macro_targets() {
+        let meta = serde_json::json!({
+            "packages": [
+                { "name": "lightcraft-macros", "manifest_path": "/ws/macros/Cargo.toml",
+                  "targets": [ { "kind": ["proc-macro"], "src_path": "/ws/macros/src/lib.rs" } ] },
+            ]
+        });
+        let paths = root_paths(&meta).expect("metadata should parse");
+        assert_eq!(paths, vec![("lightcraft-macros".to_owned(), PathBuf::from("/ws/macros/src/lib.rs"))]);
     }
 
     #[test]
