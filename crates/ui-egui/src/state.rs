@@ -359,7 +359,6 @@ pub struct UiState {
     pub print: crate::print_view::PrintUi,
 }
 
-
 impl Default for UiState {
     fn default() -> Self {
         UiState {
