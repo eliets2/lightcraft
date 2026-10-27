@@ -1659,7 +1659,6 @@ impl Session {
     }
 }
 
-
 #[cfg(test)]
 #[path = "import/tests_known.rs"]
 mod tests_known;
