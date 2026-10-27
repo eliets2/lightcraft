@@ -2624,3 +2624,22 @@ fn the_recipe_commands_are_listed_with_their_parameters() {
     let save = commands.iter().find(|c| c.id == "preset.saveRecipe").expect("preset.saveRecipe is a command");
     assert!(save.enabled && save.params.contains("recipe: [{id:") && save.params.contains("name"), "{}", save.params);
 }
+
+/// A saved recipe that resets an HDR control to its default is applied as the recipe would apply it:
+/// alone, and next to another adjustment, on a photo whose HDR settings are not the default.
+#[test]
+fn a_saved_hdr_reset_applies_to_existing_hdr_settings() {
+    let mut s = Session::new();
+    for recipe in [json!([{"id": "hdr.maxEv", "value": 3}]), json!([{"id": "hdr.maxEv", "value": 3}, {"id": "light.exposure", "value": 0.5}])] {
+        let p = s.execute("preset.saveRecipe", &json!({"name": format!("Reset {recipe}"), "recipe": recipe})).unwrap();
+        let saved = s.presets.iter().find(|x| x.id == p["id"].as_str().unwrap()).unwrap().settings.clone();
+        let mut base = lightcraft_develop::DevelopSettings::default();
+        base.hdr.enabled = true;
+        base.hdr.max_ev = 1.5;
+        let out = lightcraft_develop::apply_partial(&base, &saved, 1.0);
+        assert_eq!(out.hdr.max_ev, 3.0, "{saved}");
+        assert!(out.hdr.enabled, "the reset leaves the other HDR settings alone: {saved}");
+        let want_exposure = if recipe.as_array().unwrap().len() > 1 { 0.5 } else { base.light.exposure };
+        assert_eq!(out.light.exposure, want_exposure, "{saved}");
+    }
+}
