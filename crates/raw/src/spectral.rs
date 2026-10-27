@@ -50,8 +50,8 @@ impl Camera {
 /// `(make, model as sold, table model)`: bodies sharing a table camera's sensor that rawtoaces-data's alias list
 /// doesn't name, kept here because the table is generated. Fujifilm's 26.1 MP X-Trans CMOS 4 bodies use the X-T3's
 /// or X-T4's sensor (X-T30 issue: a black-and-white Acros camera JPEG gives no colour to fit, and without matrices the photo
-/// opened in the muted neutral fallback). The GFX100S II uses the GFX 100's sensor, so it borrows its matrices
-/// (without them its raws fall back to the neutral camera-RGB-approximately-sRGB colour, which shifts hues).
+/// opened in the muted neutral fallback). The GFX100S II is not listed: its 102MP CMOS II sensor is not established
+/// as the GFX 100's sensor, so it borrows no GFX 100 matrices here.
 const SAME_SENSOR: &[(&str, &str, &str)] = &[
     ("Fujifilm", "X-T30", "X-T3"),
     ("Fujifilm", "X-T30 II", "X-T3"),
@@ -61,7 +61,6 @@ const SAME_SENSOR: &[(&str, &str, &str)] = &[
     ("Fujifilm", "X-E4", "X-T3"),
     ("Fujifilm", "X-S20", "X-T4"),
     ("Fujifilm", "X-M5", "X-T3"),
-    ("Fujifilm", "GFX100S II", "GFX 100"),
 ];
 
 /// Model names compared without case, the brand, a leading `EOS` or a trailing `DIGITAL`
@@ -88,6 +87,11 @@ fn brand(make: &str) -> String {
 /// The table's camera for a file's Exif make and model, directly or through an alias. Without a make, the model
 /// alone must match.
 pub fn find(make: Option<&str>, model: &str) -> Option<&'static Camera> {
+    // No spectral, CFA or matrix evidence establishes the GFX100S II as the GFX 100's sensor, so it must not
+    // borrow the GFX 100's matrices through an alias or a same-sensor row.
+    if key("FUJIFILM", model) == "GFX100S II" {
+        return None;
+    }
     let make = make.map(brand).filter(|b| !b.is_empty());
     let same = |row_make: &str, row_model: &str| {
         let row_brand = brand(row_make);
@@ -181,10 +185,12 @@ mod tests {
     }
 
     #[test]
-    fn gfx100s_ii_uses_gfx_100_matrices() {
-        // GFX100S II is not in the table, so its raws never get step 4's measured matrices
-        // and fall back to step 5's neutral camera-RGB-approximately-sRGB.
-        assert_eq!(find(Some("FUJIFILM"), "GFX100S II").map(|c| c.model), Some("GFX 100"),);
+    fn gfx100s_ii_uses_gfx_100_matrices_review_regression_1() {
+        // GFX100S II sharing the GFX 100's sensor or colour matrices is an unsupported
+        // claim: no table row, alias or donor evidence establishes it. GFX100S II must
+        // not borrow the GFX 100's matrices through SAME_SENSOR, so it must not be found
+        // at all until evidence-backed evidence exists.
+        assert_eq!(find(Some("FUJIFILM"), "GFX100S II"), None);
     }
 
     #[test]
