@@ -387,7 +387,7 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context) {
     if keyboard_owned(app, ctx) || app.recording_shortcut.is_some() || app.ui.name_edit.is_some() {
         return;
     }
-    let mut fire: Vec<String> = Vec::new();
+    let mut fire: Vec<(String, Key)> = Vec::new();
     // shortcuts the native menu bar handles (it consumes those key presses itself)
     let native = |sc: &str| app.native_shortcuts.contains(sc);
     let mut aliased: Vec<(&str, serde_json::Value)> = Vec::new();
@@ -412,7 +412,7 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context) {
             && !taken.contains(&(Modifiers::NONE, Key::Enter))
             && matches(i, Modifiers::NONE, Key::Enter)
         {
-            fire.push("view.detail".to_string());
+            fire.push(("view.detail".to_string(), Key::Enter));
         }
         for b in bindable() {
             if let Some(sc) = binding(keymap, b.id, b.default)
@@ -422,7 +422,7 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context) {
                 && matches(i, m, k)
                 && let Some(id) = grid_key_command(keymap, grid, app.ui.fullscreen, b.id, (m, k))
             {
-                fire.push(id.to_string());
+                fire.push((id.to_string(), k));
             }
         }
         for (sc, id, params) in ALIASES {
@@ -437,28 +437,28 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context) {
         // rating 0-5, colour labels 6-9 (with Shift: and advance)
         for (n, key) in [Key::Num0, Key::Num1, Key::Num2, Key::Num3, Key::Num4, Key::Num5].iter().enumerate() {
             if matches(i, Modifiers::NONE, *key) && !native(&n.to_string()) && !taken.contains(&(Modifiers::NONE, *key)) {
-                fire.push(format!("rate:{n}:0"));
+                fire.push((format!("rate:{n}:0"), *key));
             }
             if matches(i, Modifiers::SHIFT, *key) && !taken.contains(&(Modifiers::SHIFT, *key)) {
-                fire.push(format!("rate:{n}:1"));
+                fire.push((format!("rate:{n}:1"), *key));
             }
         }
         for (label, key, sc) in [("red", Key::Num6, "6"), ("yellow", Key::Num7, "7"), ("green", Key::Num8, "8"), ("blue", Key::Num9, "9")] {
             if matches(i, Modifiers::NONE, key) && !native(sc) && !taken.contains(&(Modifiers::NONE, key)) {
-                fire.push(format!("label:{label}"));
+                fire.push((format!("label:{label}"), key));
             }
         }
         if grid_navigation {
             // Home / End: the first / last photo of the view
             for (key, id) in [(Key::Home, "grid:first"), (Key::End, "grid:last")] {
                 if matches(i, Modifiers::NONE, key) && !taken.contains(&(Modifiers::NONE, key)) {
-                    fire.push(id.to_string());
+                    fire.push((id.to_string(), key));
                 }
             }
             // Shift+← / Shift+→: the previous / next photo of the view joins the selection
             for (key, step) in [(Key::ArrowLeft, -1i64), (Key::ArrowRight, 1)] {
                 if matches(i, Modifiers::SHIFT, key) && !taken.contains(&(Modifiers::SHIFT, key)) {
-                    fire.push(format!("grid:extend:{step}"));
+                    fire.push((format!("grid:extend:{step}"), key));
                 }
             }
         }
@@ -498,8 +498,8 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context) {
             app.toast(ctx, e);
         }
     }
-    let rotate_fires = fire.iter().any(|f| f == "crop.rotateAspect");
-    for f in fire {
+    let rotate_fires = fire.iter().any(|(f, _)| f == "crop.rotateAspect");
+    for (f, key) in fire {
         // a slideshow: ←/→ step (a cut)
         if app.ui.slideshow.is_some() && matches!(f.as_str(), "library.next" | "library.previous") {
             let _ = app.run(if f == "library.next" { "slideshow.next" } else { "slideshow.previous" }, json!({}));
@@ -569,8 +569,9 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context) {
                 _ => app.toast(ctx, crate::i18n::tr("Unflagged")),
             }
         } else {
-            // H toggles mask pins while the Masking panel is active (elsewhere it opens Remove)
-            if f == "panel.remove" && app.ui.right == crate::state::RightPanel::Masking {
+            // H toggles mask pins while the Masking panel is active (elsewhere it opens Remove);
+            // a different key bound to Remove opens Remove instead
+            if f == "panel.remove" && app.ui.right == crate::state::RightPanel::Masking && key == Key::H {
                 let _ = app.run("view.maskPins", json!({}));
                 continue;
             }

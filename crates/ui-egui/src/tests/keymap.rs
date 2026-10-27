@@ -672,4 +672,20 @@ fn h_opens_remove_when_another_panel_is_active() {
         assert_eq!(h.app.ui.mask_pins, pins, "H outside Masking leaves the pins alone");
     }
 }
+
+/// The fired command carries only the command id, not the key that fired it: the H/pins toggle
+/// keyed on `panel.remove` must not fire for a reassigned Remove shortcut. A non-H key bound to
+/// Remove opens Remove even while Masking is active.
+#[test]
+fn reassigned_remove_shortcut_opens_remove_while_masking() {
+    let mut h = demo();
+    let r = h.app.run("app.setShortcut", json!({"id": "panel.remove", "shortcut": "Shift+R"})).unwrap();
+    assert_eq!(r["shortcut"], "Shift+R", "{r}");
+    assert_eq!(crate::shortcuts::shortcut_of(&h.app.ui.settings.keymap, "panel.remove"), Some("Shift+R"),);
+    open_panel(&mut h, "panel.masking", RightPanel::Masking);
+    assert!(h.app.ui.mask_pins, "pins are shown by default");
+    key(&mut h, "R", true);
+    assert_eq!(h.app.ui.right, RightPanel::Remove, "Shift+R opens Remove while Masking");
+    assert_eq!(h.app.ui.tool, "remove", "and switches to the remove tool");
+    assert!(h.app.ui.mask_pins, "Shift+R does not toggle the mask pins");
 }
