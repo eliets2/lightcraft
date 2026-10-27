@@ -246,12 +246,12 @@ fn interpolate_object(base: Option<&Map<String, Value>>, patch: &Map<String, Val
 }
 
 /// One leaf at `t`. Numbers move from `base` towards `patch`. Other values switch to the preset's
-/// at half amount and up, and below it take the base's value. A null in the base is no value:
-/// it never clears the photo's value (below half amount the leaf is left out). A null the preset
-/// writes is a value like any other, so it applies at half amount and up (a preset can clear an
-/// option field such as a crop aspect).
+/// at half amount and up, and below it take the base's value. A null in the base is a value like
+/// any other: below half amount a null import baseline restores `None` (a crop aspect becomes
+/// "free" again instead of the photo keeping its locked aspect). A null the preset writes is a
+/// value like any other, so it applies at half amount and up (a preset can clear an option field
+/// such as a crop aspect).
 fn interpolate_leaf(base: Option<&Value>, patch: &Value, t: f64) -> Option<Value> {
-    let base = base.filter(|b| !b.is_null());
     match (base, patch) {
         // integer fields (the grain seed, ids) are discrete like strings: see `scale_patch`
         (Some(Value::Number(b)), Value::Number(p)) if b.is_f64() || p.is_f64() => {
@@ -540,8 +540,9 @@ mod tests {
     }
 
     /// A null a preset writes into an option field (here a crop aspect: null is "free") is the
-    /// preset's value, so it clears the photo's aspect from half amount up, as any value of the
-    /// preset does; below half amount the photo keeps its own value.
+    /// preset's value. With a null import baseline it clears the photo's aspect at any amount:
+    /// below half amount the null import baseline is a value (`None`), and from half amount up
+    /// the preset's own null applies as any value of the preset does.
     #[test]
     fn a_preset_null_clears_an_option_field_from_half_amount() {
         let mut current = DevelopSettings::default();
@@ -555,16 +556,16 @@ mod tests {
             favorite: false,
             builtin: false,
         };
-        for amount in [1.0, 0.7, 0.5] {
-            assert_eq!(p.apply_on(&current, &original, amount).crop.aspect, None, "amount {amount}: the preset's null clears the aspect");
+        for amount in [1.0, 0.7, 0.5, 0.3] {
+            assert_eq!(p.apply_on(&current, &original, amount).crop.aspect, None, "amount {amount}: the aspect is cleared");
         }
-        assert_eq!(p.apply_on(&current, &original, 0.3).crop.aspect, Some((3, 2)), "below half amount the photo keeps its aspect");
     }
 
-    /// The import state has no aspect, and that null must never overwrite the photo's own aspect:
-    /// the preset's aspect applies from half amount, and below it the photo keeps its aspect.
+    /// A null import baseline (`crop.aspect` absent on import) is a value like any other below
+    /// half amount, so it restores the imported None ("free") aspect instead of leaving the
+    /// photo's locked aspect in place; from half amount up the preset's aspect applies.
     #[test]
-    fn a_null_in_the_original_never_overwrites_the_photos_option_field() {
+    fn a_null_import_aspect_restores_the_free_aspect_below_half_amount() {
         let mut current = DevelopSettings::default();
         current.crop.aspect = Some((3, 2));
         let original = DevelopSettings::default();
@@ -576,7 +577,7 @@ mod tests {
             favorite: false,
             builtin: false,
         };
-        assert_eq!(p.apply_on(&current, &original, 0.4).crop.aspect, Some((3, 2)), "40 %: the photo keeps its aspect");
+        assert_eq!(p.apply_on(&current, &original, 0.4).crop.aspect, None, "40 %: the null import baseline restores the free aspect");
         assert_eq!(p.apply_on(&current, &original, 0.6).crop.aspect, Some((16, 9)), "60 %: the preset's aspect applies");
     }
 
@@ -585,5 +586,38 @@ mod tests {
         let mut a = json!({"x": {"a": 1, "b": 2}, "y": [1]});
         deep_merge(&mut a, &json!({"x": {"b": 3}, "y": [2, 3]}));
         assert_eq!(a, json!({"x": {"a": 1, "b": 3}, "y": [2, 3]}));
+    }
+
+    /// A null import baseline (`crop.aspect` absent on import) is no value: at any amount below
+    /// half — including zero — the named leaf is left out, so the photo's locked aspect stays and
+    /// amount 0 does not restore the imported None ("free") aspect. From half amount up the
+    /// preset's aspect applies like any other preset value.
+    #[test]
+    fn amount_zero_restores_a_null_import_crop_aspect() {
+        let mut current = DevelopSettings::default();
+        current.crop.aspect = Some((3, 2));
+        let original = DevelopSettings::default(); // the import state has no aspect
+        let p = Preset {
+            id: "p".into(),
+            name: "P".into(),
+            group: "G".into(),
+            settings: json!({"crop": {"aspect": [16, 9]}}),
+            favorite: false,
+            builtin: false,
+        };
+        for amount in [0.0, 0.25, 0.4] {
+            assert_eq!(
+                p.apply_on(&current, &original, amount).crop.aspect,
+                None,
+                "amount {amount}: the null import baseline is restored"
+            );
+        }
+        for amount in [0.5, 0.75, 1.0] {
+            assert_eq!(
+                p.apply_on(&current, &original, amount).crop.aspect,
+                Some((16, 9)),
+                "amount {amount}: the preset's aspect applies"
+            );
+        }
     }
 }
