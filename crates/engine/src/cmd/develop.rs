@@ -51,6 +51,17 @@ fn partial_diff(a: &Value, b: &Value) -> Option<Value> {
     }
 }
 
+/// The settings as JSON with the HDR subtree always present: [`Hdr`] is left out while it is the default
+/// (its JSON stays as it was), so a reset to a default HDR value would have nothing to compare with and
+/// would be dropped from a saved preset.
+fn full_json(s: &DevelopSettings) -> Value {
+    let mut v = s.to_json();
+    if let Some(obj) = v.as_object_mut() {
+        obj.entry("hdr").or_insert_with(|| serde_json::to_value(&s.hdr).unwrap_or(Value::Null));
+    }
+    v
+}
+
 /// The partial settings a batch-edit recipe names, with the values the import would give (clamped
 /// by the control specs). Each named control is compared with the same control at a value it is not
 /// set to, so a control the recipe sets to its default (a reset) is stored too, and nothing else is.
@@ -68,7 +79,7 @@ fn recipe_partial(recipe: &[(String, f64)]) -> Option<Value> {
             return None;
         }
     }
-    partial_diff(&named.to_json(), &other.to_json())
+    partial_diff(&full_json(&named), &full_json(&other))
 }
 
 /// The longest name or group a saved recipe preset may have (characters).
@@ -1312,5 +1323,16 @@ mod recipe_tests {
         assert_eq!(recipe_partial(&recipe(&[("light.exposure", 0.5)])), Some(json!({"light": {"exposure": 0.5}})));
         // a reset to the control's default is stored
         assert_eq!(recipe_partial(&recipe(&[("light.exposure", 0.0)])), Some(json!({"light": {"exposure": 0.0}})));
+    }
+
+    /// The HDR subtree is left out of the JSON while it is the default, so a reset of a headroom to its
+    /// default is stored in the preset by itself and next to another adjustment.
+    #[test]
+    fn an_hdr_reset_is_stored_alone_and_next_to_another_adjustment() {
+        let reset = recipe_partial(&recipe(&[("hdr.maxEv", 3.0)])).expect("a reset is stored");
+        assert_eq!(reset.pointer("/hdr/max_ev"), Some(&json!(3.0)), "{reset}");
+        let both = recipe_partial(&recipe(&[("hdr.maxEv", 3.0), ("light.exposure", 0.5)])).expect("both are stored");
+        assert_eq!(both.pointer("/hdr/max_ev"), Some(&json!(3.0)), "{both}");
+        assert_eq!(both.pointer("/light/exposure"), Some(&json!(0.5)), "{both}");
     }
 }
