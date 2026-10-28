@@ -590,6 +590,7 @@ pub fn push_dabs_counted(dabs: &mut Vec<Point>, emitted: &mut usize, prev: Optio
         return false;
     }
     let before = dabs.len();
+    let mut hostile = false;
     if let Some(prev) = prev {
         let dist = prev.dist(q);
         if dist.is_nan() || dist <= STATIONARY_PX {
@@ -598,6 +599,7 @@ pub fn push_dabs_counted(dabs: &mut Vec<Point>, emitted: &mut usize, prev: Optio
         let n = (dist / dab_spacing(r)).ceil();
         // a hostile or degenerate segment (huge) gets no in-between dabs rather than a huge
         // allocation: 1 M dabs is far more than any on-screen stroke needs
+        hostile = !(n.is_finite() && n <= 1_000_000.0);
         let n = if n.is_finite() && n <= 1_000_000.0 { n.max(0.0) as usize } else { 0 };
         // the in-between dabs and `q` together fit what is left of the stroke's budget
         let n = n.min(room);
@@ -606,7 +608,12 @@ pub fn push_dabs_counted(dabs: &mut Vec<Point>, emitted: &mut usize, prev: Optio
         }
     }
     dabs.push(q);
-    *emitted += dabs.len() - before;
+    if hostile {
+        // a hostile segment is treated as a full stroke: no more dabs fit after it
+        *emitted = MAX_STROKE_DABS;
+    } else {
+        *emitted += dabs.len() - before;
+    }
     true
 }
 
