@@ -1112,7 +1112,7 @@ pub fn specs() -> Vec<CommandSpec> {
                     None => s
                         .presets
                         .iter()
-                        .find(|q| q.name == preset.name && q.group == preset.group && q.settings == preset.settings)
+                        .find(|q| !q.builtin && q.name == preset.name && q.group == preset.group && q.settings == preset.settings)
                         .map(|q| q.id.clone())
                         .ok_or_else(|| bad(C, "the preset could not be saved"))?,
                 };
