@@ -5,16 +5,22 @@ use lightcraft_catalog::{Album, AlbumId, ColorLabel, CopyrightStatus, Filter, Fl
 use serde_json::{Value, json};
 
 use super::{CommandSpec, always, bad, bool_or, cmd, has_active, has_library_selection, has_selection, ok, str_param};
+use crate::cmd::library::selection::select_after_deletion;
 use crate::{LibrarySource, Result, Selection, Session};
 
 mod filters;
 mod gps;
-mod import;
 mod selection;
 mod specs;
 
+/// `specs.rs` imports `import_batch_done`, `import_params` and `list_auto_import_folder`
+/// from `super::import`; they are defined in `library.rs` now (`library/import.rs` was
+/// folded into it), so re-export them under that path.
+mod import {
+    pub use super::{import_batch_done, import_params, list_auto_import_folder};
+}
+
 pub(crate) use filters::covers_other_disks;
-pub use specs::specs;
 
 /// The auto-import folder's visible files with their sizes (the file-system half of
 /// `library.autoImportScan`; the app lists on a worker thread and passes `listing`).
@@ -1753,16 +1759,6 @@ fn merge_rules(
     Ok(f)
 }
 
-/// Whether `path` lies above a disk: some of its `ids` photos are on a disk (not the startup
-/// disk) that the folder does not lie in. Such a folder (`/Volumes`, `/mnt`…) is not a folder of
-/// one disk but a way to reach several.
-pub(crate) fn covers_other_disks(s: &Session, path: &str, ids: &[PhotoId]) -> bool {
-    ids.iter()
-        .filter_map(|id| s.catalog.photo(*id))
-        .filter_map(|p| lightcraft_catalog::folders::volume_of(p))
-        .any(|v| v != "/" && !lightcraft_catalog::query::folder_within(path, &v))
-}
-
 /// The current view (source + filter) as smart-album rules. Viewing a smart album starts from
 /// its rules with the filter bar's settings on top.
 fn view_rules(s: &Session) -> lightcraft_catalog::Filter {
@@ -1796,13 +1792,6 @@ fn view_rules(s: &Session) -> lightcraft_catalog::Filter {
             }
             f
         }
-    }
-}
-
-impl Session {
-    /// The current view (source + filter) as smart-album rules (see `album.createSmart`).
-    pub fn view_rules(&self) -> lightcraft_catalog::Filter {
-        view_rules(self)
     }
 }
 

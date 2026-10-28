@@ -41,6 +41,7 @@ mod scan;
 mod types;
 
 pub use files::EXTENSIONS;
+pub use types::{ImportUprightMode, ImportWarning, ImportWarningCode};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum ImportMode {
@@ -223,45 +224,6 @@ pub struct ImportReport {
     /// Per-photo diagnostics from foreign XMP develop settings that could not be fully carried over.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub warnings: Vec<ImportWarning>,
-}
-
-/// A structured diagnostic from foreign XMP develop settings.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum ImportWarningCode {
-    /// A named camera profile was found but cannot be applied as Lightroom does.
-    CameraProfile,
-    /// Lightroom geometry data was found but its saved transform is not retained.
-    UprightGeometry,
-    /// One or more other XMP develop fields have no LightCraft mapping.
-    UnmappedXmp,
-}
-
-/// The saved Lightroom Upright mode associated with a foreign geometry transform.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum ImportUprightMode {
-    Off,
-    Auto,
-    Level,
-    Vertical,
-    Full,
-    Guided,
-    Unknown,
-}
-
-/// One actionable XMP import diagnostic. `path` is filled when its photo is committed.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ImportWarning {
-    pub path: String,
-    pub code: ImportWarningCode,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub profile: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub mode: Option<ImportUprightMode>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub fields: Vec<String>,
 }
 
 /// A file moved by an import.
@@ -1603,60 +1565,6 @@ pub fn system_clock() -> String {
 /// Unix seconds → `YYYY-MM-DDTHH:MM:SS` (UTC), proleptic Gregorian.
 pub fn civil(secs: i64) -> String {
     lightcraft_catalog::dates::civil(secs)
-}
-
-impl Session {
-    /// A thumbnail for an import candidate (not in the catalog): a raw's embedded preview, else a
-    /// small render of the file. `slot` makes the job's photo id unique (`u64::MAX - slot`).
-    pub fn candidate_thumb_job(&mut self, c: &ImportCandidate, edge: usize, slot: u64) -> Option<crate::media::QuickJob> {
-        if c.error.is_some() {
-            return None;
-        }
-        let id = PhotoId(u64::MAX - slot);
-        let mut p = Photo::new(id, Source::File { path: c.path.clone() }, &c.name, &c.format, c.width.max(1), c.height.max(1), "");
-        p.kind = c.kind;
-        if let Some(info) = self.import_probes.get(&c.path) {
-            p.as_shot_wb = info.as_shot_wb;
-            p.embedded_lens = info.embedded_lens;
-            p.preview_only = info.preview_only.clone();
-        }
-        p.develop = std::sync::Arc::new(p.import_defaults());
-        let edge = edge.clamp(64, crate::media::SourceLevel::Thumb.max_edge());
-        let level = crate::media::SourceLevel::Thumb;
-        let source = self.media.origin_ref(&p.source, level.max_edge());
-        let key = lightcraft_preview::Hasher128::new().str(&c.path).u64(c.file_size).u64(edge as u64).finish().0 as u64;
-        let small = crate::media::RenderJob {
-            request_id: 0,
-            cache_generation: self.media.rendered.generation(),
-            source_key: None,
-            photo: id,
-            level,
-            source,
-            origin: p.source.clone(),
-            info: crate::media::source_info(&p),
-            settings: p.develop.clone(),
-            request: lightcraft_pipeline::RenderRequest::fit(edge, edge),
-            key,
-            cache: None,
-            stages: None,
-            view_cache: None,
-            display: None,
-            slide: None,
-            preview_cut: None,
-            display_fit: None,
-        };
-        let embedded = match (&self.media.preview_loader, c.kind) {
-            (Some(l), MediaKind::Raw) => Some((c.path.clone(), l.clone(), edge)),
-            _ => None,
-        };
-        Some(crate::media::QuickJob { request_id: 0, photo: id, key, cached: Vec::new(), embedded, small: Some(Box::new(small)) })
-    }
-
-    /// Use the system clock for import/edit times (native hosts).
-    pub fn with_system_clock(mut self) -> Self {
-        self.clock = Box::new(system_clock);
-        self
-    }
 }
 
 #[cfg(test)]
