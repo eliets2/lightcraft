@@ -606,18 +606,10 @@ mod tests {
             builtin: false,
         };
         for amount in [0.0, 0.25, 0.4] {
-            assert_eq!(
-                p.apply_on(&current, &original, amount).crop.aspect,
-                None,
-                "amount {amount}: the null import baseline is restored"
-            );
+            assert_eq!(p.apply_on(&current, &original, amount).crop.aspect, None, "amount {amount}: the null import baseline is restored");
         }
         for amount in [0.5, 0.75, 1.0] {
-            assert_eq!(
-                p.apply_on(&current, &original, amount).crop.aspect,
-                Some((16, 9)),
-                "amount {amount}: the preset's aspect applies"
-            );
+            assert_eq!(p.apply_on(&current, &original, amount).crop.aspect, Some((16, 9)), "amount {amount}: the preset's aspect applies");
         }
     }
 }
