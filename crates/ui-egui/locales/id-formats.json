@@ -322,6 +322,6 @@
   "{n} selected photo{} · {pages} page{}": "{n} foto dipilih · {pages} halaman{:.0}{:.0}",
   "{n} photo{} in view · {slides} slide{} · {time}": "{n} foto di tampilan · {slides} slide · {time}{:.0}{:.0}",
   "Bring photos in with File › Import Photos… ({keys}).": "Masukkan foto melalui File › Impor foto… ({keys}).",
-  "View › Detail ({keys}).": "Tampilan › Detail ({keys}).",
+  "View › Detail View ({keys}).": "Tampilan › Tampilan Detail ({keys}).",
   "File › Export… · File › Print… ({keys}).": "File › Ekspor… · File › Cetak… ({keys})."
 }

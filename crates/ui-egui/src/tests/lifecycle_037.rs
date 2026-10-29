@@ -2029,6 +2029,9 @@ fn a_discarded_layout_does_not_publish_its_widget_registry() {
 fn a_gesture_replies_only_after_the_completed_pass_consumed_its_event() {
     let ctx = egui::Context::default();
     let mut app = app();
+    // a headless host never gains the first-run tour: its modal would sit over the passes this
+    // test drives (screenshot tests elsewhere in this file need the host not headless)
+    app.headless_host = true;
     frame(&ctx, raw(egui::vec2(1000.0, 700.0)), |ui| app.logic(ui.ctx()));
     app.logic(&ctx);
     assert!(app.fonts_ready);

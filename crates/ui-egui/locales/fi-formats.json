@@ -319,6 +319,6 @@
   "{name} is installed": "{name} on asennettu",
   "{name} is installed and in use: face recognition is on": "{name} on asennettu ja käytössä: kasvojentunnistus on päällä",
   "Bring photos in with File › Import Photos… ({keys}).": "Tuo kuvia valitsemalla Tiedosto › Tuo kuvia… ({keys}).",
-  "View › Detail ({keys}).": "Näytä › Tarkastelu ({keys}).",
+  "View › Detail View ({keys}).": "Näytä › Tarkastelunäkymä ({keys}).",
   "File › Export… · File › Print… ({keys}).": "Tiedosto › Vie… · Tiedosto › Tulosta… ({keys})."
 }
