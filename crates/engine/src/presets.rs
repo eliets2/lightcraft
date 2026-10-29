@@ -834,4 +834,34 @@ mod tests {
         let dv = s.develop_of(id).unwrap();
         assert_eq!(dv.light.exposure, 0.5, "amount 0 gives the import look's value for a setting the preset names");
     }
+
+    /// Issue #2207: an import look whose `crop.aspect` is `None` serializes as an absent key, so at
+    /// amount 0 a crop preset must restore the imported free aspect instead of leaving the photo's
+    /// locked aspect in place.
+    #[test]
+    fn amount_zero_restores_a_null_import_crop_aspect_from_an_absent_key() {
+        let mut s = Session::with_demo();
+        let id = s.active().unwrap();
+        let mut p = (**s.catalog.photo(id).unwrap()).clone();
+        let mut look = p.camera_defaults();
+        look.crop.aspect = None;
+        p.import_look = Some(std::sync::Arc::new(look.clone()));
+        p.develop = std::sync::Arc::new(look);
+        s.catalog.apply(lightcraft_catalog::Op::RemovePhoto { id: p.id }).unwrap();
+        s.catalog.apply(lightcraft_catalog::Op::AddPhoto { photo: Box::new(p) }).unwrap();
+        // lock the aspect on the photo's current settings
+        s.execute("develop.merge", &json!({"settings": {"crop": {"aspect": [3, 2]}}})).unwrap();
+        assert_eq!(s.develop_of(id).unwrap().crop.aspect, Some((3, 2)));
+        // a crop preset naming [16, 9], applied at amount 0, restores the imported None aspect
+        s.presets.push(Preset {
+            id: "test.crop-16-9".into(),
+            name: "Crop 16:9".into(),
+            group: "Crop".into(),
+            settings: json!({"crop": {"aspect": [16, 9]}}),
+            favorite: false,
+            builtin: false,
+        });
+        s.execute("preset.apply", &json!({"id": "test.crop-16-9", "amount": 0})).unwrap();
+        assert_eq!(s.develop_of(id).unwrap().crop.aspect, None, "amount 0 restores the null import baseline");
+    }
 }

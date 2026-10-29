@@ -248,9 +248,10 @@ fn interpolate_object(base: Option<&Map<String, Value>>, patch: &Map<String, Val
 /// One leaf at `t`. Numbers move from `base` towards `patch`. Other values switch to the preset's
 /// at half amount and up, and below it take the base's value. A null in the base is a value like
 /// any other: below half amount a null import baseline restores `None` (a crop aspect becomes
-/// "free" again instead of the photo keeping its locked aspect). A null the preset writes is a
-/// value like any other, so it applies at half amount and up (a preset can clear an option field
-/// such as a crop aspect).
+/// "free" again instead of the photo keeping its locked aspect). A missing base value (an import
+/// baseline serialized as an absent key) counts as `null` below half amount, so amount 0 restores
+/// the imported `None`. A null the preset writes is a value like any other, so it applies at half
+/// amount and up (a preset can clear an option field such as a crop aspect).
 fn interpolate_leaf(base: Option<&Value>, patch: &Value, t: f64) -> Option<Value> {
     match (base, patch) {
         // integer fields (the grain seed, ids) are discrete like strings: see `scale_patch`
@@ -259,7 +260,7 @@ fn interpolate_leaf(base: Option<&Value>, patch: &Value, t: f64) -> Option<Value
             serde_json::Number::from_f64(b + (p - b) * t).map(Value::Number)
         }
         _ if t >= 0.5 => Some(patch.clone()),
-        _ => base.cloned(),
+        _ => base.cloned().or_else(|| Some(Value::Null)),
     }
 }
 
