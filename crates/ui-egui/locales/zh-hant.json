@@ -2165,7 +2165,7 @@
   "The Photo Grid lays the library out as justified rows: rate, flag and colour-label, filter, and gather photos into albums.": "照片格狀檢視以等高列排列圖庫：可評分、標記旗標與色彩標籤、篩選，並將照片歸入相簿。",
   "View › Photo Grid.": "檢視 › 照片格狀檢視。",
   "Develop a photo": "編輯照片",
-  "Open a photo to develop it: exposure, colour, detail and masks, all non-destructive. Y compares before and after.": "開啟照片進行編輯：曝光、色彩、細節與遮色片，全部為非破壞性。按 Y 可比較編輯前後。",
+  "Open a photo to develop it: exposure, colour, detail and masks, all non-destructive. Use View › Before/After Side by Side to compare before and after.": "開啟照片進行編輯：曝光、色彩、細節與遮色片，全部為非破壞性。使用 檢視 › 編輯前／後左右檢視 比較編輯前後。",
   "View › Detail.": "檢視 › 詳細檢視。",
   "Cull a shoot": "挑選一次拍攝的照片",
   "Assisted Culling scores focus and exposure, finds bursts, and flags blurry shots as rejects, so the keepers surface fast.": "輔助挑片會評估對焦與曝光、找出連拍組，並將模糊的照片標為排除，讓入選的照片更快浮現。",

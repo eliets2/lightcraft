@@ -2357,7 +2357,7 @@
   "The Photo Grid lays the library out as justified rows: rate, flag and colour-label, filter, and gather photos into albums.": "Сетка фото выстраивает библиотеку ровными рядами: оценивайте, отмечайте флагами и цветовыми метками, фильтруйте и собирайте фотографии в альбомы.",
   "View › Photo Grid.": "Вид › Сетка фото.",
   "Develop a photo": "Обработайте фотографию",
-  "Open a photo to develop it: exposure, colour, detail and masks, all non-destructive. Y compares before and after.": "Откройте фото для обработки: экспозиция, цвет, детализация и маски, всё неразрушающе. Y сравнивает до и после.",
+  "Open a photo to develop it: exposure, colour, detail and masks, all non-destructive. Use View › Before/After Side by Side to compare before and after.": "Откройте фото для обработки: экспозиция, цвет, детализация и маски, всё неразрушающе. Используйте Вид › До/после рядом, чтобы сравнить до и после.",
   "View › Detail.": "Вид › Детализация.",
   "Cull a shoot": "Отберите снимки съёмки",
   "Assisted Culling scores focus and exposure, finds bursts, and flags blurry shots as rejects, so the keepers surface fast.": "Автоматический отбор оценивает резкость и экспозицию, находит серии и помечает размытые кадры как отклонённые, чтобы лучшие снимки сразу бросались в глаза.",

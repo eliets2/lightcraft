@@ -2149,7 +2149,7 @@
   "The Photo Grid lays the library out as justified rows: rate, flag and colour-label, filter, and gather photos into albums.": "Kuvaruudukko asettelee kirjaston tasattuihin riveihin: arvioi, merkitse ja väritä kuvia, suodata ja kokoaa niitä albumeihin.",
   "View › Photo Grid.": "Näytä › Kuvaruudukko.",
   "Develop a photo": "Kehitä kuva",
-  "Open a photo to develop it: exposure, colour, detail and masks, all non-destructive. Y compares before and after.": "Avaa kuva kehitettäväksi: valotus, väri, yksityiskohdat ja maskit, kaikki ei-tuhovaa. Y vertaa ennen- ja jälkikuvaa.",
+  "Open a photo to develop it: exposure, colour, detail and masks, all non-destructive. Use View › Before/After Side by Side to compare before and after.": "Avaa kuva kehitettäväksi: valotus, väri, yksityiskohdat ja maskit, kaikki ei-tuhovaa. Käytä Näytä › Ennen/jälkeen vierekkäin ennen- ja jälkikuvan vertailuun.",
   "View › Detail.": "Näytä › Tarkastelu.",
   "Cull a shoot": "Karsi kuvaus",
   "Assisted Culling scores focus and exposure, finds bursts, and flags blurry shots as rejects, so the keepers surface fast.": "Avustettu valinta pisteyttää terävyyden ja valotuksen, tunnistaa kuvasarjat ja merkitsee sumeat kuvat hylätyiksi, jotta parhaat nousevat nopeasti esille.",

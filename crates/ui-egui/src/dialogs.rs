@@ -58,10 +58,11 @@ pub(crate) const WELCOME_NEXT: &str = "Next";
 pub(crate) const WELCOME_START: &str = "Get Started";
 
 /// The first-run tour's pages: (title, what it does, where to find it). Every menu path names a
-/// real command (`file.addPhotos`, `view.photoGrid`, `view.detail`, `dialog.cull`, `dialog.export`,
-/// `dialog.print`); `›` paints (the menu triangle `▸` does not). The pages that name a shortcut
-/// take the command's live binding at render time ([`welcome_body`]) — no key is written here, so
-/// no platform is shown a chord its menus do not bind.
+/// real command (`file.addPhotos`, `view.photoGrid`, `view.detail`, `view.beforeAfter`,
+/// `dialog.cull`, `dialog.export`, `dialog.print`); `›` paints (the menu triangle `▸` does not).
+/// The pages that name a shortcut take the command's live binding at render time
+/// ([`welcome_body`]) — no key is written here, so no platform is shown a chord its menus do
+/// not bind.
 pub(crate) const WELCOME_PAGES: [(&str, &str, &str); 6] = [
     (
         "Welcome to LightCraft",
@@ -75,7 +76,7 @@ pub(crate) const WELCOME_PAGES: [(&str, &str, &str); 6] = [
     ),
     (
         "Develop a photo",
-        "Open a photo to develop it: exposure, colour, detail and masks, all non-destructive. Y compares before and after.",
+        "Open a photo to develop it: exposure, colour, detail and masks, all non-destructive. Use View › Before/After Side by Side to compare before and after.",
         "View › Detail.",
     ),
     (
