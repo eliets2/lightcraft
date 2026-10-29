@@ -2364,7 +2364,7 @@
   "The Photo Grid lays the library out as justified rows: rate, flag and colour-label, filter, and gather photos into albums.": "写真グリッドは、写真を高さのそろった行に並べます。評価、旗、カラーラベルを付けたり、絞り込んだり、写真をアルバムにまとめたりできます。",
   "View › Photo Grid.": "表示 › 写真グリッド。",
   "Develop a photo": "写真を現像する",
-  "Open a photo to develop it: exposure, colour, detail and masks, all non-destructive. Y compares before and after.": "写真を開いて現像します。露出、色、ディテール、マスクをすべて非破壊で調整できます。Y で編集前と編集後を比べられます。",
+  "Open a photo to develop it: exposure, colour, detail and masks, all non-destructive. Use View › Before/After Side by Side to compare before and after.": "写真を開いて現像します。露出、色、ディテール、マスクをすべて非破壊で調整できます。表示 › 編集前／編集後の左右表示で編集前と編集後を比べられます。",
   "View › Detail.": "表示 › 詳細。",
   "Cull a shoot": "撮影分を選別する",
   "Assisted Culling scores focus and exposure, finds bursts, and flags blurry shots as rejects, so the keepers surface fast.": "写真の選別を補助する機能は、ピントと露出を採点し、連写をまとめ、ぶれた写真を不採用にするので、残す写真がすぐ見つかります。",
