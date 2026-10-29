@@ -59,10 +59,11 @@ pub(crate) const WELCOME_NEXT: &str = "Next";
 pub(crate) const WELCOME_START: &str = "Get Started";
 
 /// The first-run tour's pages: (title, what it does, where to find it). Every menu path names a
-/// real command (`file.addPhotos`, `view.photoGrid`, `view.detail`, `dialog.cull`, `dialog.export`,
-/// `dialog.print`); `›` paints (the menu triangle `▸` does not). The pages that name a shortcut
-/// take the command's live binding at render time ([`welcome_body`]) — no key is written here, so
-/// no platform is shown a chord its menus do not bind.
+/// real command (`file.addPhotos`, `view.photoGrid`, `view.detail`, `view.beforeAfter`,
+/// `dialog.cull`, `dialog.export`, `dialog.print`); `›` paints (the menu triangle `▸` does not).
+/// The pages that name a shortcut take the command's live binding at render time
+/// ([`welcome_body`]) — no key is written here, so no platform is shown a chord its menus do
+/// not bind.
 pub(crate) const WELCOME_PAGES: [(&str, &str, &str); 6] = [
     (
         "Welcome to LightCraft",
@@ -76,8 +77,8 @@ pub(crate) const WELCOME_PAGES: [(&str, &str, &str); 6] = [
     ),
     (
         "Develop a photo",
-        "Open a photo to develop it: exposure, colour, detail and masks, all non-destructive. Y compares before and after.",
-        "View › Detail.",
+        "Open a photo to develop it: exposure, colour, detail and masks, all non-destructive. Use View › Before/After Side by Side to compare before and after.",
+        "View › Detail View.",
     ),
     (
         "Cull a shoot",
@@ -95,7 +96,6 @@ pub(crate) const WELCOME_PAGES: [(&str, &str, &str); 6] = [
         "Start the app with --control 7980 (or LIGHTCRAFT_CONTROL_PORT), then lightcraft-cli mcp --connect attaches one to it.",
     ),
 ];
-
 
 /// The tour page that names the desktop-only launch flow: an MCP agent attaches over a `--control`
 /// port, which only the desktop app listens on. The browser build omits the page rather than
@@ -124,6 +124,24 @@ fn welcome_page_command(page: usize) -> Option<&'static str> {
     }
 }
 
+/// The tour page that names Print. The browser build's File menu disables Print
+/// ([`crate::menus::ui_enabled`]), so that host's tour names Export alone in the opening line
+/// ([`welcome_opening`]) instead of a menu item the host greys out.
+const WELCOME_PRINT_PAGE: usize = 4;
+
+/// The opening line a tour page paints under its text: the pages that name a shortcut carry the
+/// command's live binding (`keys`), the Share page names Export alone on the web host, and the
+/// rest paint the page's own sentence.
+pub(crate) fn welcome_opening(page: usize, opening: &str, keys: Option<&str>, web_host: bool) -> String {
+    match (page, keys, web_host) {
+        (WELCOME_PRINT_PAGE, _, true) => crate::i18n::tr("File › Export…").to_string(),
+        (0, Some(keys), _) => crate::i18n::tr_format!("Bring photos in with File › Import Photos… ({keys}).", keys = keys),
+        (2, Some(keys), _) => crate::i18n::tr_format!("View › Detail View ({keys}).", keys = keys),
+        (WELCOME_PRINT_PAGE, Some(keys), _) => crate::i18n::tr_format!("File › Export… · File › Print… ({keys}).", keys = keys),
+        _ => crate::i18n::tr(opening).to_string(),
+    }
+}
+
 /// The first-run tour: one page at a time, Back / Skip / Next under it. `close` is set when the
 /// tour is finished (Next on the last page) or skipped.
 fn welcome_body(app: &LightcraftApp, ui: &mut egui::Ui, t: &Tokens, page: &mut usize, close: &mut bool) {
@@ -142,12 +160,7 @@ fn welcome_body(app: &LightcraftApp, ui: &mut egui::Ui, t: &Tokens, page: &mut u
     let keys = welcome_page_command(*page)
         .and_then(|id| crate::shortcuts::shortcut_of(&app.ui.settings.keymap, id))
         .map(|sc| crate::menus::menubar::shortcut_text(sc, mac));
-    let opening = match (*page, keys) {
-        (0, Some(keys)) => crate::i18n::tr_format!("Bring photos in with File › Import Photos… ({keys}).", keys = keys),
-        (2, Some(keys)) => crate::i18n::tr_format!("View › Detail ({keys}).", keys = keys),
-        (4, Some(keys)) => crate::i18n::tr_format!("File › Export… · File › Print… ({keys}).", keys = keys),
-        _ => crate::i18n::tr(opening).to_string(),
-    };
+    let opening = welcome_opening(*page, opening, keys.as_deref(), cfg!(target_arch = "wasm32"));
     ui.label(egui::RichText::new(opening).color(t.text_dim));
     ui.add_space(8.0);
     // progress dots, centred: the active page's is the accent

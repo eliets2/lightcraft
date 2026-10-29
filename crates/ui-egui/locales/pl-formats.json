@@ -319,6 +319,6 @@
   "{name} is installed": "{name} jest zainstalowany",
   "{name} is installed and in use: face recognition is on": "{name} jest zainstalowany i używany: rozpoznawanie twarzy jest włączone",
   "Bring photos in with File › Import Photos… ({keys}).": "Zdjęcia importujesz przez Plik › Importuj zdjęcia… ({keys}).",
-  "View › Detail ({keys}).": "Widok › Szczegóły ({keys}).",
+  "View › Detail View ({keys}).": "Widok › Widok szczegółów ({keys}).",
   "File › Export… · File › Print… ({keys}).": "Plik › Eksportuj… · Plik › Drukuj… ({keys})."
 }

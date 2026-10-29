@@ -319,6 +319,6 @@
   "{name} is installed": "{name} đã được cài đặt",
   "{name} is installed and in use: face recognition is on": "{name} đã được cài đặt và đang dùng: nhận diện khuôn mặt đã bật",
   "Bring photos in with File › Import Photos… ({keys}).": "Đưa ảnh vào bằng Tệp › Nhập ảnh… ({keys}).",
-  "View › Detail ({keys}).": "Xem › Chi tiết ({keys}).",
+  "View › Detail View ({keys}).": "Xem › Chế độ xem chi tiết ({keys}).",
   "File › Export… · File › Print… ({keys}).": "Tệp › Xuất… · Tệp › In… ({keys})."
 }

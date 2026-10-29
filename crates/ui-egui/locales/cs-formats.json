@@ -319,6 +319,6 @@
   "{name} is installed": "{name} je nainstalován",
   "{name} is installed and in use: face recognition is on": "{name} je nainstalován a používán: rozpoznávání obličejů je zapnuto",
   "Bring photos in with File › Import Photos… ({keys}).": "Fotografie importujete přes Soubor › Importovat fotografie… ({keys}).",
-  "View › Detail ({keys}).": "Zobrazení › Detail ({keys}).",
+  "View › Detail View ({keys}).": "Zobrazení › Zobrazení detailu ({keys}).",
   "File › Export… · File › Print… ({keys}).": "Soubor › Exportovat… · Soubor › Tisk… ({keys})."
 }
