@@ -260,7 +260,7 @@ fn interpolate_leaf(base: Option<&Value>, patch: &Value, t: f64) -> Option<Value
             serde_json::Number::from_f64(b + (p - b) * t).map(Value::Number)
         }
         _ if t >= 0.5 => Some(patch.clone()),
-        _ => base.cloned().or_else(|| Some(Value::Null)),
+        _ => base.cloned().or(Some(Value::Null)),
     }
 }
 
