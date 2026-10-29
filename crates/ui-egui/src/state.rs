@@ -59,6 +59,7 @@ pub struct UiState {
     /// Presets column: show a live thumbnail of the photo with each preset.
     pub preset_thumbs: bool,
     pub filmstrip: bool,
+    pub bottom_bar: bool,
     pub zoom: Zoom,
     /// Pan offset of the loupe when zoomed (image-normalized centre).
     pub pan: (f32, f32),
@@ -374,6 +375,7 @@ impl Default for UiState {
             presets: false,
             preset_thumbs: false,
             filmstrip: true,
+            bottom_bar: true,
             zoom: Zoom::Fit,
             pan: (0.5, 0.5),
             click_zoom: 100,

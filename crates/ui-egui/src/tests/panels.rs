@@ -2591,3 +2591,18 @@ fn the_histogram_clipping_buttons_stay_clear_of_the_hovered_scroll_bar() {
     // and the shadow one keeps the same inset from its edge
     assert!(((low.left() - hist.left()) - (hist.right() - high.right())).abs() < 0.5, "{low:?} {high:?} in {hist:?}");
 }
+
+/// Pressing T toggles the bottom bar on and off. It is drawn unconditionally
+/// (docking.rs:420) with no `bottom_bar` flag in UiState, no `view.bottomBar` command
+/// and no T shortcut, so it can never be hidden.
+#[test]
+fn t_key_toggles_the_bottom_bar() {
+    let mut h = demo([1400.0, 900.0], json!({"view": "detail"}));
+    assert!(has(&h, "flag:unflag"), "the bottom bar is drawn");
+    h.request("ui.key", json!({"key": "t"}), T);
+    h.step();
+    assert!(!has(&h, "flag:unflag"), "T hides the bottom bar");
+    h.request("ui.key", json!({"key": "t"}), T);
+    h.step();
+    assert!(has(&h, "flag:unflag"), "T shows the bottom bar again");
+}
