@@ -15,8 +15,12 @@ mod frame;
 mod rename;
 mod sam_model;
 
+pub(crate) use confirm::{album_entries, confirm_dialog};
 pub use cull::{MAX_BURST_GAP, clamp_cull_burst, cull_params, fmt_gap, parse_gap};
-use export::{WM_INSET_Y, WM_OPACITY, WM_POSITIONS, WM_SIZE, export_dialog_params, export_size, group_checklist, watermark_preview};
+use export::{
+    LIMIT_KB, QUALITY, START_NUMBER, WM_IMAGE_WIDTH, WM_INSET_X, WM_INSET_Y, WM_OPACITY, WM_POSITIONS, WM_SIZE, export_dialog_params, export_size,
+    group_checklist, watermark_preview,
+};
 pub use frame::{ConfirmStyle, confirm_style, list_height, prompt};
 use frame::{
     DIALOG_CHROME_GUESS, DIALOG_MIN_BODY, DIALOG_SCREEN_MARGIN, choices, clicked_backdrop, dialog_body, dialog_field, field, just_opened, num,
@@ -398,15 +402,9 @@ impl SamState {
             running: sam.download_status().running,
             failed: sam.download_status().error.is_some(),
             by_hand: sam_by_hand(sam),
-
-
-
-
-                        }
-                    }
-                }
-
-
+        }
+    }
+}
 
 /// The label of a dialog's cancel button.
 fn cancel_label(dlg: &Dialog, sam: &SamState) -> &'static str {
@@ -1844,11 +1842,6 @@ fn about_body(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, dlg: &mut 
                 let r = ui.link(crate::i18n::tr(label)).on_hover_text(url);
                 if r.clicked() {
                     let _ = crate::links::open(app, url);
-
-
-
-
-
                 }
             }
         }

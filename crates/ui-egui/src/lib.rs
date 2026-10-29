@@ -76,8 +76,7 @@ mod caches;
 mod clock;
 mod services;
 
-#[cfg(test)]
-use app::{import_tick_allowed, sam_download_ended, shot_ready};
+use app::{detect_summary, import_tick_allowed, sam_download_ended, shot_ready};
 pub(crate) use caches::key_of;
 pub use caches::{FilterValues, LibraryCounts, RulesView};
 use clock::AppClock;
