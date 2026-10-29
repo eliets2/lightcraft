@@ -307,6 +307,6 @@
   "Where should the Lightroom catalog “{catalog}” go?": "Kam má jít katalog Lightroomu „{catalog}“?",
   "Merge into the open library “{library}” ({count} photo{})": "Sloučit s otevřenou knihovnou „{library}“ (fotografie: {count}{:.0})",
   "Bring photos in with File › Import Photos… ({keys}).": "Fotografie importujete přes Soubor › Importovat fotografie… ({keys}).",
-  "View › Detail ({keys}).": "Zobrazení › Detail ({keys}).",
+  "View › Detail View ({keys}).": "Zobrazení › Zobrazení detailu ({keys}).",
   "File › Export… · File › Print… ({keys}).": "Soubor › Exportovat… · Soubor › Tisk… ({keys})."
 }

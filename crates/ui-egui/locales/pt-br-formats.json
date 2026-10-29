@@ -307,6 +307,6 @@
   "Where should the Lightroom catalog “{catalog}” go?": "Para onde vai o catálogo do Lightroom “{catalog}”?",
   "Merge into the open library “{library}” ({count} photo{})": "Mesclar na biblioteca aberta “{library}” ({count} foto{})",
   "Bring photos in with File › Import Photos… ({keys}).": "Traga fotos com Arquivo › Importar fotos… ({keys}).",
-  "View › Detail ({keys}).": "Exibir › Detalhe ({keys}).",
+  "View › Detail View ({keys}).": "Exibir › Exibição de detalhe ({keys}).",
   "File › Export… · File › Print… ({keys}).": "Arquivo › Exportar… · Arquivo › Imprimir… ({keys})."
 }

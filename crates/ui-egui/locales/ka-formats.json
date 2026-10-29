@@ -307,6 +307,6 @@
   "Where should the Lightroom catalog “{catalog}” go?": "სად გადავიტანოთ Lightroom-ის კატალოგი „{catalog}“?",
   "Merge into the open library “{library}” ({count} photo{})": "გაერთიანება ღია ბიბლიოთეკასთან „{library}“ (ფოტოები: {count}){:.0}",
   "Bring photos in with File › Import Photos… ({keys}).": "ფოტოების შემოსატანად გამოიყენეთ ფაილი › ფოტოების იმპორტი… ({keys}).",
-  "View › Detail ({keys}).": "ხედი › დეტალი ({keys}).",
+  "View › Detail View ({keys}).": "ხედი › დეტალური ხედი ({keys}).",
   "File › Export… · File › Print… ({keys}).": "ფაილი › ექსპორტი… · ფაილი › დაბეჭდვა… ({keys})."
 }

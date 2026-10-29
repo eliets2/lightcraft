@@ -307,6 +307,6 @@
   "Where should the Lightroom catalog “{catalog}” go?": "Minne Lightroom-luettelo ”{catalog}” tuodaan?",
   "Merge into the open library “{library}” ({count} photo{})": "Yhdistä avoimeen kirjastoon ”{library}” (kuvia: {count}{:.0})",
   "Bring photos in with File › Import Photos… ({keys}).": "Tuo kuvia valitsemalla Tiedosto › Tuo kuvia… ({keys}).",
-  "View › Detail ({keys}).": "Näytä › Tarkastelu ({keys}).",
+  "View › Detail View ({keys}).": "Näytä › Tarkastelunäkymä ({keys}).",
   "File › Export… · File › Print… ({keys}).": "Tiedosto › Vie… · Tiedosto › Tulosta… ({keys})."
 }

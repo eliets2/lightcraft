@@ -307,6 +307,6 @@
   "Where should the Lightroom catalog “{catalog}” go?": "Ke mana katalog Lightroom “{catalog}” diimpor?",
   "Merge into the open library “{library}” ({count} photo{})": "Gabungkan ke pustaka yang terbuka “{library}” ({count} foto{:.0})",
   "Bring photos in with File › Import Photos… ({keys}).": "Masukkan foto melalui File › Impor foto… ({keys}).",
-  "View › Detail ({keys}).": "Tampilan › Detail ({keys}).",
+  "View › Detail View ({keys}).": "Tampilan › Tampilan Detail ({keys}).",
   "File › Export… · File › Print… ({keys}).": "File › Ekspor… · File › Cetak… ({keys})."
 }

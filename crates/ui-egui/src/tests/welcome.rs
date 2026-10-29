@@ -238,3 +238,14 @@ fn the_tour_opens_once_the_library_window_is_dismissed() {
     frame(&mut held);
     assert_eq!(held.ui.seen_version.as_deref(), Some(env!("CARGO_PKG_VERSION")));
 }
+
+/// The browser build's File menu disables Print (`menus::ui_enabled` turns `dialog.print` off on
+/// wasm), so the Share page's opening line names Export alone instead of a menu item the host
+/// greys out. The desktop keeps both menu paths and the live Print binding.
+#[test]
+fn the_web_tour_names_export_alone_not_the_desktop_print_menu() {
+    use crate::panels::dialogs::welcome_opening;
+    assert_eq!(welcome_opening(4, "File › Export… · File › Print…", Some("Ctrl+P"), true), "File › Export…");
+    assert_eq!(welcome_opening(4, "File › Export… · File › Print…", Some("Ctrl+P"), false), "File › Export… · File › Print… (Ctrl+P).");
+    assert_eq!(welcome_opening(4, "File › Export… · File › Print…", None, false), "File › Export… · File › Print…");
+}
