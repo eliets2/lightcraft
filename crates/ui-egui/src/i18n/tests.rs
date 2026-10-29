@@ -137,7 +137,9 @@ fn catalogs_agree_on_placeholders() {
 }
 
 /// The tour's text (its pages, and its window and button labels) is in every catalog: a language
-/// missing one of these keys would show that line in English on the first launch.
+/// missing one of these keys would show that line in English on the first launch. The pages that
+/// name a shortcut carry the live chord through a format message (`menubar::shortcut_text` paints
+/// it), so their `{keys}` forms are pinned in every `*-formats.json` too.
 #[test]
 fn the_welcome_tour_is_translated_in_every_catalog() {
     use crate::dialogs::{WELCOME_NEXT, WELCOME_PAGES, WELCOME_START, WELCOME_TITLE};
@@ -146,10 +148,18 @@ fn the_welcome_tour_is_translated_in_every_catalog() {
         .flat_map(|(title, text, opening)| [*title, *text, *opening])
         .chain([WELCOME_TITLE, WELCOME_NEXT, WELCOME_START])
         .collect();
+    let format_keys = [
+        "Bring photos in with File \u{203a} Import Photos\u{2026} ({keys}).",
+        "View \u{203a} Detail ({keys}).",
+        "File \u{203a} Export\u{2026} \u{b7} File \u{203a} Print\u{2026} ({keys}).",
+    ];
     for language in Locale::ALL.iter().copied().filter(|language| *language != Locale::En) {
         let catalog = language.catalog();
         let missing: Vec<&str> = keys.iter().copied().filter(|key| !catalog.contains_key(*key)).collect();
         assert!(missing.is_empty(), "{}: no translation for {missing:?}", language.code());
+        let own_formats = formats_catalog(language.code());
+        let missing_formats: Vec<&str> = format_keys.iter().copied().filter(|key| !own_formats.contains_key(*key)).collect();
+        assert!(missing_formats.is_empty(), "{}: no translation for {missing_formats:?}", language.code());
     }
 }
 

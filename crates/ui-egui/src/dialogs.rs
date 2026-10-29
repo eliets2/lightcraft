@@ -60,12 +60,14 @@ pub(crate) const WELCOME_START: &str = "Get Started";
 
 /// The first-run tour's pages: (title, what it does, where to find it). Every menu path names a
 /// real command (`file.addPhotos`, `view.photoGrid`, `view.detail`, `dialog.cull`, `dialog.export`,
-/// `dialog.print`); `›` paints (the menu triangle `▸` does not).
+/// `dialog.print`); `›` paints (the menu triangle `▸` does not). The pages that name a shortcut
+/// take the command's live binding at render time ([`welcome_body`]) — no key is written here, so
+/// no platform is shown a chord its menus do not bind.
 pub(crate) const WELCOME_PAGES: [(&str, &str, &str); 6] = [
     (
         "Welcome to LightCraft",
         "A fast, non-destructive photo library and raw developer: your originals stay untouched, and every edit can be revisited or reset.",
-        "Bring photos in with File › Import Photos… (Cmd+Shift+I).",
+        "Bring photos in with File › Import Photos…",
     ),
     (
         "Find and organize",
@@ -75,7 +77,7 @@ pub(crate) const WELCOME_PAGES: [(&str, &str, &str); 6] = [
     (
         "Develop a photo",
         "Open a photo to develop it: exposure, colour, detail and masks, all non-destructive. Y compares before and after.",
-        "View › Detail (D).",
+        "View › Detail.",
     ),
     (
         "Cull a shoot",
@@ -85,7 +87,7 @@ pub(crate) const WELCOME_PAGES: [(&str, &str, &str); 6] = [
     (
         "Share your work",
         "Export renders JPEG, PNG, TIFF, WebP and more, sized as you like; Print lays a photo out on a page as PDF.",
-        "File › Export… · File › Print… (Cmd+P).",
+        "File › Export… · File › Print…",
     ),
     (
         "Put agents to work",
@@ -93,6 +95,7 @@ pub(crate) const WELCOME_PAGES: [(&str, &str, &str); 6] = [
         "Start the app with --control 7980 (or LIGHTCRAFT_CONTROL_PORT), then lightcraft-cli mcp --connect attaches one to it.",
     ),
 ];
+
 
 /// The tour page that names the desktop-only launch flow: an MCP agent attaches over a `--control`
 /// port, which only the desktop app listens on. The browser build omits the page rather than
@@ -111,9 +114,19 @@ fn welcome_pages_host() -> &'static [(&'static str, &'static str, &'static str)]
     welcome_pages(cfg!(target_arch = "wasm32"))
 }
 
+/// The command whose shortcut a tour page's opening line names.
+fn welcome_page_command(page: usize) -> Option<&'static str> {
+    match page {
+        0 => Some("file.addPhotos"),
+        2 => Some("view.detail"),
+        4 => Some("dialog.print"),
+        _ => None,
+    }
+}
+
 /// The first-run tour: one page at a time, Back / Skip / Next under it. `close` is set when the
 /// tour is finished (Next on the last page) or skipped.
-fn welcome_body(ui: &mut egui::Ui, t: &Tokens, page: &mut usize, close: &mut bool) {
+fn welcome_body(app: &LightcraftApp, ui: &mut egui::Ui, t: &Tokens, page: &mut usize, close: &mut bool) {
     let pages = welcome_pages_host();
     let last = pages.len() - 1;
     *page = (*page).min(last);
@@ -122,7 +135,20 @@ fn welcome_body(ui: &mut egui::Ui, t: &Tokens, page: &mut usize, close: &mut boo
     ui.label(egui::RichText::new(crate::i18n::tr(title)).font(t.semibold(16.0)).color(t.text));
     ui.label(egui::RichText::new(crate::i18n::tr(text)).color(t.text_label));
     ui.add_space(2.0);
-    ui.label(egui::RichText::new(crate::i18n::tr(opening)).color(t.text_dim));
+    // The pages that name a shortcut show the command's live binding, painted the way the menus
+    // paint theirs (`menubar::shortcut_text`: `⌘⇧I` on macOS, `Ctrl+Shift+I` elsewhere) — never
+    // a hard-coded key. A command whose binding was removed shows the menu path alone.
+    let mac = ui.ctx().os() == egui::os::OperatingSystem::Mac;
+    let keys = welcome_page_command(*page)
+        .and_then(|id| crate::shortcuts::shortcut_of(&app.ui.settings.keymap, id))
+        .map(|sc| crate::menus::menubar::shortcut_text(sc, mac));
+    let opening = match (*page, keys) {
+        (0, Some(keys)) => crate::i18n::tr_format!("Bring photos in with File › Import Photos… ({keys}).", keys = keys),
+        (2, Some(keys)) => crate::i18n::tr_format!("View › Detail ({keys}).", keys = keys),
+        (4, Some(keys)) => crate::i18n::tr_format!("File › Export… · File › Print… ({keys}).", keys = keys),
+        _ => crate::i18n::tr(opening).to_string(),
+    };
+    ui.label(egui::RichText::new(opening).color(t.text_dim));
     ui.add_space(8.0);
     // progress dots, centred: the active page's is the accent
     let spacing = 12.0;
@@ -279,7 +305,7 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
             }
             ui.spacing_mut().item_spacing.y = 8.0;
             body_h = dialog_body(ui, (!import && !print).then_some(title.as_str()), body_max, |ui| {
-                dialog_content(app, ui, &t, body_max, &mut confirm, &mut dlg)
+                dialog_content(app, ui, &t, body_max, &mut confirm, &mut close, &mut dlg)
             });
             ui.add_space(4.0);
             // the confirm on the right with Cancel to its left (macOS and GNOME's order), filled with
@@ -2030,12 +2056,12 @@ fn about_body(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, dlg: &mut 
 
 /// The body of the open dialog: what each kind of dialog shows between its title and its buttons. `confirm` is set
 /// by a dialog that is confirmed from its body (a text field's Return).
-fn dialog_content(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, body_max: f32, confirm: &mut bool, dlg: &mut Dialog) {
+fn dialog_content(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens, body_max: f32, confirm: &mut bool, close: &mut bool, dlg: &mut Dialog) {
     match dlg {
         Dialog::AutoStack { .. } => auto_stack_body(app, ui, t, dlg),
         Dialog::Cull { .. } => cull_body(app, ui, t, dlg),
         Dialog::WhatsNew => whats_new_body(ui, t, dlg),
-        Dialog::Welcome { page } => welcome_body(ui, t, page, &mut close),
+        Dialog::Welcome { page } => welcome_body(app, ui, t, page, close),
         Dialog::DenoiseModel { info, accepted } => crate::panels::denoise::model_dialog(app, ui, t, info, accepted),
         Dialog::FaceModel { info, accepted, .. } => crate::panels::faces::model_dialog(app, ui, t, info, accepted),
         Dialog::LightroomResult { .. } => lightroom_result_body(ui, dlg),
