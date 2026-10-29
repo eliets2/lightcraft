@@ -328,11 +328,11 @@ fn write_snapshot(store: &mut dyn Store, seq: u64, catalog: &Catalog) -> std::io
         {
             let mut see = |s: &lightcraft_develop::DevelopSettings| {
                 s.visit_seg_masks(&mut |m| {
-                    if !m.data.is_empty()
-                        && let std::collections::hash_map::Entry::Vacant(e) = index.entry(m.data.clone())
-                    {
-                        pool.push(e.key().clone());
-                        e.insert((pool.len() - 1) as u32);
+                    // borrowed lookup: a grid every history step shares is not cloned just to
+                    // find it already indexed (only a new grid is copied, into pool and table)
+                    if !m.data.is_empty() && !index.contains_key(m.data.as_str()) {
+                        index.insert(m.data.clone(), pool.len() as u32);
+                        pool.push(m.data.clone());
                     }
                 });
             };
