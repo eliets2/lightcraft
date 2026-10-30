@@ -34,6 +34,7 @@ const HEIF_PACKAGES: &[&str] = &["lightcraft-codecs", "lightcraft-heif"];
 /// An entry ending in `/` covers the directory. `embedded_files_are_mapped` keeps this complete.
 const EMBEDDED: &[(&str, &[&str])] = &[
     ("assets/app-icon/", &["lightcraft"]),
+    ("assets/app-icon/hicolor/128x128/apps/ai.storyteller.lightcraft.png", &["lightcraft-ui-egui"]),
     ("assets/camera-profiles/", &["lightcraft-engine"]),
     ("assets/camera-tone/", &["lightcraft-engine"]),
     ("assets/fonts/", &["lightcraft-engine", "lightcraft-ui-egui"]),
