@@ -557,6 +557,10 @@ fn ui_commands_4(app: &mut LightcraftApp, _ctx: &egui::Context, id: &str, p: &Va
             app.ui.filmstrip = !app.ui.filmstrip;
             Ok(Value::Null)
         }
+        "view.bottomBar" => {
+            app.ui.bottom_bar = !app.ui.bottom_bar;
+            Ok(Value::Null)
+        }
         "view.frameRate" => {
             // {show?: bool} (toggles when omitted)
             app.ui.frame_rate = p.get("show").and_then(Value::as_bool).unwrap_or(!app.ui.frame_rate);
