@@ -314,7 +314,6 @@ impl Preset {
             m.adjust.amount = (m.adjust.amount * amount).clamp(0.0, 200.0);
             out.masks.push(m);
         }
-)
         out
     }
 }
