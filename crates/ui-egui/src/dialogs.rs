@@ -365,8 +365,10 @@ pub fn show(app: &mut LightcraftApp, ctx: &egui::Context, blocked: bool) {
         }
         // The startup dialog is recorded once it was presented, not when the logic tick picked
         // it: a host that runs `logic` and quits before a visible frame does not burn the tour,
-        // and a crash while it is up still does not reopen it on every launch.
-        if matches!(at_start, Dialog::Welcome { .. } | Dialog::WhatsNew) {
+        // and a crash while it is up still does not reopen it on every launch. A frame whose
+        // input a notice owns is not a presentation: the dialog is drawn but cannot be used, so
+        // the recording waits for a pass where the dialog actually takes input.
+        if !raw_blocked && matches!(at_start, Dialog::Welcome { .. } | Dialog::WhatsNew) {
             app.ui.record_startup_dialog_seen();
         }
     }
