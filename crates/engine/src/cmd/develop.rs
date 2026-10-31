@@ -1096,7 +1096,10 @@ pub fn specs() -> Vec<CommandSpec> {
                     let info = s.source_info(id);
                     let prepared = prepare_photo_for_wb_partial(&d, &preset.settings, &info);
                     let on_kelvin_scale = prepared.is_some() && info.raw && !info.relative_wb;
-                    let mut next = s.preset_applied(id, &preset, amount).unwrap_or_else(|| (*d).clone());
+                    // compose on the photo prepared for the white balance partial (its values on
+                    // the partial's scale), as `develop.merge` does via `merge_settings_for_photo`,
+                    // so a one-field preset keeps the field it never named on the photo's scale
+                    let mut next = s.preset_applied(id, prepared.as_ref().unwrap_or(&*d), &preset, amount).unwrap_or_else(|| (*d).clone());
                     if on_kelvin_scale {
                         lightcraft_pipeline::local::normalize_wb(&mut next, &info);
                     }

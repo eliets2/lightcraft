@@ -172,15 +172,17 @@ pub fn expand_preset_paths(paths: &[String]) -> Vec<String> {
 }
 
 impl Session {
-    /// The settings after applying `preset` to photo `id` at `amount`. The settings the preset
-    /// names are computed on the photo's import state ([`lightcraft_catalog::Photo::import_defaults`])
-    /// when a default preset recorded one (`import_look`); a photo without one (its settings came
-    /// from an XMP sidecar or a catalog import, which record none) composes them on its current
-    /// settings instead, since the camera defaults are not its import state. Either way, the
-    /// settings the preset does not name keep the photo's values (issue #2159). The `preset.apply`
-    /// command and the UI's hover previews share this, so hovering shows exactly what a click commits.
-    pub fn preset_applied(&self, id: PhotoId, preset: &Preset, amount: f64) -> Option<DevelopSettings> {
-        let current = self.develop_of(id)?;
+    /// The settings after applying `preset` to photo `id` at `amount`, with `current` the photo's
+    /// settings to compose on. The settings the preset names are computed on the photo's import
+    /// state ([`lightcraft_catalog::Photo::import_defaults`]) when a default preset recorded one
+    /// (`import_look`); a photo without one (its settings came from an XMP sidecar or a catalog
+    /// import, which record none) composes them on `current` instead, since the camera defaults are
+    /// not its import state. Either way, the settings the preset does not name keep `current`'s
+    /// values (issue #2159). The `preset.apply` command passes the photo prepared for a white
+    /// balance partial ([`crate::cmd::develop::prepare_photo_for_wb_partial`]) as `current`, so a
+    /// one-field white balance preset is resolved on the partial's scale; the UI's hover previews
+    /// pass the photo's own settings.
+    pub fn preset_applied(&self, id: PhotoId, current: &DevelopSettings, preset: &Preset, amount: f64) -> Option<DevelopSettings> {
         let photo = self.catalog.photo(id)?;
         // The original is read only below 100 %: the panel asks for every visible row at 100 % on
         // every frame, and then neither the import state nor a copy of the photo's settings is built.
@@ -190,9 +192,9 @@ impl Session {
                 look = photo.import_defaults();
                 &look
             }
-            _ => &current,
+            _ => current,
         };
-        Some(preset.apply_on(&current, original, amount))
+        Some(preset.apply_on(current, original, amount))
     }
 
     /// Add imported presets. Identical presets (same name, group and settings) already present are

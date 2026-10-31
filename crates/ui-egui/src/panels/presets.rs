@@ -220,7 +220,11 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                         ui.painter().rect_filled(r, 0.0, t.hover.gamma_multiply(0.7));
                     }
                     // the preview is what a click commits: the same composition as `preset.apply` (`Session::preset_applied`)
-                    let look = if thumbs || resp.hovered() { active.and_then(|id| app.session.preset_applied(id, &pr, 1.0)) } else { None };
+                    let look = if thumbs || resp.hovered() {
+                        active.and_then(|id| app.session.develop_of(id).as_deref().and_then(|d| app.session.preset_applied(id, d, &pr, 1.0)))
+                    } else {
+                        None
+                    };
                     let mut text_x = r.left() + 40.0;
                     if thumbs && let (Some(id), Some(s)) = (active, look.as_ref()) {
                         let tr = Rect::from_min_size(pos2(r.left() + 36.0, r.top() + 5.0), vec2(66.0, row_h - 10.0));
@@ -316,7 +320,7 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
                 && let Some((saved_id, saved_preset, saved_label)) =
                     ui.data(|d| d.get_temp::<(lightcraft_catalog::PhotoId, Preset, String)>(last_hover_id))
                 && saved_id == id
-                && let Some(s) = app.session.preset_applied(id, &saved_preset, 1.0)
+                && let Some(s) = app.session.develop_of(id).as_deref().and_then(|d| app.session.preset_applied(id, d, &saved_preset, 1.0))
             {
                 app.hover_preview = Some(HoverPreview { label: saved_label, settings: s });
             }
