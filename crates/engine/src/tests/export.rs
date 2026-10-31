@@ -1516,4 +1516,3 @@ fn a_user_preset_naming_a_built_in_is_renamed_when_the_library_opens() {
     assert_eq!((b["format"].as_str(), b["longEdge"].as_u64()), (Some("jpeg"), Some(2048)), "{b}");
     let _ = std::fs::remove_dir_all(&lib);
 }
-}
