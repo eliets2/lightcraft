@@ -1096,11 +1096,11 @@ pub fn specs() -> Vec<CommandSpec> {
                     let info = s.source_info(id);
                     let prepared = prepare_photo_for_wb_partial(&d, &preset.settings, &info);
                     let on_kelvin_scale = prepared.is_some() && info.raw && !info.relative_wb;
-                    let mut next = s.preset_applied(*id, &preset, amount);
+                    let mut next = s.preset_applied(id, &preset, amount).unwrap_or_else(|| (*d).clone());
                     if on_kelvin_scale {
                         lightcraft_pipeline::local::normalize_wb(&mut next, &info);
                     }
-                    s.develop_op(*id, next, &format!("Preset: {}", preset.name))
+                    s.develop_op(id, next, &format!("Preset: {}", preset.name))
                 })
                 .collect::<Vec<_>>();
             s.commit(&format!("Preset: {}", preset.name), Op::Batch { ops })?;
