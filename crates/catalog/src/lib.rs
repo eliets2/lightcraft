@@ -387,7 +387,6 @@ fn resolve_grids(settings: &mut Arc<DevelopSettings>, grids: &[String], dangling
     });
     dangling
 }
-}
 
 /// A short memory of what the latest ops changed, so that what is derived from the catalog (the grid's list) can
 /// follow a small edit without being worked out again from every photo.
