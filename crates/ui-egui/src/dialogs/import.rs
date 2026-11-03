@@ -38,7 +38,7 @@ pub use body::{DEFAULT_FOLDER_TEMPLATE, body, example_destination, source_summar
 pub(crate) use body::{DIALOG_SIZE, note_dialog_bottom};
 #[cfg(test)]
 use body::{RECIPE_CONTROLS, note_recipe_value};
-pub(crate) use body::{DIALOG_SIZE, THUMB_SIZE_DEFAULT, note_dialog_bottom, thumb_size};
+pub(crate) use body::{THUMB_SIZE_DEFAULT, thumb_size};
 pub(crate) use scan::StoppingScans;
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) use scan::cards_seen;
