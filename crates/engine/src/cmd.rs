@@ -275,8 +275,9 @@ pub(crate) fn ok() -> Result<Value> {
 /// A batch-edit recipe from a command's params: `[{id, value}, …]`, each `id` a develop control a
 /// recipe may name ([`check_recipe`]). Empty when absent or null. A malformed item, a control a
 /// recipe may not name, or more entries than there are controls is an error, so a typo is refused
-/// rather than silently ignored. An id named twice counts once, the last value winning; the list
-/// comes back in id order.
+/// rather than silently ignored. The size cap counts raw entries (duplicates included); an id named
+/// twice counts once for the value, the last value winning; the list comes back in id order.
+/// Non-finite values are refused.
 pub(crate) fn recipe_param(p: &Value, cmd: &str) -> Result<Vec<(String, f64)>> {
     let Some(v) = p.get("recipe").filter(|v| !v.is_null()) else { return Ok(Vec::new()) };
     let Some(items) = v.as_array() else {
@@ -289,7 +290,7 @@ pub(crate) fn recipe_param(p: &Value, cmd: &str) -> Result<Vec<(String, f64)>> {
     let mut by_id = std::collections::BTreeMap::new();
     for it in items {
         let id = it.get("id").and_then(Value::as_str).filter(|s| !s.is_empty()).ok_or_else(|| bad(cmd, "each recipe item needs an `id`"))?;
-        let value = it.get("value").and_then(Value::as_f64).ok_or_else(|| bad(cmd, format!("recipe `{id}` needs a numeric `value`")))?;
+        let value = it.get("value").and_then(Value::as_f64).filter(|v| v.is_finite()).ok_or_else(|| bad(cmd, format!("recipe `{id}` needs a numeric `value`")))?;
         by_id.insert(id.to_string(), value);
     }
     let recipe: Vec<(String, f64)> = by_id.into_iter().collect();
@@ -310,6 +311,9 @@ pub(crate) fn recipe_param(p: &Value, cmd: &str) -> Result<Vec<(String, f64)>> {
 ///   cannot name the same look for every photo of a batch.
 pub(crate) fn check_recipe(recipe: &[(String, f64)]) -> std::result::Result<(), String> {
     use lightcraft_develop::{Section, controls};
+    if recipe.iter().any(|(_, v)| !v.is_finite()) {
+        return Err("a recipe value must be a finite number".into());
+    }
     let mut scratch = lightcraft_develop::DevelopSettings::default();
     for (id, value) in recipe {
         let Some(spec) = controls::CONTROLS.iter().find(|c| c.id == id.as_str()) else {

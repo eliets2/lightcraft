@@ -3249,8 +3249,12 @@ fn a_batch_edit_recipe_changes_imported_photos() {
 #[test]
 fn a_bad_recipe_is_refused() {
     let mut s = Session::new().with_fs();
-    let err = s.execute("library.import", &json!({"paths": ["/nonexistent-lc"], "recipe": [{"id": "nope.nope", "value": 1}]})).unwrap_err();
+    let err = s.execute("library.import", &json!({ "paths": ["/nonexistent-lc"], "recipe": [{"id": "nope.nope", "value": 1}] })).unwrap_err();
     assert!(format!("{err}").contains("unknown recipe control"), "{err}");
+    // JSON cannot carry a non-finite value, but a recipe built in code can: it is refused
+    // before anything is imported, like a malformed one.
+    let opts = crate::import::ImportOptions { recipe: vec![("light.exposure".into(), f64::INFINITY)], ..Default::default() };
+    assert!(crate::import::ImportJob::new(&mut s, opts).is_err());
     let err = s.execute("library.import", &json!({"paths": ["/nonexistent-lc"], "recipe": "x"})).unwrap_err();
     assert!(format!("{err}").contains("recipe"), "{err}");
     assert_eq!(s.catalog.len(), 0);

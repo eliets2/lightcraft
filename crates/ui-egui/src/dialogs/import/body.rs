@@ -1,7 +1,7 @@
 use serde_json::json;
 
 use super::tags::{tag_field_width, tag_help, tag_toggle, unknown_tags_warning};
-use super::{Align2, Color32, ImportDialog, LightcraftApp, Rect, Sense, Slot, Stroke, StrokeKind, Tokens, Value, Vec2, pos2, register, vec2};
+use super::{Color32, ImportDialog, LightcraftApp, Rect, Sense, Slot, Stroke, StrokeKind, Tokens, Value, Vec2, pos2, register, vec2};
 
 /// The review dialog's first size (points). It can be resized; the photo grid takes the height.
 pub(crate) const DIALOG_SIZE: [f32; 2] = [960.0, 720.0];
@@ -491,11 +491,12 @@ pub(super) fn note_recipe_value(recipe: &mut std::collections::BTreeMap<String, 
 /// catalog nor the preset collections; "Save as Preset" is the explicit way to keep one for reuse.
 fn recipe_section(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDialog) {
     let t = Tokens::get(ui.ctx());
+    let tr = |s: &'static str| crate::i18n::tr(s);
     let open_id = egui::Id::unique("import-recipe-open");
     let mut open = ui.ctx().data(|m| m.get_temp::<bool>(open_id)).unwrap_or(false);
-    field(ui, "Batch edits", |ui| {
+    field(ui, tr("Batch edits"), |ui| {
         ui.spacing_mut().item_spacing.x = 4.0;
-        if crate::widgets::text_button(ui, "importRecipeToggle", if open { "Hide adjustments" } else { "Adjust…" }, open).clicked() {
+        if crate::widgets::text_button(ui, "importRecipeToggle", tr(if open { "Hide adjustments" } else { "Adjust…" }), open).clicked() {
             open = !open;
         }
         let n = d.recipe.len();
@@ -520,7 +521,7 @@ fn recipe_section(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDial
             note_recipe_value(&mut d.recipe, spec, nv);
         }
     }
-    field(ui, "Recipe", |ui| {
+    field(ui, tr("Recipe"), |ui| {
         ui.spacing_mut().item_spacing.x = 4.0;
         crate::text_field::TextField::singleline("field:importRecipeName", &mut d.recipe_name)
             .hint(crate::i18n::tr("name for a saved preset"))
@@ -712,7 +713,7 @@ fn field<R>(ui: &mut egui::Ui, label: &str, add: impl FnOnce(&mut egui::Ui) -> R
     ui.horizontal(|ui| {
         ui.allocate_ui_with_layout(vec2(78.0, 24.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
             ui.set_min_width(78.0);
-            ui.label(egui::RichText::new(crate::i18n::tr(label)).color(t.text_label));
+            ui.label(egui::RichText::new(label).color(t.text_label));
         });
         add(ui)
     })
