@@ -1101,7 +1101,15 @@ pub fn specs() -> Vec<CommandSpec> {
                     let on_kelvin_scale = prepared.is_some() && info.raw && !info.relative_wb;
                     let base: &DevelopSettings = prepared.as_ref().unwrap_or(&d);
                     // the preset composes on the photo's original state, not the visible edits (issue #2159)
-                    let original = s.catalog.photo(id).map(|p| p.import_defaults()).unwrap_or_default();
+                    // on the same white-balance scale as the prepared current settings, so a one-field
+                    // white-balance preset interpolates numbers written on one scale (issue #2910)
+                    let original = s
+                        .catalog
+                        .photo(id)
+                        .map(|p| p.import_defaults())
+                        .unwrap_or_default();
+                    let original = prepare_photo_for_wb_partial(&original, &preset.settings, &info)
+                        .unwrap_or(original);
                     let mut next = preset.apply_on(base, &original, amount);
                     if on_kelvin_scale {
                         lightcraft_pipeline::local::normalize_wb(&mut next, &info);

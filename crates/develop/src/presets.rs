@@ -213,6 +213,11 @@ fn compose_named(current: &DevelopSettings, original: &DevelopSettings, settings
     }
     let cur = current.to_json();
     let mut base = original.to_json();
+    // `to_json` omits a default `hdr`: restore it in the base, so a preset that names `hdr`
+    // interpolates from the import state's HDR settings and returns to them below half amount.
+    if let Some(b) = base.as_object_mut() {
+        b.entry("hdr").or_insert_with(|| serde_json::json!(crate::Hdr::default()));
+    }
     if let (Some(b), Some(c)) = (base.as_object_mut(), cur.as_object()) {
         for k in REPAIR_KEYS {
             if let Some(v) = c.get(k) {
@@ -313,14 +318,12 @@ impl Preset {
 /// The preset's masks, added to the photo's own (ones it already has are skipped), their effect
 /// scaled by the amount.
 fn add_masks(out: &mut DevelopSettings, masks: &[Value], amount: f64) {
-    let mut next = out.masks.iter().map(|m| m.id).max().unwrap_or(0);
     for m in masks {
         let Ok(mut m) = serde_json::from_value::<crate::Mask>(m.clone()) else { continue };
         if out.masks.iter().any(|q| q.name == m.name && q.components == m.components) {
             continue;
         }
-        next += 1;
-        m.id = next;
+        m.id = out.next_mask_id();
         m.adjust.amount = (m.adjust.amount * amount).clamp(0.0, 200.0);
         out.masks.push(m);
     }
@@ -605,5 +608,25 @@ mod tests {
         ids.sort_unstable();
         ids.dedup();
         assert_eq!(ids.len(), 3, "{:?}", out.masks);
+    }
+
+    /// Regression: a preset's masks must not reuse or wrap a `u32::MAX` mask id (the unchecked
+    /// `next += 1` overflows in debug and wraps to `0`, colliding with a default id-0 mask, in
+    /// release). New masks take the lowest unused id, so they never collide with the photo's own.
+    #[test]
+    fn preset_masks_get_unused_ids_after_a_mask_id_at_the_limit_review_regression_1() {
+        let s = DevelopSettings { masks: vec![crate::Mask { id: u32::MAX, name: "Theirs".into(), ..Default::default() }], ..Default::default() };
+        let p = Preset {
+            id: "p".into(),
+            name: "P".into(),
+            group: "User".into(),
+            settings: json!({"masks": [{"id": 7, "name": "A"}, {"id": 7, "name": "B"}]}),
+            favorite: false,
+            builtin: false,
+        };
+        let out = p.apply(&s, 1.0);
+        let mut ids: Vec<u32> = out.masks.iter().map(|m| m.id).collect();
+        ids.sort_unstable();
+        assert_eq!(ids, vec![1, 2, u32::MAX], "{:?}", out.masks);
     }
 }
