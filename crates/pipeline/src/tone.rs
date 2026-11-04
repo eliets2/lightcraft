@@ -113,19 +113,13 @@ impl ToneMap {
     pub fn camera_hdr(curve: &CameraTone, contrast: f64, whites: f64, blacks: f64, peak: f32) -> ToneMap {
         let contrast = contrast.clamp(-100.0, 100.0);
         let peak = if peak.is_finite() { peak.max(1.0) } else { 1.0 };
-        let c = (contrast / 100.0) as f32;
-        // The camera curve's contrast is already baked into `y`, so a post-curve S-curve can
-        // only mildly compress it — at contrast = -100 the render stays too contrasty. Scale
-        // scene EV about grey *before* the curve instead: negative contrast compresses the
-        // input EV range and flattens the curve itself, positive contrast is unchanged.
-        let ev_scale = if c < 0.0 { 1.0 + c } else { 1.0 };
         let adjustment = Self::display(contrast, whites, blacks);
         let neutral = contrast == 0.0 && whites == 0.0 && blacks == 0.0;
         let top = (2.9 - 1.6 * (whites as f32 / 100.0) + peak.log2() + 1.0).max(HDR_FROM_EV + 0.5);
         let lut = (0..LUT_N)
             .map(|i| {
                 let ev = LUT_MIN_EV + (LUT_MAX_EV - LUT_MIN_EV) * i as f32 / (LUT_N - 1) as f32;
-                let y = curve.apply(GREY * 2f32.powf(ev * ev_scale));
+                let y = curve.apply(GREY * 2f32.powf(ev));
                 let o = if neutral { y } else { adjustment.apply(y) };
                 if peak > 1.0 { (o + (peak - 1.0) * smooth(HDR_FROM_EV, top, ev)).clamp(0.0, peak) } else { o }
             })
@@ -402,16 +396,17 @@ mod tests {
     }
 
     #[test]
-    fn camera_hdr_min_contrast_flattens_tone_curve() {
+    fn camera_hdr_preserves_camera_curve_at_negative_contrast() {
         let curve = CameraTone::new(knots()).unwrap();
         let flat = ToneMap::camera_hdr(&curve, -100.0, 0.0, 0.0, 1.0);
-        // Min contrast must flatten the camera curve's contrast, not just mildly
-        // compress it on top of the curve whose full contrast is already baked in.
+        // Negative contrast must keep the camera curve's contrast: the ev_scale flattening
+        // is a look change that belongs behind a new process version, not in camera_hdr
+        // itself, so the shadow-to-highlight gap should survive instead of collapsing.
         let shadow = 0.01;
         let highlight = 2.0;
         let camera_gap = curve.apply(highlight) - curve.apply(shadow);
         let flat_gap = flat.apply(highlight) - flat.apply(shadow);
-        assert!(flat_gap < camera_gap * 0.5, "min contrast leaves {flat_gap} of the camera curve's {camera_gap} contrast");
+        assert!(flat_gap > camera_gap * 0.5, "negative contrast collapses the camera curve's {camera_gap} contrast to {flat_gap}");
     }
 
     #[test]
