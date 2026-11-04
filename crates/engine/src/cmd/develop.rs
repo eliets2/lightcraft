@@ -1101,8 +1101,19 @@ pub fn specs() -> Vec<CommandSpec> {
                     let on_kelvin_scale = prepared.is_some() && info.raw && !info.relative_wb;
                     let base: &DevelopSettings = prepared.as_ref().unwrap_or(&d);
                     // the preset composes on the photo's original state, not the visible edits (issue #2159)
-                    let original = s.catalog.photo(id).map(|p| p.import_defaults()).unwrap_or_default();
-                    let mut next = preset.apply_on(base, &original, amount);
+                    // only when an import look was recorded; otherwise it measures from the current
+                    // settings, matching Session::preset_applied (hover previews and the commit agree).
+                    // At 100 % the import state is not read at all.
+                    let photo = s.catalog.photo(id);
+                    let look;
+                    let original: &DevelopSettings = match photo {
+                        Some(p) if p.import_look.is_some() && (amount - 1.0).abs() >= 1e-9 => {
+                            look = p.import_defaults();
+                            &look
+                        }
+                        _ => base,
+                    };
+                    let mut next = preset.apply_on(base, original, amount);
                     if on_kelvin_scale {
                         lightcraft_pipeline::local::normalize_wb(&mut next, &info);
                     }
