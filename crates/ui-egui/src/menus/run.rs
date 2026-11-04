@@ -551,6 +551,12 @@ fn ui_commands_3(app: &mut LightcraftApp, ctx: &egui::Context, id: &str, p: &Val
             }
             Ok(json!({"layoutImage": app.ui.layout_image}))
         }
+        "view.loupeGrid" => {
+            // {show?: bool} (toggles when omitted): the grid over the photo in the loupe
+            let show = p.get("show").and_then(Value::as_bool).unwrap_or(!app.ui.layout_image.loupe_grid.show);
+            app.ui.layout_image.loupe_grid.show = show;
+            Ok(json!({"ok": true, "show": show}))
+        }
         "view.navigator" => {
             app.ui.navigator = !app.ui.navigator;
             Ok(json!({"navigator": app.ui.navigator}))

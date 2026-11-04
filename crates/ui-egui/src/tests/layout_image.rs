@@ -179,3 +179,31 @@ fn view_loupe_overlay_lists_the_layout_image_commands() {
     assert_eq!(checked, ["view.layoutImage", "view.layoutImageOpacity", "view.layoutImageMatte"]);
     let _ = std::fs::remove_dir_all(path.parent().unwrap());
 }
+
+#[test]
+fn the_loupe_grid_draws_lines_inside_the_photo_only() {
+    let mut h = loupe();
+    let photo = widget(&h, "canvas:image").expect("the loupe shows a photo");
+    let before = h.snapshot(SETTLE);
+
+    let r = run(&mut h, "view.loupeGrid", json!({"show": true}));
+    assert_eq!(r["ok"], true, "{r}");
+    assert!(h.step_until(T, |h| widget(h, "canvas:loupeGrid").is_some()), "the grid is drawn once read");
+    let shown = h.snapshot(SETTLE);
+    let r = widget(&h, "canvas:loupeGrid").unwrap();
+    // the grid spans the inside of the photo and nothing outside it
+    assert!(photo.expand(1.0).contains_rect(r), "{r:?} inside {photo:?}");
+    assert!(r.width() > 8.0 && r.height() > 8.0, "{r:?}");
+    // grid lines fall inside the photo; just outside it the pixels are untouched
+    let inside = egui::pos2(r.center().x, r.center().y);
+    let outside = egui::pos2(r.left() - 4.0, r.center().y);
+    assert!(photo.contains(inside) && !photo.contains(outside), "{inside:?} vs {outside:?}");
+    assert!(!close(px(&shown, inside), px(&before, inside), 3), "grid line inside the photo {:?}", px(&shown, inside));
+    assert!(close(px(&shown, outside), px(&before, outside), 3), "no grid outside the photo {:?}", px(&shown, outside));
+
+    // switching it off removes the drawing
+    assert!(run(&mut h, "view.loupeGrid", json!({"show": false}))["ok"] == true, "the grid can be turned off again");
+    assert!(widget(&h, "canvas:loupeGrid").is_none(), "hidden: not drawn");
+    let back = h.snapshot(SETTLE);
+    assert!(close(px(&back, inside), px(&before, inside), 3), "hidden: the photo is untouched");
+}
