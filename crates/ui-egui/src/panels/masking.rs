@@ -218,16 +218,19 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
         for (index, m) in d.masks.iter().enumerate() {
             let sel = app.session.active_mask == Some(m.id);
             if let Some((rid, name)) = app.ui.renaming_mask.as_mut().filter(|(rid, _)| *rid == m.id) {
-                // inline rename: Enter (or leaving the field) commits, Escape cancels
+                // inline rename: Enter (or leaving the field) commits, Escape cancels; the
+                // stored name is selected when the field takes focus, so typing replaces it
                 let rid = *rid;
-                let r = ui.add(egui::TextEdit::singleline(name).desired_width(ui.available_width()).id_salt(("maskRename", rid)));
-                register(ui, format!("maskRename:{rid}"), r.rect);
-                if !r.has_focus() && !r.lost_focus() {
-                    r.request_focus();
+                let field = crate::text_field::TextField::singleline(&format!("maskRename:{rid}"), name)
+                    .select_on_focus(true)
+                    .width(ui.available_width())
+                    .show(ui);
+                if !field.editing && field.ending.is_none() {
+                    field.response.request_focus();
                 }
-                if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                if field.cancelled() {
                     app.ui.renaming_mask = None;
-                } else if r.lost_focus() {
+                } else if field.committed() {
                     let name = name.trim().to_string();
                     app.ui.renaming_mask = None;
                     if !name.is_empty() && name != m.name {
