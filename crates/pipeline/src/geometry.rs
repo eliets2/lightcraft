@@ -217,10 +217,7 @@ impl Frame {
         // the source) is always aspect-corrected, otherwise the render maps the whole crop onto
         // a non-matching box and stretches the image.
         let reduced = max_w >= self.src_w && max_h >= self.src_h;
-        if reduced
-            && (mw - 1.0) / a <= mh + 1.0
-            && (mw + 1.0) / a >= mh - 1.0
-        {
+        if reduced && (mw - 1.0) / a <= mh + 1.0 && (mw + 1.0) / a >= mh - 1.0 {
             return (max_w.max(1), max_h.max(1));
         }
         let (w, h) = if mw / mh > a { (mh * a, mh) } else { (mw, mw / a) };
