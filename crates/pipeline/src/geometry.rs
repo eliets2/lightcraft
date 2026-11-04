@@ -209,11 +209,18 @@ impl Frame {
     pub fn fit(&self, max_w: usize, max_h: usize) -> (usize, usize) {
         let a = self.aspect();
         let (mw, mh) = (max_w.max(1) as f64, max_h.max(1) as f64);
-        // a box that is already this aspect up to rounding (an export size) is the size: fitting
-        // into it again rounds twice and can lose a pixel of the edge that was asked for. A
-        // reduced source (a thumbnail or preview proxy) rounds its aspect differently from the
-        // full photo, so allow a whole pixel of slack rather than half a pixel.
-        if (mw - 1.0) / a <= mh + 1.0 && (mw + 1.0) / a >= mh - 1.0 {
+        // A box that is already this aspect up to rounding (an export size) is the size: fitting
+        // into it again rounds twice and can lose a pixel of the edge that was asked for. The
+        // whole-pixel slack is only for a reduced source (a thumbnail or preview proxy) whose
+        // rounded aspect is unreliable: the box is at least as large as the source, so fitting
+        // it is upscaling, not a fit-box request. A fit-box request (the box is smaller than
+        // the source) is always aspect-corrected, otherwise the render maps the whole crop onto
+        // a non-matching box and stretches the image.
+        let reduced = max_w >= self.src_w && max_h >= self.src_h;
+        if reduced
+            && (mw - 1.0) / a <= mh + 1.0
+            && (mw + 1.0) / a >= mh - 1.0
+        {
             return (max_w.max(1), max_h.max(1));
         }
         let (w, h) = if mw / mh > a { (mh * a, mh) } else { (mw, mw / a) };
@@ -559,5 +566,17 @@ mod tests {
         // the whole image, mirrored: output top-left is the image's bottom-right
         let p = f.out_to_norm(400, 200).apply(Point::new(0.0, 0.0));
         assert!((p.x - 1.0).abs() < 1e-9 && (p.y - 1.0).abs() < 1e-9, "{p:?}");
+    }
+
+    /// The one-pixel slack in Frame::fit lets a fit-box request pass through without aspect
+    /// correction when it is within one pixel of the frame's aspect, so the render maps the
+    /// whole crop onto a non-matching box and stretches the image: a 3:2 frame fitted into
+    /// 100x65 returns 100x65 instead of the aspect-corrected 98x65.
+    #[test]
+    fn fit_corrects_aspect_without_one_pixel_slack() {
+        let s = DevelopSettings::default();
+        let f = Frame::new(300, 200, &s, true);
+        assert_eq!(f.aspect(), 1.5);
+        assert_eq!(f.fit(100, 65), (98, 65));
     }
 }
