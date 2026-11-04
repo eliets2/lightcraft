@@ -390,7 +390,7 @@ fn teleconverter_combo_does_not_inherit_base_profile() {
 </lensdatabase>"#;
     let db = LensDb::parse(xml).unwrap();
     assert!(db.find_lens(Some("Nikon"), "NIKKOR Z 400mm f/4.5 VR S", None).is_some(), "the base profile matches its own name");
-    // A digit-free teleconverter suffix must not inherit the 400 mm profile: 
+    // A digit-free teleconverter suffix must not inherit the 400 mm profile:
     // name_score finds every base-profile number token present and would score 0.78.
     assert!(db.find_lens(Some("Nikon"), "NIKKOR Z 400mm f/4.5 VR S Z TC", None).is_none(), "teleconverter combos do not inherit the base profile");
     // A converter factor ("1.4") is a numeric token the base profile lacks, so the
@@ -399,5 +399,4 @@ fn teleconverter_combo_does_not_inherit_base_profile() {
         db.find_lens(Some("Nikon"), "NIKKOR Z 400mm f/4.5 VR S Z TC-1.4x", None).is_none(),
         "teleconverter combos do not inherit the base profile",
     );
-}
 }
