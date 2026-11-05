@@ -176,6 +176,13 @@ struct Tile {
 
 /// Register the frames: cameras for the connected set.
 pub fn register(frames: &[Frame], progress: &Progress) -> Result<(Vec<Option<Camera>>, f64, f64)> {
+    let (cams, rms_before, rms, _f0) = register_with_initial(frames, progress)?;
+    Ok((cams, rms_before, rms))
+}
+
+/// Register the frames, also returning the initial focal estimate `f0` (before bundle
+/// adjustment) so the output scale can be based on it as well as on the adjusted focals.
+fn register_with_initial(frames: &[Frame], progress: &Progress) -> Result<(Vec<Option<Camera>>, f64, f64, f64)> {
     let n = frames.len();
     let work: Vec<(crate::features::Features, f64)> = frames
         .par_iter()
@@ -220,7 +227,7 @@ pub fn register(frames: &[Frame], progress: &Progress) -> Result<(Vec<Option<Cam
     let adj = camera::bundle_adjust(&cams, &pairs, anchor, 60);
     let mut cams = adj.cameras;
     camera::straighten(&mut cams);
-    Ok((cams, adj.rms_before, adj.rms))
+    Ok((cams, adj.rms_before, adj.rms, f0))
 }
 
 /// Stitch `frames` (oriented, linear) into a panorama.
@@ -233,7 +240,7 @@ pub fn stitch(mut frames: Vec<Frame>, opts: &PanoOptions, progress: &Progress) -
         return Err(MergeError::TooMany(n, MAX_FRAMES));
     }
     check(progress, 0.01, "Finding features")?;
-    let (cams, rms_before, rms) = register(&frames, progress)?;
+    let (cams, rms_before, rms, f0) = register_with_initial(&frames, progress)?;
     let used: Vec<usize> = (0..n).filter(|&i| cams[i].is_some()).collect();
     let fov = fov(&frames, &cams);
     let projection = match opts.projection {
@@ -271,9 +278,21 @@ pub fn stitch(mut frames: Vec<Frame>, opts: &PanoOptions, progress: &Progress) -
             }
             let fr = &frames[i];
             let (w, h) = (fr.width() as f64, fr.height() as f64);
-            let sx = 2.0 * (0.5 * w / c.f).atan();
-            let sy = 2.0 * (0.5 * h / c.f).atan();
-            need = need.max((w / sx).max(h / sy) / fmed);
+            // Local pixels-per-radian of a rectilinear frame at its edge centres is
+            // f * (1 + (half_size / f)^2) (sec^2 of the edge angle), not the frame
+            // average w / sx, which underestimates the edge density. Take the
+            // maximum over both edges, and over the adjusted focal and the initial
+            // estimate f0, so bundle adjustment lowering c.f cannot lower the
+            // output focal below the initial estimate's density.
+            let edge_density = |f: f64| -> f64 {
+                if f <= 0.0 {
+                    return 0.0;
+                }
+                let dx = f * (1.0 + ((0.5 * w) / f).powi(2));
+                let dy = f * (1.0 + ((0.5 * h) / f).powi(2));
+                dx.max(dy)
+            };
+            need = need.max(edge_density(c.f).max(edge_density(f0)) / fmed);
         }
         let fit = (max_px / surface).sqrt().min(MAX_EDGE / (bx1 - bx0).max(by1 - by0));
         native_scale = need;

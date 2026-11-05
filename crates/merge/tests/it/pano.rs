@@ -329,4 +329,37 @@ mod tests {
             perspective.native_megapixels
         );
     }
+
+    #[test]
+    fn a_wide_angle_trio_keeps_edge_pixel_density() {
+        let e = env();
+        let f = 2000.0; // ~90° × 74° field of view on a 4000×3000 phone frame
+        let shots = [
+            Shot { yaw: -20.0, pitch: 0.0, roll: 0.0, gain: 1.0 },
+            Shot { yaw: 0.0, pitch: 0.0, roll: 0.0, gain: 1.0 },
+            Shot { yaw: 20.0, pitch: 0.0, roll: 0.0, gain: 1.0 },
+        ];
+        let rs: Vec<M3> = shots.iter().map(|s| rot(s.yaw, s.pitch, s.roll)).collect();
+        let frames: Vec<Frame> = shots.iter().zip(&rs).map(|(s, r)| shoot(&e, r, f, 4000, 3000, s.gain)).collect();
+        let res = stitch(frames, &PanoOptions { projection: Projection::Spherical, ..Default::default() }, &no_progress).unwrap();
+        assert_eq!(res.used.len(), 3, "all three frames must connect: {:?}", res.used);
+        // A rectilinear frame's local pixels-per-radian at its horizontal/vertical edge
+        // centre is c.f * (1 + (half_size / c.f)^2) (sec^2 of the edge angle), well above
+        // the frame-average w / sx. The spherical canvas must reach that maximum, not
+        // just the average, or the edges are downsampled.
+        let (w, h) = (4000.0, 3000.0);
+        let mut required = 0.0f64;
+        for c in res.cameras.iter().flatten() {
+            let dx = c.f * (1.0 + ((w / 2.0) / c.f).powi(2));
+            let dy = c.f * (1.0 + ((h / 2.0) / c.f).powi(2));
+            required = required.max(dx).max(dy);
+        }
+        eprintln!("wide-angle trio edge density: output focal {:.0} px/rad, frame edge needs {:.0} px/rad", res.focal, required);
+        assert!(
+            res.focal >= 0.98 * required,
+            "output focal {:.0} px/rad downsamples the frame edge, which needs {:.0} px/rad at the recovered focal lengths",
+            res.focal,
+            required
+        );
+    }
 }
