@@ -117,7 +117,7 @@ fn load(dir: &Path, downloaded: bool) -> Option<Arc<LensDb>> {
                 .map(|rd| {
                     rd.filter_map(|e| e.ok()).map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x.eq_ignore_ascii_case("xml"))).count()
                 })
-                .unwrap_or(0);
+                .map_or_else(|_| "unknown".to_string(), |n| n.to_string());
             log::info!("lens database: {files} files, {profiles} profiles", files = n_files, profiles = db.lenses.len());
             for (file, e) in errors {
                 log::warn!("lens database: skipped {file}: {e}");
@@ -437,5 +437,45 @@ mod tests {
         assert!(before > 2.0, "the recorded line is curved: {before} px");
         // 8-bit output and a 2 px line: the centroid measurement itself is good to about a pixel
         assert!(after < 1.0 && after < before / 8.0, "corrected line bent by {after} px (uncorrected {before})");
+    }
+
+    /// When the second directory scan fails, the summary must not report 0 files: a scan failure is not an
+    /// empty directory. The database is read in a child process (as in
+    /// [`lens_database_summary_reports_files_and_profiles`]); the folder is removed while the child is still
+    /// parsing its many files, after it has listed them, so the recount scan fails.
+    #[test]
+    fn lens_database_summary_reports_unknown_files_when_scan_fails() {
+        let dir = std::env::temp_dir().join(format!("lc-lens-unknown-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let lens = "<lens><maker>Testcam</maker><model>Testcam 18-55mm f/3.5-5.6</model><mount>T</mount><cropfactor>1.5</cropfactor><calibration><distortion model=\"poly3\" focal=\"18\" k1=\"-0.03\" /></calibration></lens>";
+        let mut xml = String::from("<lensdatabase><camera><maker>Testcam</maker><model>TC-1</model><mount>T</mount><cropfactor>1.5</cropfactor></camera>");
+        for _ in 0..5000 {
+            xml.push_str(lens);
+        }
+        xml.push_str("</lensdatabase>");
+        for i in 0..20 {
+            std::fs::write(dir.join(format!("f{i}.xml")), &xml).unwrap();
+        }
+        let exe = std::env::current_exe().unwrap();
+        let mut child = std::process::Command::new(exe)
+            .args(["--exact", "lens_profiles::tests::lens_database_summary_child", "--ignored", "--test-threads=1", "--nocapture"])
+            .env(ENV, &dir)
+            .env("LIGHTCRAFT_LOG", "trace")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(700));
+        let _ = std::fs::remove_dir_all(&dir);
+        let out = child.wait_with_output().unwrap();
+        let stderr = String::from_utf8_lossy(&out.stderr).to_lowercase();
+        let logged: Vec<&str> = stderr.lines().filter(|l| l.starts_with("lightcraft: ")).collect();
+        let summary = logged
+            .iter()
+            .find(|l| l.contains("lens database:") && l.contains("files"))
+            .expect("the lens database summary line was not logged");
+        assert!(summary.contains("unknown files"), "a failed scan must not be reported as 0 files: {summary}");
+        assert!(!summary.contains("0 files"), "{summary}");
     }
 }
