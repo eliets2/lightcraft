@@ -714,6 +714,37 @@ fn mask_list_rename_hide_and_overlay_colour() {
     assert_eq!(h.app.ui.mask_overlay_color, all[(i + 1) % all.len()]);
 }
 
+/// The inline rename field does not select the old name on focus, so typing must replace it
+/// rather than insert at the cursor; Escape cancels the rename without sending `mask.rename`.
+#[test]
+fn mask_rename_replaces_old_name_and_escape_sends_no_command() {
+    let mut h = detail("panel.masking");
+    exec(&mut h, "mask.add", json!({"kind": "linear"}));
+    h.settle(SETTLE);
+    let first = develop(&h).masks[0].id;
+    let r = h.request("ui.clickWidget", json!({"id": format!("mask:{first}"), "count": 2}), T);
+    assert_eq!(r["ok"], true, "{r}");
+    h.settle(Duration::from_secs(5));
+    assert_eq!(h.app.ui.renaming_mask.as_ref().map(|r| r.0), Some(first), "double-click starts renaming");
+    // Typing without selecting the old name first must replace it: the field has no
+    // select_on_focus, so the typed text lands at the cursor instead of overwriting.
+    h.request("ui.text", json!({"text": "Sky"}), T);
+    h.request("ui.key", json!({"key": "Enter"}), T);
+    h.settle(Duration::from_secs(5));
+    assert!(h.app.ui.renaming_mask.is_none());
+    let name = develop(&h).masks[0].name.clone();
+    assert_eq!(name, "Sky", "typing replaces the old name instead of inserting before it: {name}");
+    // Escape closes the field and commits nothing: the name is left as it was.
+    let r = h.request("ui.clickWidget", json!({"id": format!("mask:{first}"), "count": 2}), T);
+    assert_eq!(r["ok"], true, "{r}");
+    h.settle(Duration::from_secs(5));
+    assert_eq!(h.app.ui.renaming_mask.as_ref().map(|r| r.0), Some(first));
+    h.request("ui.key", json!({"key": "Escape"}), T);
+    h.settle(Duration::from_secs(5));
+    assert!(h.app.ui.renaming_mask.is_none(), "Escape closes the rename field");
+    assert_eq!(develop(&h).masks[0].name, name, "Escape leaves the mask name unchanged");
+}
+
 #[test]
 fn command_drag_straightens_in_crop() {
     let mut h = detail("panel.crop");
