@@ -11,7 +11,7 @@
 
 use std::sync::{Arc, Mutex, PoisonError};
 
-use egui::{Color32, Rect, pos2, vec2};
+use egui::{Color32, Rect, Stroke, pos2, vec2};
 use lightcraft_raster::Rgba8;
 
 use crate::LightcraftApp;
@@ -107,11 +107,29 @@ fn start(ctx: &egui::Context, path: &str) -> Loaded {
 /// to the canvas.
 pub fn draw(app: &LightcraftApp, p: &egui::Painter, photo: Rect) {
     let li = &app.ui.layout_image;
-    let path = li.path.trim();
-    if !li.show || path.is_empty() || photo.width() < 1.0 || photo.height() < 1.0 {
+    if photo.width() < 1.0 || photo.height() < 1.0 {
         return;
     }
     let ctx = p.ctx().clone();
+    // View ▸ Loupe Overlay ▸ Grid: lines spanning the photo, nothing outside it.
+    // Drawn independently of the layout image: the grid is its own overlay (View ▸ Loupe Overlay ▸ Grid).
+    if li.loupe_grid.show {
+        let stroke = Stroke::new(1.0, Color32::WHITE);
+        let divisions = 4;
+        for i in 1..divisions {
+            let fx = photo.left() + photo.width() * i as f32 / divisions as f32;
+            p.line_segment([pos2(fx, photo.top()), pos2(fx, photo.bottom())], stroke);
+        }
+        for i in 1..divisions {
+            let fy = photo.top() + photo.height() * i as f32 / divisions as f32;
+            p.line_segment([pos2(photo.left(), fy), pos2(photo.right(), fy)], stroke);
+        }
+        register_geometry(&ctx, "canvas:loupeGrid", photo);
+    }
+    let path = li.path.trim();
+    if !li.show || path.is_empty() {
+        return;
+    }
     let id = egui::Id::unique("loupe-layout-image");
     let file = (path.to_string(), li.revision);
     let mut cache = match ctx.data(|d| d.get_temp::<Cache>(id)) {
