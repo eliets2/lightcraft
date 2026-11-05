@@ -207,6 +207,10 @@ fn temp_pdf(name: &str) -> String {
     std::env::temp_dir().join(format!("lightcraft-print-{name}-{}.pdf", std::process::id())).to_string_lossy().to_string()
 }
 
+fn temp_jpeg(name: &str) -> String {
+    std::env::temp_dir().join(format!("lightcraft-print-{name}-{}.jpg", std::process::id())).to_string_lossy().to_string()
+}
+
 #[test]
 fn export_pdf_prints_the_current_settings() {
     let mut s = Session::with_demo();
@@ -284,6 +288,26 @@ fn export_pdf_with_a_printer_profile() {
     let err = fails(&mut s, "print.exportPdf", json!({"path": path, "ids": ids}));
     assert!(err.contains("gone.icc"), "{err}");
     assert!(s.activity.list().is_empty(), "nothing started");
+}
+
+#[test]
+fn export_jpeg_writes_one_file_per_page() {
+    let mut s = Session::with_demo();
+    let ids: Vec<u64> = s.catalog.photos().take(3).map(|p| p.id.0).collect();
+    run(
+        &mut s,
+        "print.set",
+        json!({"layout": {"style": "contactSheet", "grid": {"columns": 1, "rows": 2}, "page": {"paper": "a5"}}, "job": {"ppi": 100.0}}),
+    );
+    let path = temp_jpeg("export");
+    let r = s.execute("print.exportJpeg", &json!({"path": path, "ids": ids}));
+    assert!(r.is_ok(), "print.exportJpeg should be registered");
+    let r = r.unwrap();
+    assert_eq!((r["pages"].as_u64(), r["photos"].as_u64()), (Some(2), Some(3)));
+    assert!(std::fs::read(&path).unwrap().len() > 0, "no JPEG bytes written");
+    let page2 = format!("{}-2.jpg", path.trim_end_matches(".jpg"));
+    assert!(std::fs::read(&page2).unwrap().len() > 0, "no JPEG bytes written for page 2");
+    assert!(s.activity.list().is_empty(), "the activity row is gone when the print is done");
 }
 
 #[test]
