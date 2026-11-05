@@ -1103,7 +1103,12 @@ pub fn specs() -> Vec<CommandSpec> {
                     // the preset composes on the photo's original state, not the visible edits (issue #2159)
                     // on the same white-balance scale as the prepared current settings, so a one-field
                     // white-balance preset interpolates numbers written on one scale (issue #2910)
-                    let original = s.catalog.photo(id).map(|p| p.import_defaults()).unwrap_or_default();
+                    // with no import look recorded, the original is the photo's current settings
+                    let photo = s.catalog.photo(id);
+                    let original: DevelopSettings = match photo.and_then(|p| p.import_look.as_ref()) {
+                        Some(_) if (amount - 1.0).abs() >= 1e-9 => photo.map(|p| p.import_defaults()).unwrap_or_default(),
+                        _ => (*base).clone(),
+                    };
                     let original = prepare_photo_for_wb_partial(&original, &preset.settings, &info).unwrap_or(original);
                     let mut next = preset.apply_on(base, &original, amount);
                     if on_kelvin_scale {
