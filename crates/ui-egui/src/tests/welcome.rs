@@ -249,3 +249,39 @@ fn the_web_tour_names_export_alone_not_the_desktop_print_menu() {
     assert_eq!(welcome_opening(4, "File › Export… · File › Print…", Some("Ctrl+P"), false), "File › Export… · File › Print… (Ctrl+P).");
     assert_eq!(welcome_opening(4, "File › Export… · File › Print…", None, false), "File › Export… · File › Print…");
 }
+
+#[test]
+fn welcome_button_row_fits_available_width() {
+    // A narrow viewport: the welcome buttons must stay inside the available width.
+    // The row's spacer is computed after `back` consumes width without measuring
+    // `back`'s desired width first, so the total button width is not clamped.
+    let mut app = LightcraftApp::new(lightcraft_engine::Session::with_demo(), Services { png: None, ..Default::default() });
+    app.ui.dialog = Some(Dialog::Welcome { page: 0 });
+    let mut h = Headless::new(app, [200.0, 800.0], 1.0);
+    h.step();
+    h.settle(Duration::from_secs(5));
+
+    let find = |id: &str| {
+        h.app
+            .widgets
+            .iter()
+            .find(|(w, _)| w.as_str() == id)
+            .map(|(_, r)| *r)
+    };
+
+    let back = find("button:welcomeBack").unwrap_or_else(|| {
+        panic!("widget button:welcomeBack not registered: {:?}", h.app.widgets)
+    });
+    let skip = find("button:welcomeSkip").unwrap_or_else(|| {
+        panic!("widget button:welcomeSkip not registered: {:?}", h.app.widgets)
+    });
+    let next = find("button:welcomeNext").unwrap_or_else(|| {
+        panic!("widget button:welcomeNext not registered: {:?}", h.app.widgets)
+    });
+
+    let right = back.right().max(skip.right()).max(next.right());
+    assert!(
+        right <= 200.0,
+        "welcome button row overflows the available width: right edge {right} > 200 (back={back:?}, skip={skip:?}, next={next:?})"
+    );
+}

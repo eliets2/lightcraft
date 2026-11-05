@@ -179,16 +179,26 @@ fn welcome_body(app: &LightcraftApp, ui: &mut egui::Ui, t: &Tokens, page: &mut u
     let next = Button::new(next_label).kind(Kind::Primary).widget("button:welcomeNext").min_width(84.0);
     let gap = ui.spacing().item_spacing.x;
     let row_w = ui.available_width().max(ui.min_rect().width()).max(1.0);
-    let (skip_w, next_w) = (skip.desired_size(ui).x, next.desired_size(ui).x);
-    ui.allocate_ui_with_layout(egui::vec2(row_w, next.desired_size(ui).y), egui::Layout::left_to_right(egui::Align::Center), |ui| {
-        if back.show(ui).clicked() {
+    let back_size = back.desired_size(ui);
+    let skip_size = skip.desired_size(ui);
+    let next_size = next.desired_size(ui);
+    let total_w = back_size.x + skip_size.x + next_size.x + 2.0 * gap;
+    let scale = if total_w > row_w && total_w > 0.0 { row_w / total_w } else { 1.0 };
+    let back_w = back_size.x * scale;
+    let skip_w = skip_size.x * scale;
+    let next_w = next_size.x * scale;
+    ui.allocate_ui_with_layout(egui::vec2(row_w, next_size.y), egui::Layout::left_to_right(egui::Align::Center), |ui| {
+        let (rect, _) = ui.allocate_exact_size(egui::vec2(back_w, back_size.y), egui::Sense::hover());
+        if back.show_at(ui, rect).clicked() {
             *page -= 1;
         }
         ui.add_space((ui.available_width() - skip_w - next_w - 2.0 * gap).max(0.0));
-        if skip.show(ui).clicked() {
+        let (rect, _) = ui.allocate_exact_size(egui::vec2(skip_w, skip_size.y), egui::Sense::hover());
+        if skip.show_at(ui, rect).clicked() {
             *close = true;
         }
-        if next.show(ui).clicked() {
+        let (rect, _) = ui.allocate_exact_size(egui::vec2(next_w, next_size.y), egui::Sense::hover());
+        if next.show_at(ui, rect).clicked() {
             if *page == last {
                 *close = true;
             } else {
