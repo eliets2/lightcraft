@@ -531,7 +531,6 @@ fn auto_skips_a_selected_photo_it_cannot_read() {
     assert!(s.execute("develop.auto", &json!({})).is_err(), "with nothing readable the error is reported");
     assert!(s.execute("develop.auto", &json!({"ids": [good.0, 999_999]})).is_err(), "a wrong id is refused, not skipped");
 }
-
 #[test]
 fn versions_history_and_reset() {
     let mut s = demo();
