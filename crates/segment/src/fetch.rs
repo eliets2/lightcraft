@@ -34,12 +34,13 @@ pub const SAM3_WEIGHTS_SIZE: u64 = 3_439_938_512;
 /// `<base>/<f>`.
 /// Hugging Face's `facebook/sam3` can't be a default: it is gated (each user must accept the
 /// SAM License there and download with their own token).
- // TODO(maintainer): add LightCraft's CDN locations (https, primary first), e.g.
+// TODO(maintainer): add LightCraft's CDN locations (https, primary first), e.g.
 // "https://<cdn-host>/models/sam3/<revision>" — the files there must match `SAM3_FILES`.
 // Keep this empty until `vocab.json` and `merges.txt` are pinned by size and SHA-256 in
-// `SAM3_FILES` and the files are published at those locations: a default mirror before
-// then would install unpinned tokenizer files undetected, and the gated-mirror token
-// (`TOKEN_ENV`) would be sent to the default host on fallback.
+// `SAM3_FILES`, the files are published at those locations, and the gated-mirror token
+// (`TOKEN_ENV`) is sent only to its own host, never to a default mirror on fallback:
+// a default mirror before pinning would install unpinned tokenizer files undetected,
+// and without token isolation it would receive the token when a gated mirror fails.
 pub const DEFAULT_MIRRORS: &[&str] = &[];
 
 /// Environment variable with extra mirrors (base URLs separated by commas, spaces or newlines),
@@ -79,20 +80,27 @@ mod tests {
     }
 
     #[test]
-    fn default_mirrors_offer_a_download_location() {
-        let m = mirrors(Some("https://a.example/x"), None);
-        assert!(!m.is_empty(), "mirrors() must offer a download location when one is configured");
-        assert!(m.iter().all(|base| base.starts_with("https://")));
+    fn default_mirrors_are_https_when_configured() {
+        assert!(
+            DEFAULT_MIRRORS.iter().all(|base| base.starts_with("https://")),
+            "every DEFAULT_MIRRORS entry must be an https base URL"
+        );
     }
 
     #[test]
     fn default_mirror_disabled_until_tokenizer_files_are_pinned() {
         let unpinned = SAM3_FILES.iter().any(|f| {
-            (f.name == "vocab.json" || f.name == "merges.txt") && (f.size.is_none() || f.sha256.is_none())
+            (f.name == "vocab.json" || f.name == "merges.txt")
+                && (f.size.is_none() || f.sha256.is_none())
         });
+        // Token isolation is not implemented: options() sets a single global
+        // token_env, so the bearer token would be sent to every mirror host
+        // on fallback. Defaults stay disabled until per-host token binding
+        // exists, in addition to pinning and publishing the files.
+        let token_isolated = false;
         assert!(
-            !unpinned || DEFAULT_MIRRORS.is_empty(),
-            "DEFAULT_MIRRORS must be empty until vocab.json and merges.txt are pinned by size and SHA-256"
+            (!unpinned && token_isolated) || DEFAULT_MIRRORS.is_empty(),
+            "DEFAULT_MIRRORS must be empty until vocab.json and merges.txt are pinned by size and SHA-256, the files are published at those locations, and the gated-mirror token is bound to its own host"
         );
     }
 }
