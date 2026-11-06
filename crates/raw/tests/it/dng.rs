@@ -1133,6 +1133,20 @@ fn legacy_lightcraft_dng_keeps_the_sensor_anchored_pattern() {
 }
 
 #[test]
-fn d750_without_chart_fit_finds_no_chart_row() {
+fn d750_without_chart_fit_uses_the_neutral_fallback() {
+    use lightcraft_raw::color::{as_shot_white_xy, camera_neutral, camera_transform, has_matrix};
+    // No D750 capture, fit and checks are recorded, so the chart table has no D750 row to borrow
+    // matrices from: every lookup finds nothing and the transform is the documented neutral
+    // camera-RGB-approximately-linear-sRGB fallback.
     assert_eq!(lightcraft_raw::spectral::find(Some("NIKON CORPORATION"), "NIKON D750"), None);
+    assert_eq!(lightcraft_raw::spectral::find_camera("NIKON CORPORATION NIKON D750"), None);
+    assert_eq!(lightcraft_raw::spectral::find(None, "NIKON D750"), None);
+    let mut raw = synthetic(16, 16, Some(Cfa::bayer("RGGB").unwrap()), 1);
+    raw.color = ColorData::default();
+    assert!(!has_matrix(&raw.color));
+    let t = camera_transform(&raw, as_shot_white_xy(&raw));
+    assert!(t.matrix_is_fallback, "{t:?}");
+    // The neutral under the fallback white is finite and normalised, so white balance stays usable.
+    let n = camera_neutral(&raw.color, as_shot_white_xy(&raw));
+    assert!(n.iter().all(|v| v.is_finite() && *v > 0.0), "{n:?}");
 }

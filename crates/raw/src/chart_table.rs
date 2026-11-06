@@ -2,6 +2,8 @@
 // for cameras with no published spectral sensitivities. Kept by hand: each row's capture, fit and checks are in
 // clean-room/crw/10-chart-calibration.md (scripts local-only). Reference colours: X-Rite's published L*a*b* (D50) for
 // the chart, as packaged by colour-science (BSD-3-Clause). No number comes from Adobe or from a GPL raw decoder.
+// A camera without a verified capture, fit and checks has no row here; its files fall back to the neutral
+// camera-RGB-approximately-linear-sRGB model in super::color, never to borrowed matrices from another body.
 use super::Camera;
 use lightcraft_color::Mat3;
 
