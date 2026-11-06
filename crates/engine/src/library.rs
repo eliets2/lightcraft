@@ -37,10 +37,13 @@ use crate::{EngineError, LibrarySource, Result, Selection, Session};
 pub const DEFAULT_NAME: &str = "LightCraft Library";
 
 /// The library folder `path` names. A library is a folder; naming one of its own files
-/// (`catalog.snap`, `catalog.log`, `catalog.lock`, `presets.json`, `view.json`, `prefs.json`)
+/// (`catalog.snap`, `catalog.log`, `catalog.lock`, `presets.json`, `view.json`)
 /// means the folder that holds it. Any other
 /// existing file is an error that says so, instead of the OS's "File exists" from creating the
-/// folder.
+/// folder. `prefs.json` alone does not name a library: that name is used by other programs, so
+/// an unrelated `prefs.json` must not make its folder a library (whose `save_prefs` would then
+/// replace it, dropping fields this build does not know). A genuine library is still recognised
+/// through its catalog files and its other settings files.
 pub fn resolve_dir(path: &Path) -> Result<PathBuf> {
     if !path.is_file() {
         return Ok(path.to_path_buf());
@@ -52,9 +55,9 @@ pub fn resolve_dir(path: &Path) -> Result<PathBuf> {
             lightcraft_catalog::lock::LOCK,
             "presets.json",
             "view.json",
-            "prefs.json",
         ]
-        .contains(&n)
+        .iter()
+        .any(|name| n.eq_ignore_ascii_case(name))
     });
     if !own {
         return Err(EngineError::Other(format!("{} is a file; a library is a folder", path.display())));
@@ -465,6 +468,9 @@ impl Session {
             return Err(EngineError::LightroomCatalog { path: dir, catalog: place.catalog });
         }
         let dir = resolve_dir(&dir)?;
+        if let Some(place) = crate::lightroom_folder::lightroom_catalog_at(&dir) {
+            return Err(EngineError::LightroomCatalog { path: dir, catalog: place.catalog });
+        }
         if !dir.exists() {
             return Ok(dir);
         }
@@ -497,6 +503,9 @@ impl Session {
             return Err(EngineError::LightroomCatalog { path: dir, catalog: place.catalog });
         }
         let dir = resolve_dir(&dir)?;
+        if let Some(place) = crate::lightroom_folder::lightroom_catalog_at(&dir) {
+            return Err(EngineError::LightroomCatalog { path: dir, catalog: place.catalog });
+        }
         let open = || FsStore::open(&dir).map_err(|e| EngineError::Other(format!("can't open library {}: {e}", dir.display())));
         let stores = LibraryStores { catalog: Box::new(open()?), files: Box::new(open()?), on_disk: true, dir: dir.clone() };
         // the library open in this session (same directory): hand its lock over
@@ -1070,19 +1079,68 @@ mod resolve_tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
-    /// A library's settings files (`presets.json`, `view.json`, `prefs.json`) name the folder that
+    /// A library's settings files (`presets.json`, `view.json`) name the folder that
     /// holds them, like its catalog files do.
     #[test]
     fn a_library_settings_file_opens_its_folder() {
         let dir = std::env::temp_dir().join(format!("lc-resolve-settings-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        for name in ["presets.json", "view.json", "prefs.json"] {
+        for name in ["presets.json", "view.json"] {
             let file = dir.join(name);
             std::fs::write(&file, b"{}").unwrap();
             assert_eq!(resolve_dir(&file).ok(), Some(dir.clone()), "{name}");
         }
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// An unrelated `prefs.json` alone is not a library: it does not name its folder, opening
+    /// it does not create a library there, and its bytes are left alone (so `save_prefs` can
+    /// never replace it and drop fields this build does not know). Recognition through the
+    /// catalog files and the other settings files is preserved.
+    #[test]
+    fn an_unrelated_prefs_json_alone_is_not_a_library() {
+        let dir = std::env::temp_dir().join(format!("lc-resolve-unrelated-prefs-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("prefs.json");
+        let bytes = br#"{"unknownField": 42, "cacheMb": 77}"#;
+        std::fs::write(&file, bytes).unwrap();
+        assert!(resolve_dir(&file).is_err(), "prefs.json alone must not resolve to a library folder");
+        assert!(!is_library(&dir), "a folder holding only an unrelated prefs.json is not a library");
+        let mut s = Session::new().with_fs();
+        assert!(s.open_library(&file, false).is_err());
+        assert!(s.library.is_none());
+        assert_eq!(std::fs::read(&file).unwrap(), bytes, "the unrelated file is unchanged");
+        assert!(!dir.join(lightcraft_catalog::journal::SNAPSHOT).exists(), "no library was created in the folder");
+        assert!(!dir.join(lightcraft_catalog::journal::LOG).exists(), "no library was created in the folder");
+        // the same folder is still recognised through a genuine library file
+        std::fs::write(dir.join(lightcraft_catalog::journal::SNAPSHOT), b"x").unwrap();
+        assert!(is_library(&dir));
+        assert_eq!(resolve_dir(&dir.join(lightcraft_catalog::journal::SNAPSHOT)).ok(), Some(dir.clone()));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn uppercase_library_settings_file_opens_its_folder() {
+        let dir = std::env::temp_dir().join(format!("lc-resolve-upper-settings-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("PRESETS.JSON");
+        std::fs::write(&file, b"{}").unwrap();
+        assert_eq!(resolve_dir(&file).ok(), Some(dir.clone()));
+        let _ = std::fs::remove_dir_all(&dir);
+
+        let root = std::env::temp_dir().join(format!("lc-resolve-upper-lightroom-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join("Cat.lrcat"), b"x").unwrap();
+        let file = root.join("PRESETS.JSON");
+        std::fs::write(&file, b"{}").unwrap();
+        let mut s = Session::new().with_fs();
+        assert!(matches!(s.open_library(&file, false), Err(EngineError::LightroomCatalog { .. })));
+        assert!(matches!(s.check_library(&file), Err(EngineError::LightroomCatalog { .. })));
+        let _ = std::fs::remove_dir_all(&root);
     }
 
     /// A host that ends the process without destructors releases the lock by hand: the owner note
