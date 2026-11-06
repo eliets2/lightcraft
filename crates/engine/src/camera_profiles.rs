@@ -107,7 +107,12 @@ fn parse(json: &[u8], origin: &str) -> Result<CameraProfile, String> {
 
 /// Model spelling with case and spacing folded away, for matching EXIF variants.
 fn normalized_model(model: &str) -> String {
-    model.split_whitespace().collect::<Vec<_>>().join(" ").to_ascii_lowercase()
+    let folded = model.split_whitespace().collect::<Vec<_>>().join(" ").to_ascii_lowercase();
+    match folded.as_str() {
+        "nikon z8" => "nikon z 8".to_owned(),
+        "nikon z 6-2" | "nikon z 6 2" => "nikon z 6_2".to_owned(),
+        _ => folded,
+    }
 }
 
 /// The built-in profile for `model`, if any.
@@ -146,7 +151,7 @@ pub fn get(model: &str) -> Option<Arc<CameraProfile>> {
     let path = dir().map(|d| d.join(file_name(model)));
     let profile = match path {
         Some(path) if path.is_file() => match load(&path) {
-            Ok(p) if p.model.trim() == model => Some(Arc::new(p)),
+            Ok(p) if normalized_model(&p.model) == normalized_model(model) => Some(Arc::new(p)),
             Ok(p) => {
                 eprintln!("lightcraft: ignoring camera profile {}: it is for {:?}, not {model:?}", path.display(), p.model);
                 None
@@ -158,6 +163,21 @@ pub fn get(model: &str) -> Option<Arc<CameraProfile>> {
         },
         _ => None,
     };
+    let profile = profile.or_else(|| {
+        let directory = dir()?;
+        let entries = std::fs::read_dir(directory).ok()?;
+        let mut paths: Vec<_> = entries.flatten().map(|e| e.path()).collect();
+        paths.sort();
+        for path in paths {
+            if path.extension().is_some_and(|x| x == "json")
+                && let Ok(p) = load(&path)
+                && normalized_model(&p.model) == normalized_model(model)
+            {
+                return Some(Arc::new(p));
+            }
+        }
+        None
+    });
     let profile = profile.or_else(|| bundled(model).map(Arc::new));
     cache.insert(model.to_owned(), profile.clone());
     profile
@@ -318,7 +338,18 @@ mod tests {
             ("Nikon Z 8", "NIKON Z 8"),
             ("Nikon  Z  8", "NIKON Z 8"),
         ] {
-            assert_eq!(bundled(variant), bundled(canonical), "NEF spelling {variant:?} must find the bundled {canonical:?} profile");
+            let canonical_profile = bundled(canonical);
+            assert!(canonical_profile.is_some(), "canonical Nikon profile {canonical:?} must be bundled");
+            assert_eq!(bundled(variant), canonical_profile, "NEF spelling {variant:?} must find the bundled {canonical:?} profile");
+        }
+    }
+
+    #[test]
+    fn bundled_profile_matches_nikon_model_spelling_variants_review_regression_1() {
+        for (variant, canonical) in [("NIKON Z8", "NIKON Z 8"), ("NIKON Z 6-2", "NIKON Z 6_2"), ("NIKON Z 6 2", "NIKON Z 6_2")] {
+            let canonical_profile = bundled(canonical);
+            assert!(canonical_profile.is_some(), "canonical Nikon profile {canonical:?} must be bundled");
+            assert_eq!(bundled(variant), canonical_profile, "NEF spelling {variant:?} must find the bundled {canonical:?} profile");
         }
     }
 
