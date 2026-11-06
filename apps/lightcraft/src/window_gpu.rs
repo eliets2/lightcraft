@@ -56,7 +56,8 @@ impl Files {
         }
         // on disk before the driver is touched: a driver fault can take the machine down with it
         let written = std::fs::File::create(&p).and_then(|mut f| {
-            std::io::Write::write_all(&mut f, format!("{}\n", r.name()).as_bytes())?;
+            use std::io::Write;
+            f.write_all(format!("{}\n", r.name()).as_bytes())?;
             f.sync_all()
         });
         if let Err(e) = written {
@@ -421,8 +422,10 @@ mod tests {
     #[test]
     fn the_window_marker_is_written_while_the_renderer_is_probed() {
         // glow is taken without a probe, so a forced glow arms nothing here
-        let forced =
-            backend::forced_window_renderer(std::env::var("LIGHTCRAFT_GPU_BACKEND").ok().as_deref(), std::env::var("WGPU_BACKEND").ok().as_deref());
+        let forced = backend::forced_window_renderer(
+            std::env::var("LIGHTCRAFT_GPU_BACKEND").ok().as_deref(),
+            std::env::var("WGPU_BACKEND").ok().as_deref(),
+        );
         if forced == Some(WindowRenderer::Glow) {
             return;
         }
@@ -431,5 +434,29 @@ mod tests {
         choose(&f, false);
         assert!(f.armed(), "the window-init marker must be written while the renderer is probed");
         let _ = std::fs::remove_dir_all(&d);
+    }
+    #[cfg(windows)]
+    #[test]
+    fn the_window_marker_is_written_while_the_renderer_is_probed_review_regression_1() {
+        let forced = backend::forced_window_renderer(
+            std::env::var("LIGHTCRAFT_GPU_BACKEND").ok().as_deref(),
+            std::env::var("WGPU_BACKEND").ok().as_deref(),
+        );
+        if forced == Some(WindowRenderer::Glow) {
+            return;
+        }
+        let source = include_str!("window_gpu.rs");
+        let end = source.find("the_window_marker_is_written_while_the_renderer_is_probed_review_regression_1").unwrap_or(source.len());
+        let before = &source[..end];
+        assert!(before.contains("sync_all"), "the window marker write must be durably synced before the driver probe");
+        let start = before.find("fn the_window_marker_is_written_while_the_renderer_is_probed()").unwrap_or(0);
+        assert!(before[start..].contains("WindowRenderer::Glow"), "the Windows marker test must skip when Glow is forced via environment");
+        if cfg!(windows) {
+            let d = dir("probe-marker-review-regression-1");
+            let f = Files::new(Some(d.clone()));
+            choose(&f, false);
+            assert!(f.armed(), "the window-init marker must be written while the renderer is probed");
+            let _ = std::fs::remove_dir_all(&d);
+        }
     }
 }
