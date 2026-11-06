@@ -138,6 +138,50 @@ fn cache() -> &'static Mutex<HashMap<String, Option<Arc<CameraProfile>>>> {
     CACHE.get_or_init(Default::default)
 }
 
+/// Most directory entries examined when looking for a local profile by a spelling variant.
+const MAX_PROFILE_SCAN: usize = 64;
+
+/// `model` with case, spacing and `-`/`_` separators folded away, for comparing file names.
+fn model_key(model: &str) -> String {
+    let spaced = model.replace(['-', '_'], " ");
+    normalized_model(&spaced).replace(['-', '_'], " ").split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// Whether `path` is a plausible profile file for `model`: a `.json` file whose stem folds to `model`.
+fn plausible_file_name(path: &Path, model: &str) -> bool {
+    path.extension().is_some_and(|x| x == "json") && path.file_stem().and_then(|s| s.to_str()).is_some_and(|stem| model_key(stem) == model_key(model))
+}
+
+/// The local profile for `model` in `directory`, if any: the exact file first, then plausible
+/// spelling variants of its name. Links are not followed and only a bounded number of entries
+/// are examined; a file that cannot be used is reported like the exact-path case.
+fn local_profile(directory: &Path, model: &str) -> Option<CameraProfile> {
+    let exact = directory.join(file_name(model));
+    let exact_is_file = std::fs::symlink_metadata(&exact).is_ok_and(|m| m.file_type().is_file());
+    if exact_is_file {
+        match load(&exact) {
+            Ok(p) if normalized_model(&p.model) == normalized_model(model) => return Some(p),
+            Ok(p) => eprintln!("lightcraft: ignoring camera profile {}: it is for {:?}, not {model:?}", exact.display(), p.model),
+            Err(e) => eprintln!("lightcraft: ignoring camera profile {e}"),
+        }
+    }
+    let entries = std::fs::read_dir(directory).ok()?;
+    let mut entries: Vec<_> = entries.flatten().collect();
+    entries.sort_by(|a, b| a.path().cmp(&b.path()));
+    for entry in entries.into_iter().take(MAX_PROFILE_SCAN) {
+        let path = entry.path();
+        if path == exact || entry.file_type().is_ok_and(|t| t.is_symlink()) || !plausible_file_name(&path, model) {
+            continue;
+        }
+        match load(&path) {
+            Ok(p) if normalized_model(&p.model) == normalized_model(model) => return Some(p),
+            Ok(p) => eprintln!("lightcraft: ignoring camera profile {}: it is for {:?}, not {model:?}", path.display(), p.model),
+            Err(e) => eprintln!("lightcraft: ignoring camera profile {e}"),
+        }
+    }
+    None
+}
+
 /// The profile for camera `model`: from [`dir`], else built in; read once per process.
 pub fn get(model: &str) -> Option<Arc<CameraProfile>> {
     let model = model.trim();
@@ -148,36 +192,7 @@ pub fn get(model: &str) -> Option<Arc<CameraProfile>> {
     if let Some(hit) = cache.get(model) {
         return hit.clone();
     }
-    let path = dir().map(|d| d.join(file_name(model)));
-    let profile = match path {
-        Some(path) if path.is_file() => match load(&path) {
-            Ok(p) if normalized_model(&p.model) == normalized_model(model) => Some(Arc::new(p)),
-            Ok(p) => {
-                eprintln!("lightcraft: ignoring camera profile {}: it is for {:?}, not {model:?}", path.display(), p.model);
-                None
-            }
-            Err(e) => {
-                eprintln!("lightcraft: ignoring camera profile {e}");
-                None
-            }
-        },
-        _ => None,
-    };
-    let profile = profile.or_else(|| {
-        let directory = dir()?;
-        let entries = std::fs::read_dir(directory).ok()?;
-        let mut paths: Vec<_> = entries.flatten().map(|e| e.path()).collect();
-        paths.sort();
-        for path in paths {
-            if path.extension().is_some_and(|x| x == "json")
-                && let Ok(p) = load(&path)
-                && normalized_model(&p.model) == normalized_model(model)
-            {
-                return Some(Arc::new(p));
-            }
-        }
-        None
-    });
+    let profile = dir().and_then(|d| local_profile(&d, model)).map(Arc::new);
     let profile = profile.or_else(|| bundled(model).map(Arc::new));
     cache.insert(model.to_owned(), profile.clone());
     profile
