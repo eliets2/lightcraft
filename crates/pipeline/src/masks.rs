@@ -148,6 +148,15 @@ pub fn evaluate(masks: &[Mask], frame: &Frame, w: usize, h: usize, img: &Rgb32f,
         .collect()
 }
 
+/// Whether `shape` is a Describe selection whose segmentation has not been computed yet (no
+/// usable stored grid): it selects nothing, and inverting it must not turn that nothing into a
+/// full-frame selection before the segmentation exists.
+fn is_uncomputed_prompt(shape: &MaskShape) -> bool {
+    let MaskShape::Prompt { seg, detail, .. } = shape else { return false };
+    seg.as_ref().and_then(SegGrid::new).is_none()
+        && detail.iter().take(lightcraft_develop::segmask::MAX_DETAIL).all(|d| SegGrid::new(d).is_none())
+}
+
 /// The alpha plane of mask `m` (whether visible or not): its components combined, inverted and
 /// scaled by its amount.
 #[allow(clippy::too_many_arguments)]
@@ -158,7 +167,7 @@ pub fn evaluate_one(m: &Mask, frame: &Frame, w: usize, h: usize, img: &Rgb32f, l
     let mut first = true;
     for comp in &m.components {
         let mut c = shape_alpha(&comp.shape, frame, w, h, img, log_l, ev, mattes);
-        if comp.invert {
+        if comp.invert && !is_uncomputed_prompt(&comp.shape) {
             c.data.iter_mut().for_each(|v| *v = 1.0 - *v);
         }
         if first {
@@ -185,7 +194,7 @@ pub fn evaluate_one(m: &Mask, frame: &Frame, w: usize, h: usize, img: &Rgb32f, l
             *a += (r - *a) * k.sqrt();
         }
     }
-    if m.invert {
+    if m.invert && !m.components.iter().all(|comp| is_uncomputed_prompt(&comp.shape)) {
         alpha.data.iter_mut().for_each(|v| *v = 1.0 - *v);
     }
     let amt = (m.adjust.amount / 100.0) as f32;

@@ -46,6 +46,12 @@ only what was added, and with the mask's Invert it gave the whole photo. Such ma
 first component, on every process. It landed in place as a bug fix: intersecting with nothing is not
 a look anyone chose.
 
+**An inverted Describe selection whose segmentation has not been computed yet** stays empty, at
+both the component and the mask level. Inverting its zero alpha used to select the whole frame,
+so its adjustments applied everywhere until the segmentation arrived. It now selects nothing
+until the segmentation exists, on every process. It landed in place as a bug fix: a selection
+that does not exist yet is not a look anyone chose.
+
 ## Adding a process
 
 1. Add a variant to `Process` (`V2`), append it to `Process::ALL` (oldest first), give it its number in

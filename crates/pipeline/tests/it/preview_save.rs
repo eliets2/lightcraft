@@ -147,3 +147,38 @@ fn preview_tracks_reduced_save_with_strong_edits() {
 fn large_preview_save_stress() {
     measure(6400, 768, &[800, 1440], true);
 }
+
+#[cfg(test)]
+mod inverted_uncomputed_prompt_tests {
+    #[test]
+    fn inverted_uncomputed_prompt_stays_empty() {
+        let (w, h) = (30, 30);
+        let frame = lightcraft_pipeline::geometry::Frame::new(w, h, &lightcraft_develop::DevelopSettings::default(), true);
+        let img = lightcraft_raster::Rgb32f::new(w, h);
+        let log_l = lightcraft_raster::Plane::new(w, h);
+        let shape = lightcraft_develop::MaskShape::Prompt { text: "sky".into(), seg: None, detail: vec![], edge: 0.0 };
+        let component_inverted = lightcraft_develop::Mask {
+            components: vec![lightcraft_develop::MaskComponent {
+                name: None,
+                op: lightcraft_develop::MaskOp::Intersect,
+                invert: true,
+                shape: shape.clone(),
+            }],
+            ..Default::default()
+        };
+        let alpha = lightcraft_pipeline::masks::evaluate_one(&component_inverted, &frame, w, h, &img, &log_l, 0.0, None);
+        assert!(alpha.data.iter().all(|v| *v == 0.0), "inverted uncomputed Prompt must stay empty");
+        let mask_inverted = lightcraft_develop::Mask {
+            invert: true,
+            components: vec![lightcraft_develop::MaskComponent {
+                name: None,
+                op: lightcraft_develop::MaskOp::Intersect,
+                invert: false,
+                shape,
+            }],
+            ..Default::default()
+        };
+        let alpha = lightcraft_pipeline::masks::evaluate_one(&mask_inverted, &frame, w, h, &img, &log_l, 0.0, None);
+        assert!(alpha.data.iter().all(|v| *v == 0.0), "mask-inverted uncomputed Prompt must stay empty");
+    }
+}
