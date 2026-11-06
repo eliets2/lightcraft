@@ -964,7 +964,7 @@ fn export_writes_camera_make_and_lens_make_to_exif() {
     s.execute("library.import", &json!({"paths": [src.to_string_lossy()]})).unwrap();
     let id = s.catalog.photos().next().unwrap().id;
     let e = export_photo(&mut s, id, &ExportOptions::from_json(&json!({"format": "jpeg", "longEdge": 64, "metadata": "all"})), 1).unwrap();
-    let back = lightcraft_meta::extract(&e.bytes);
+    let back = lightcraft_meta::read_exif(&e.bytes);
     assert_eq!(back.make.as_deref(), Some("Canon"), "EXIF Make is missing: {back:?}");
     assert_eq!(back.lens_make.as_deref(), Some("Sigma"), "EXIF LensMake is missing: {back:?}");
     let _ = std::fs::remove_dir_all(&dir);
