@@ -638,12 +638,13 @@ pub const HDR_HISTOGRAM_DRAG_EDGE: usize = 192;
 /// whole HDR range ([`Hdr::MAX_EV_LIMIT`](lightcraft_develop::Hdr::MAX_EV_LIMIT) stops above SDR
 /// white, whatever the headroom limit, so the scale stays put) on the right ([`Histogram::of_hdr`]). A preview of
 /// an HDR edit shows its SDR rendition; this says how far its highlights go. `None` for SDR edits,
-/// high-bit-depth, windowed and proofed requests (their histogram stays the image's).
+/// draft, high-bit-depth, windowed and proofed requests (their histogram stays the image's); a
+/// slider drag's live HDR histogram is rendered independently of the draft preview.
 pub fn hdr_histogram(src: &Rgb32f, info: &SourceInfo, s: &DevelopSettings, req: &RenderRequest) -> Option<Histogram> {
-    if !s.hdr.enabled || req.depth != OutputDepth::U8 || req.window.is_some() || req.proof.is_some() {
+    if !s.hdr.enabled || req.depth != OutputDepth::U8 || req.window.is_some() || req.proof.is_some() || req.quality == Quality::Draft {
         return None;
     }
-    let edge = if req.quality == Quality::Draft { HDR_HISTOGRAM_DRAG_EDGE } else { HDR_HISTOGRAM_EDGE };
+    let edge = HDR_HISTOGRAM_EDGE;
     let k = (edge as f64 / req.max_w.max(req.max_h).max(1) as f64).min(1.0);
     let size = |v: usize| ((v as f64 * k).round() as usize).max(1);
     let hreq = RenderRequest {
