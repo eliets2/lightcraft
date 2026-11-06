@@ -409,6 +409,20 @@ mod tests {
     }
 
     #[test]
+    fn local_profile_matches_variant_spelling_and_rejects_other_models() {
+        let dir = std::env::temp_dir().join(format!("lc-camera-profile-local-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut saved = profile();
+        saved.model = "NIKON Z 8".into();
+        let path = save(&saved, &dir).unwrap();
+        assert_eq!(path.file_name().unwrap(), "NIKON_Z_8.json");
+        assert_eq!(local_profile(&dir, "NIKON Z8"), Some(saved.clone()), "variant spelling must find the local profile");
+        assert_eq!(local_profile(&dir, "Nikon Z 8"), Some(saved), "canonical spelling must find the local profile");
+        assert_eq!(local_profile(&dir, "NIKON D5300"), None, "a profile for another model must not be returned");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
     fn pool_skips_files_that_cannot_contribute() {
         let mut pool = Pool::default();
         assert!(pool.add(b"not a raw file").is_err());
