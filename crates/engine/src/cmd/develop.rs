@@ -512,7 +512,9 @@ pub fn specs() -> Vec<CommandSpec> {
                 Ok(json!({"mix": m}))
             }
         ),
-        cmd!("develop.auto", "Auto Settings", ["Photo"], Some("Shift+A"), "{}", has_selection, |s, p| {
+        CommandSpec {
+            explicit_targets: true,
+            ..cmd!("develop.auto", "Auto Settings", ["Photo"], Some("Shift+A"), "{}", has_selection, |s, p| {
             const C: &str = "develop.auto";
             let ids = s.targets(p)?;
             // a wrong id is a bad request, unlike a photo that can't be read just now
@@ -557,7 +559,8 @@ pub fn specs() -> Vec<CommandSpec> {
                 s.commit("Auto", Op::Batch { ops })?;
             }
             Ok(first.unwrap_or_default())
-        }),
+            })
+        },
         cmd!(
             "develop.wb",
             "White Balance",

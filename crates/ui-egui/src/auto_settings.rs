@@ -160,4 +160,16 @@ mod tests {
         app.session = lightcraft_engine::Session::with_demo();
         assert!(apply(&mut app, done).is_err());
     }
+    #[test]
+    fn develop_auto_with_named_ids_and_no_selection_applies() {
+        let mut app = app();
+        let ids: Vec<_> = app.session.catalog.photos().take(2).map(|p| p.id).collect();
+        app.session.execute("library.select", &json!({"ids": []})).unwrap();
+        assert!(app.session.selection.ids.is_empty() && app.session.selection.active.is_none(), "no selection");
+        let reply = app.session.execute("develop.auto", &json!({"ids": ids.iter().map(|i| i.0).collect::<Vec<_>>()}));
+        assert!(reply.is_ok(), "ids-only develop.auto must not require a selection: {reply:?}");
+        for id in ids {
+            assert_eq!(app.session.develop_of(id).unwrap().color.vibrance, 30.0);
+        }
+    }
 }
