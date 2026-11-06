@@ -1131,3 +1131,8 @@ fn legacy_lightcraft_dng_keeps_the_sensor_anchored_pattern() {
     assert_eq!(build("Adobe Photoshop Lightroom").cfa.unwrap().name(), "BGGR");
     assert_ne!(lightcraft_raw::dngwrite::SOFTWARE, "LightCraft");
 }
+
+#[test]
+fn d750_without_chart_fit_finds_no_chart_row() {
+    assert_eq!(lightcraft_raw::spectral::find(Some("NIKON CORPORATION"), "NIKON D750"), None);
+}
