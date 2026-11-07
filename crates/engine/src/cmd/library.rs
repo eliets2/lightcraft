@@ -50,7 +50,7 @@ fn step_unrated(s: &mut Session, d: isize) -> Result<serde_json::Value> {
     let next = active
         .and_then(|a| vis.iter().position(|x| *x == a))
         .and_then(|cur| find_unrated(&vis, cur, d >= 0, &is_unrated))
-        .or_else(|| if d >= 0 { vis.iter().find(is_unrated).copied() } else { vis.iter().rev().find(is_unrated).copied() });
+        .or_else(|| if d >= 0 { vis.iter().find(|id| is_unrated(id)).copied() } else { vis.iter().rev().find(|id| is_unrated(id)).copied() });
     let Some(id) = next else {
         return Ok(json!({"allRated": true}));
     };
