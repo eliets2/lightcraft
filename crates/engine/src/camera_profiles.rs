@@ -166,13 +166,20 @@ fn local_profile(directory: &Path, model: &str) -> Option<CameraProfile> {
         }
     }
     let entries = std::fs::read_dir(directory).ok()?;
-    let mut entries: Vec<_> = entries.flatten().collect();
-    entries.sort_by(|a, b| a.path().cmp(&b.path()));
-    for entry in entries.into_iter().take(MAX_PROFILE_SCAN) {
+    let mut entries: Vec<_> = Vec::new();
+    for entry in entries.flatten() {
+        if entries.len() >= MAX_PROFILE_SCAN {
+            break;
+        }
         let path = entry.path();
         if path == exact || entry.file_type().is_ok_and(|t| t.is_symlink()) || !plausible_file_name(&path, model) {
             continue;
         }
+        entries.push(entry);
+    }
+    entries.sort_by(|a, b| a.path().cmp(&b.path()));
+    for entry in entries {
+        let path = entry.path();
         match load(&path) {
             Ok(p) if normalized_model(&p.model) == normalized_model(model) => return Some(p),
             Ok(p) => eprintln!("lightcraft: ignoring camera profile {}: it is for {:?}, not {model:?}", path.display(), p.model),
