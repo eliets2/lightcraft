@@ -87,30 +87,37 @@ fn step_unrated(s: &mut Session, d: isize) -> Result<Value> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 #[path = "library/tests_relative_ratings.rs"]
 mod relative_rating_tests;
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 #[path = "library/tests_flag_cycle.rs"]
 mod flag_cycle_tests;
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 #[path = "library/tests_rated_out.rs"]
 mod rated_out_tests;
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 #[path = "library/tests_clear_label.rs"]
 mod clear_label_tests;
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 #[path = "library/tests_enable_filters.rs"]
 mod enable_filters_tests;
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 #[path = "library/tests_source_album_filter.rs"]
 mod source_album_filter_tests;
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod next_unrated_tests {
     use lightcraft_catalog::{Op, Photo, PhotoId, Source};
     use serde_json::json;
