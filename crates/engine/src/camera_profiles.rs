@@ -167,10 +167,12 @@ fn local_profile(directory: &Path, model: &str) -> Option<CameraProfile> {
     }
     let entries = std::fs::read_dir(directory).ok()?;
     let mut entries: Vec<_> = Vec::new();
+    let mut scanned = 0;
     for entry in entries.flatten() {
-        if entries.len() >= MAX_PROFILE_SCAN {
+        if scanned >= MAX_PROFILE_SCAN {
             break;
         }
+        scanned += 1;
         let path = entry.path();
         if path == exact || entry.file_type().is_ok_and(|t| t.is_symlink()) || !plausible_file_name(&path, model) {
             continue;
