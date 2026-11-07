@@ -2641,7 +2641,10 @@ fn an_accepted_jpeg_fit_comes_before_the_spectral_matrices_review_regression_1()
     assert!(fallback_t.matrix_is_fallback);
     let fitted = dro_test_look(&std::array::from_fn(|i| 0.006 * 1.13f32.powi(i as i32)), &|x| x.sqrt());
     assert_ne!(fitted.matrix, Mat3::IDENTITY);
-    assert!(fitted.matrix.apply([1.0; 3]).iter().all(|v| (v - 1.0).abs() < 1e-9), "neutral-preserving fitted matrix");
+    assert!(
+        fitted.matrix.apply([1.0; 3]).iter().all(|v| (v - 1.0).abs() < 1e-9),
+        "neutral-preserving fitted matrix"
+    );
     let fitted_clone = fitted.clone();
     let (xy, t, look) = starting_colour_with(
         &mut raw,
@@ -2653,8 +2656,18 @@ fn an_accepted_jpeg_fit_comes_before_the_spectral_matrices_review_regression_1()
         |_, _| panic!("no dark tone fit after an accepted fit"),
     );
     let look = look.expect("the accepted fit");
-    assert_eq!(xy, fallback_xy, "a neutral-preserving fitted matrix must keep the as-shot white: {xy:?} vs {fallback_xy:?}");
-    assert_eq!(t.wb, fallback_t.wb, "the fitted matrix must not change the white balance: {:?} vs {:?}", t.wb, fallback_t.wb);
+    assert_eq!(
+        xy,
+        fallback_xy,
+        "a neutral-preserving fitted matrix must keep the as-shot white: {xy:?} vs {fallback_xy:?}"
+    );
+    assert_eq!(
+        t.wb,
+        fallback_t.wb,
+        "the fitted matrix must not change the white balance: {:?} vs {:?}",
+        t.wb,
+        fallback_t.wb
+    );
     assert_eq!(t.white_xy, xy);
     let loader = look.matrix.mul(&t.matrix);
     let expected = fitted.matrix.mul(&fallback_t.matrix);
@@ -2670,13 +2683,22 @@ fn an_accepted_jpeg_fit_comes_before_the_spectral_matrices_review_regression_1()
     if let Some(look_loader) = look_loader {
         let tags = starting_colour_tags(&mut raw2.clone(), &bytes).expect("DNG tags for the fitted raw");
         let back = lightcraft_raw::color::camera_transform_of(&tags, lightcraft_raw::color::as_shot_white_of(&tags, None));
-        assert_eq!(back.wb, t_loader.wb, "DNG tags must use the loader white balance: {:?} vs {:?}", back.wb, t_loader.wb);
+        assert_eq!(
+            back.wb,
+            t_loader.wb,
+            "DNG tags must use the loader white balance: {:?} vs {:?}",
+            back.wb,
+            t_loader.wb
+        );
         let loader_matrix = look_loader.matrix.mul(&t_loader.matrix);
         let render = |m: &Mat3, wb: [f32; 3], ev: f64, c: [f64; 3]| m.apply(std::array::from_fn(|i| c[i] * wb[i] as f64)).map(|v| v * ev.exp2());
         for c in [[0.2, 0.3, 0.1], [0.6, 0.6, 0.6]] {
             let want = render(&loader_matrix, t_loader.wb, t_loader.baseline_exposure, c);
             let got = render(&back.matrix, back.wb, back.baseline_exposure, c);
-            assert!(want.iter().zip(got).all(|(a, b)| (a - b).abs() < 1e-4), "DNG tags must render like the loader: {want:?} vs {got:?}");
+            assert!(
+                want.iter().zip(got).all(|(a, b)| (a - b).abs() < 1e-4),
+                "DNG tags must render like the loader: {want:?} vs {got:?}"
+            );
         }
     }
 }
