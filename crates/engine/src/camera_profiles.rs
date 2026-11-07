@@ -141,12 +141,10 @@ fn cache() -> &'static Mutex<HashMap<String, Option<Arc<CameraProfile>>>> {
 /// Most plausible profile files examined when looking for a local profile by a spelling variant.
 const MAX_PROFILE_SCAN: usize = 64;
 
-/// `model` with case and spacing folded away, for comparing file names. `-`/`_` separators are
-/// folded only for the Nikon Z variants, whose file names use `_` where EXIF uses a space or `-`;
-/// for other models `A-B` and `A_B` stay distinct.
+/// `model` with case and spacing folded away, for comparing file names. `_` is folded to a space
+/// because [`file_name`] writes spaces as `_`; `-` is kept, so `A-B` and `A_B` stay distinct.
 fn model_key(model: &str) -> String {
-    let folded = normalized_model(&model.replace(['-', '_'], " "));
-    if folded == "nikon z 8" || folded == "nikon z 6_2" { folded } else { normalized_model(model) }
+    normalized_model(&model.replace('_', " "))
 }
 
 /// Whether `path` is a plausible profile file for `model`: a `.json` file whose stem folds to `model`.
@@ -429,6 +427,19 @@ mod tests {
         assert_eq!(local_profile(&dir, "NIKON Z8"), Some(saved.clone()), "variant spelling must find the local profile");
         assert_eq!(local_profile(&dir, "Nikon Z 8"), Some(saved), "canonical spelling must find the local profile");
         assert_eq!(local_profile(&dir, "NIKON D5300"), None, "a profile for another model must not be returned");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn local_profile_matches_spaced_model_saved_with_underscores() {
+        let dir = std::env::temp_dir().join(format!("lc-camera-profile-spaced-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut saved = profile();
+        saved.model = "NIKON D5300".into();
+        let path = save(&saved, &dir).unwrap();
+        assert_eq!(path.file_name().unwrap(), "NIKON_D5300.json");
+        assert_eq!(local_profile(&dir, "Nikon D5300"), Some(saved.clone()), "spaced query must find the underscore file name");
+        assert_eq!(local_profile(&dir, "NIKON D5300"), Some(saved));
         let _ = std::fs::remove_dir_all(&dir);
     }
 
