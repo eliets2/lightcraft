@@ -24,6 +24,42 @@ pub fn specs() -> Vec<CommandSpec> {
     v
 }
 
+fn find_unrated(vis: &[PhotoId], cur: usize, forward: bool, is_unrated: &dyn Fn(&PhotoId) -> bool) -> Option<PhotoId> {
+    let mut found = None;
+    if forward {
+        for (pos, id) in vis.iter().enumerate() {
+            if pos > cur && is_unrated(id) {
+                found = Some(*id);
+                break;
+            }
+        }
+        if found.is_none() {
+            for (pos, id) in vis.iter().enumerate() {
+                if pos <= cur && is_unrated(id) {
+                    found = Some(*id);
+                    break;
+                }
+            }
+        }
+    } else {
+        for (pos, id) in vis.iter().enumerate().rev() {
+            if pos < cur && is_unrated(id) {
+                found = Some(*id);
+                break;
+            }
+        }
+        if found.is_none() {
+            for (pos, id) in vis.iter().enumerate().rev() {
+                if pos >= cur && is_unrated(id) {
+                    found = Some(*id);
+                    break;
+                }
+            }
+        }
+    }
+    found
+}
+
 fn step_unrated(s: &mut Session, d: isize) -> Result<serde_json::Value> {
     let vis = s.visible_cloned();
     if vis.is_empty() {
@@ -35,23 +71,8 @@ fn step_unrated(s: &mut Session, d: isize) -> Result<serde_json::Value> {
     }
     let active = s.active();
     let next = active
-        .and_then(|a| {
-            let cur = vis.iter().position(|x| *x == a)?;
-            if d >= 0 {
-                vis.iter()
-                    .enumerate()
-                    .find(|(pos, id)| *pos > cur && is_unrated(id))
-                    .map(|(_, id)| *id)
-                    .or_else(|| vis.iter().enumerate().find(|(pos, id)| *pos <= cur && is_unrated(id)).map(|(_, id)| *id))
-            } else {
-                vis.iter()
-                    .enumerate()
-                    .rev()
-                    .find(|(pos, id)| *pos < cur && is_unrated(id))
-                    .map(|(_, id)| *id)
-                    .or_else(|| vis.iter().enumerate().rev().find(|(pos, id)| *pos >= cur && is_unrated(id)).map(|(_, id)| *id))
-            }
-        })
+        .and_then(|a| vis.iter().position(|x| *x == a))
+        .and_then(|cur| find_unrated(&vis, cur, d >= 0, &is_unrated))
         .or_else(|| vis.iter().find(|id| is_unrated(id)).copied());
     let Some(id) = next else {
         return Ok(json!({"allRated": true}));
