@@ -1,10 +1,10 @@
 //! Library commands: view source, filter/sort, selection, ratings/flags/labels, rotate, delete,
 //! metadata, albums, import.
 
-use lightcraft_catalog::PhotoId;
-use serde_json::json;
+use lightcraft_catalog::{Album, AlbumId, ColorLabel, CopyrightStatus, Filter, Flag, GroupBy, Op, PhotoId, Sort, SortKey};
+use serde_json::{Value, json};
 
-use super::{CommandSpec, always, cmd, ok};
+use super::{CommandSpec, LibrarySource, always, bad, bool_or, cmd, has_active, has_library_selection, has_selection, ok, str_param};
 use crate::{Result, Selection, Session};
 
 mod filters;
@@ -27,9 +27,13 @@ pub fn specs() -> Vec<CommandSpec> {
 fn find_unrated(vis: &[PhotoId], cur: usize, forward: bool, is_unrated: &dyn Fn(&PhotoId) -> bool) -> Option<PhotoId> {
     let indexed: Vec<(usize, PhotoId)> = vis.iter().copied().enumerate().filter(|(_, id)| is_unrated(id)).collect();
     if forward {
-        indexed.iter().find(|(pos, _)| *pos > cur).map(|(_, id)| *id).or_else(|| indexed.iter().find(|(pos, _)| *pos <= cur).map(|(_, id)| *id))
+        indexed.iter().find_map(|(pos, id)| (*pos > cur).then_some(*id)).or_else(|| indexed.iter().find_map(|(pos, id)| (*pos <= cur).then_some(*id)))
     } else {
-        indexed.iter().rev().find(|(pos, _)| *pos < cur).map(|(_, id)| *id).or_else(|| indexed.iter().rev().find(|(pos, _)| *pos >= cur).map(|(_, id)| *id))
+        indexed
+            .iter()
+            .rev()
+            .find_map(|(pos, id)| (*pos < cur).then_some(*id))
+            .or_else(|| indexed.iter().rev().find_map(|(pos, id)| (*pos >= cur).then_some(*id)))
     }
 }
 
@@ -46,7 +50,7 @@ fn step_unrated(s: &mut Session, d: isize) -> Result<serde_json::Value> {
     let next = active
         .and_then(|a| vis.iter().position(|x| *x == a))
         .and_then(|cur| find_unrated(&vis, cur, d >= 0, &is_unrated))
-        .or_else(|| if d >= 0 { vis.iter().find(|id| is_unrated(id)).copied() } else { vis.iter().rev().find(|id| is_unrated(id)).copied() });
+        .or_else(|| if d >= 0 { vis.iter().find(is_unrated).copied() } else { vis.iter().rev().find(is_unrated).copied() });
     let Some(id) = next else {
         return Ok(json!({"allRated": true}));
     };
