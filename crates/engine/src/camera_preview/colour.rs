@@ -77,7 +77,11 @@ pub(crate) fn starting_colour(
 /// and the look is left with the identity matrix, so the loader (which multiplies
 /// `look.matrix` into `t.matrix`) and the DNG/merge tags (which do the same) apply it once,
 /// on the same transform.
-fn fold_fitted_matrix(xy: Xy, mut t: CameraTransform, look: Option<CameraLook>) -> (Xy, CameraTransform, Option<CameraLook>) {
+fn fold_fitted_matrix(
+    xy: Xy,
+    mut t: CameraTransform,
+    look: Option<CameraLook>,
+) -> (Xy, CameraTransform, Option<CameraLook>) {
     let Some(mut look) = look else { return (xy, t, None) };
     if look.matrix == Mat3::IDENTITY {
         return (xy, t, Some(look));

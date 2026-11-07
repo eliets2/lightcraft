@@ -107,7 +107,9 @@ use tone::{HighlightCheck, ToneFit, fit_tone, fit_tone_conditional, highlights};
 /// 13: the sensor proxy of every per-file fit gets the embedded vignetting correction the render applies (Fujifilm
 /// RAF; other makes with a lens database), so the render no longer applies it twice, at the position a lens warp samples;
 /// the warped candidate's alignment leaves out the pixels outside the sensor instead of reading them as black.
-pub const LOOK_VERSION: u32 = 13;
+/// 14: an accepted JPEG fit's matrix is folded into the camera transform (the look keeps the identity matrix), so the
+/// loader, DNG conversion and merge apply it once on the same transform.
+pub const LOOK_VERSION: u32 = 14;
 
 #[derive(Clone, Debug)]
 pub(crate) struct CameraLook {
@@ -178,9 +180,21 @@ mod fitted_matrix_test {
             |_, _| panic!("no black-and-white JPEG fit after an accepted fit"),
             |_, _| panic!("no dark tone fit after an accepted fit"),
         );
-        assert_eq!(look.map(|look| look.matrix), Some(Mat3::IDENTITY), "the fitted matrix is folded into the transform, not kept in the look");
-        assert_eq!(t.matrix, fitted.matrix.mul(&fallback_t.matrix), "the transform must use the fitted matrix, not the fallback one");
-        assert_eq!(xy, fallback_xy, "a neutral-preserving fitted matrix must keep the as-shot white: {xy:?} vs the fallback's {fallback_xy:?}");
+        assert_eq!(
+            look.map(|look| look.matrix),
+            Some(Mat3::IDENTITY),
+            "the fitted matrix is folded into the transform, not kept in the look"
+        );
+        assert_eq!(
+            t.matrix,
+            fitted.matrix.mul(&fallback_t.matrix),
+            "the transform must use the fitted matrix, not the fallback one"
+        );
+        assert_eq!(
+            xy,
+            fallback_xy,
+            "a neutral-preserving fitted matrix must keep the as-shot white: {xy:?} vs the fallback's {fallback_xy:?}"
+        );
         assert_eq!(t.wb, fallback_t.wb, "the as-shot white balance is kept");
         assert_eq!(t.white_xy, xy, "the transform is at the white it was computed for");
     }
