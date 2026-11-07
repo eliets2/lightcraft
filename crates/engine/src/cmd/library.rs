@@ -5,7 +5,7 @@ use lightcraft_catalog::PhotoId;
 use serde_json::json;
 
 use super::{CommandSpec, always, cmd, ok};
-use crate::{LibrarySource, Result, Selection, Session};
+use crate::{Result, Selection, Session};
 
 mod filters;
 mod gps;
