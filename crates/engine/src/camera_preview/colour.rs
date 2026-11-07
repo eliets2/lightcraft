@@ -65,9 +65,26 @@ pub(crate) fn starting_colour(
     );
     if look.is_none() && dng_tone_eligible(raw, &t) {
         let look = fit_dng_tone(raw, bytes, &t, embedded);
-        return (xy, t, look);
+        return fold_fitted_matrix(xy, t, look);
     }
-    (xy, t, look)
+    fold_fitted_matrix(xy, t, look)
+}
+
+/// Fold a fitted look's colour matrix into the transform, once. The fitted matrix operates on
+/// already white-balanced pixels, so it cannot give the scene white: deriving the white from
+/// it would turn a neutral-preserving matrix's white into D50 and change `t.wb`. The as-shot
+/// white and white balance the fit was made at are kept, the matrix is applied to `t.matrix`
+/// and the look is left with the identity matrix, so the loader (which multiplies
+/// `look.matrix` into `t.matrix`) and the DNG/merge tags (which do the same) apply it once,
+/// on the same transform.
+fn fold_fitted_matrix(xy: Xy, mut t: CameraTransform, look: Option<CameraLook>) -> (Xy, CameraTransform, Option<CameraLook>) {
+    let Some(mut look) = look else { return (xy, t, None) };
+    if look.matrix == Mat3::IDENTITY {
+        return (xy, t, Some(look));
+    }
+    t.matrix = look.matrix.mul(&t.matrix);
+    look.matrix = Mat3::IDENTITY;
+    (xy, t, Some(look))
 }
 
 /// Whether the profile's tone curve is absent or the identity (within 0.005 over the range).
@@ -108,7 +125,7 @@ pub(super) fn starting_colour_with(
     }
     let (look, black_and_white) = fit(raw, &t);
     if let Some(look) = look {
-        return (xy, t, Some(look));
+        return fold_fitted_matrix(xy, t, Some(look));
     }
     let (xy, t) = match raw.metadata.model.as_deref().and_then(|model| lightcraft_raw::spectral::find(raw.metadata.make.as_deref(), model)) {
         Some(camera) => {
@@ -122,7 +139,7 @@ pub(super) fn starting_colour_with(
     };
     // A black-and-white JPEG first tries its existing tone fit on the chosen colour.
     let look = if black_and_white { monochrome(raw, &t) } else { None };
-    (xy, t, look.or_else(|| dark(raw, &t)))
+    fold_fitted_matrix(xy, t, look.or_else(|| dark(raw, &t)))
 }
 
 /// The colour a raw starts from ([`starting_colour`]) as DNG colour tags, for a DNG of the raw's camera RGB (Photo
