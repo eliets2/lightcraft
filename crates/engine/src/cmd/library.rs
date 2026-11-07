@@ -73,7 +73,7 @@ fn step_unrated(s: &mut Session, d: isize) -> Result<serde_json::Value> {
     let next = active
         .and_then(|a| vis.iter().position(|x| *x == a))
         .and_then(|cur| find_unrated(&vis, cur, d >= 0, &is_unrated))
-        .or_else(|| vis.iter().find(|id| is_unrated(id)).copied());
+        .or_else(|| if d >= 0 { vis.iter().find(|id| is_unrated(id)).copied() } else { vis.iter().rev().find(|id| is_unrated(id)).copied() });
     let Some(id) = next else {
         return Ok(json!({"allRated": true}));
     };
@@ -142,6 +142,25 @@ mod next_unrated_tests {
         }
         s.execute("library.sort", &json!({"key": "fileName", "ascending": true}))?;
         s.execute("library.select", &json!({"ids": [1]}))?;
+        Ok(s)
+    }
+
+    fn session_no_active() -> Result<Session> {
+        let mut s = Session::new();
+        for (id, rating) in [(1, 5), (2, 1), (3, 0), (4, 0)] {
+            let mut photo = Photo::new(
+                PhotoId(id),
+                Source::File { path: format!("/lightcraft-next-unrated/{id}.jpg") },
+                &format!("{id}.jpg"),
+                "JPEG",
+                40,
+                30,
+                "2026-10-09",
+            );
+            photo.rating = rating;
+            s.catalog.apply(Op::AddPhoto { photo: Box::new(photo) })?;
+        }
+        s.execute("library.sort", &json!({"key": "fileName", "ascending": true}))?;
         Ok(s)
     }
 
@@ -239,5 +258,23 @@ mod next_unrated_tests {
         assert_eq!(s.selection.ids, vec![PhotoId(1), PhotoId(2), PhotoId(3)], "staying must preserve the multi-photo selection");
         assert_eq!(s.active_mask, Some(7), "staying must preserve the mask state");
         assert_eq!(s.active_spot, Some(2), "staying must preserve the spot state");
+    }
+
+    #[test]
+    fn next_unrated_without_active_picks_first_unrated_photo() {
+        let mut s = session_no_active().unwrap();
+        assert_eq!(s.active(), None);
+        let result = s.execute("library.nextUnrated", &json!({})).unwrap();
+        assert_eq!(result, json!({"active": 3}));
+        assert_eq!(s.active(), Some(PhotoId(3)));
+    }
+
+    #[test]
+    fn prev_unrated_without_active_picks_last_unrated_photo() {
+        let mut s = session_no_active().unwrap();
+        assert_eq!(s.active(), None);
+        let result = s.execute("library.prevUnrated", &json!({})).unwrap();
+        assert_eq!(result, json!({"active": 4}));
+        assert_eq!(s.active(), Some(PhotoId(4)));
     }
 }
