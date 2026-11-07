@@ -4,8 +4,8 @@
 use lightcraft_catalog::{Album, AlbumId, ColorLabel, CopyrightStatus, Filter, Flag, GroupBy, Op, PhotoId, Sort, SortKey};
 use serde_json::{Value, json};
 
-use super::{CommandSpec, LibrarySource, always, bad, bool_or, cmd, has_active, has_library_selection, has_selection, ok, str_param};
-use crate::{Result, Selection, Session};
+use super::{CommandSpec, always, bad, bool_or, cmd, has_active, has_library_selection, has_selection, ok, str_param};
+use crate::{LibrarySource, Result, Selection, Session};
 
 mod filters;
 mod gps;
@@ -250,6 +250,28 @@ mod next_unrated_tests {
     fn prev_unrated_without_active_picks_last_unrated_photo() {
         let mut s = session_no_active().unwrap();
         assert_eq!(s.active(), None);
+        let result = s.execute("library.prevUnrated", &json!({})).unwrap();
+        assert_eq!(result, json!({"active": 4}));
+        assert_eq!(s.active(), Some(PhotoId(4)));
+    }
+
+    #[test]
+    fn next_unrated_with_active_filtered_out_picks_first_unrated_photo() {
+        let mut s = session().unwrap();
+        assert_eq!(s.active(), Some(PhotoId(1)));
+        s.execute("library.filter", &json!({"rating": 0})).unwrap();
+        assert!(!s.visible_cloned().contains(&PhotoId(1)), "active photo is filtered out of the view");
+        let result = s.execute("library.nextUnrated", &json!({})).unwrap();
+        assert_eq!(result, json!({"active": 3}));
+        assert_eq!(s.active(), Some(PhotoId(3)));
+    }
+
+    #[test]
+    fn prev_unrated_with_active_filtered_out_picks_last_unrated_photo() {
+        let mut s = session().unwrap();
+        assert_eq!(s.active(), Some(PhotoId(1)));
+        s.execute("library.filter", &json!({"rating": 0})).unwrap();
+        assert!(!s.visible_cloned().contains(&PhotoId(1)), "active photo is filtered out of the view");
         let result = s.execute("library.prevUnrated", &json!({})).unwrap();
         assert_eq!(result, json!({"active": 4}));
         assert_eq!(s.active(), Some(PhotoId(4)));

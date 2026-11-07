@@ -862,7 +862,7 @@ fn all_rated_toast(v: &Value) -> bool {
 
 #[cfg(test)]
 mod next_unrated_shortcut_tests {
-    use super::{Keymap, all_rated_toast, assign, fire_command, parse, shortcut_of};
+    use super::{Keymap, all_rated_toast, assign, bindable, fire_command, parse, shortcut_of};
     use serde_json::json;
 
     fn app_with(ratings: &[(u64, u8)]) -> crate::LightcraftApp {
@@ -916,6 +916,15 @@ mod next_unrated_shortcut_tests {
         assert_ne!(shortcut_of(&keymap, "library.prevUnrated"), Some("Cmd+Left"));
         assign(&mut keymap, "library.prevUnrated", None).unwrap();
         assert_eq!(shortcut_of(&keymap, "library.prevUnrated"), None);
+    }
+
+    #[test]
+    fn cmd_arrow_defaults_are_not_shared_with_another_command() {
+        for sc in ["Cmd+Right", "Cmd+Left"] {
+            let key = parse(sc);
+            let owners: Vec<&str> = bindable().iter().filter(|b| b.default.and_then(parse) == key).map(|b| b.id).collect();
+            assert_eq!(owners.len(), 1, "{sc} should be the default of exactly one command, got {owners:?}");
+        }
     }
 
     #[test]
