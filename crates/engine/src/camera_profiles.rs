@@ -220,6 +220,9 @@ fn cache_key_for(directory: Option<&Path>) -> u64 {
         .collect();
     files.sort();
     let mut h = lightcraft_preview::Hasher128::new();
+    // Nikon Z variant spellings (Z8, Z 6-2, Z 6 2) now match the bundled
+    // profiles, so renders made before that matching must not be reused.
+    h.str("camera-profile-matching-v2");
     for (name, len, modified) in &files {
         h.str(name).u64(*len).u64(modified.as_secs()).u64(u64::from(modified.subsec_nanos()));
     }
