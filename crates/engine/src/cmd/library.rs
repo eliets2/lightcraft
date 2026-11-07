@@ -25,19 +25,11 @@ pub fn specs() -> Vec<CommandSpec> {
 }
 
 fn find_unrated(vis: &[PhotoId], cur: usize, forward: bool, is_unrated: &dyn Fn(&PhotoId) -> bool) -> Option<PhotoId> {
+    let indexed: Vec<(usize, PhotoId)> = vis.iter().copied().enumerate().filter(|(_, id)| is_unrated(id)).collect();
     if forward {
-        vis.iter()
-            .enumerate()
-            .find(|(pos, id)| *pos > cur && is_unrated(id))
-            .map(|(_, id)| *id)
-            .or_else(|| vis.iter().enumerate().find(|(pos, id)| *pos <= cur && is_unrated(id)).map(|(_, id)| *id))
+        indexed.iter().find(|(pos, _)| *pos > cur).map(|(_, id)| *id).or_else(|| indexed.iter().find(|(pos, _)| *pos <= cur).map(|(_, id)| *id))
     } else {
-        vis.iter()
-            .enumerate()
-            .rev()
-            .find(|(pos, id)| *pos < cur && is_unrated(id))
-            .map(|(_, id)| *id)
-            .or_else(|| vis.iter().enumerate().rev().find(|(pos, id)| *pos >= cur && is_unrated(id)).map(|(_, id)| *id))
+        indexed.iter().rev().find(|(pos, _)| *pos < cur).map(|(_, id)| *id).or_else(|| indexed.iter().rev().find(|(pos, _)| *pos >= cur).map(|(_, id)| *id))
     }
 }
 
