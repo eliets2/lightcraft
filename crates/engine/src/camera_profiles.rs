@@ -165,10 +165,10 @@ fn local_profile(directory: &Path, model: &str) -> Option<CameraProfile> {
             Err(e) => eprintln!("lightcraft: ignoring camera profile {e}"),
         }
     }
-    let entries = std::fs::read_dir(directory).ok()?;
+    let read_dir = std::fs::read_dir(directory).ok()?;
     let mut entries: Vec<_> = Vec::new();
     let mut scanned = 0;
-    for entry in entries.flatten() {
+    for entry in read_dir.flatten() {
         if scanned >= MAX_PROFILE_SCAN {
             break;
         }
