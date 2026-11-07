@@ -138,7 +138,7 @@ fn cache() -> &'static Mutex<HashMap<String, Option<Arc<CameraProfile>>>> {
     CACHE.get_or_init(Default::default)
 }
 
-/// Most directory entries examined when looking for a local profile by a spelling variant.
+/// Most plausible profile files examined when looking for a local profile by a spelling variant.
 const MAX_PROFILE_SCAN: usize = 64;
 
 /// `model` with case, spacing and `-`/`_` separators folded away, for comparing file names.
@@ -167,12 +167,7 @@ fn local_profile(directory: &Path, model: &str) -> Option<CameraProfile> {
     }
     let read_dir = std::fs::read_dir(directory).ok()?;
     let mut entries: Vec<_> = Vec::new();
-    let mut scanned = 0;
     for entry in read_dir.flatten() {
-        if scanned >= MAX_PROFILE_SCAN {
-            break;
-        }
-        scanned += 1;
         let path = entry.path();
         if path == exact || entry.file_type().is_ok_and(|t| t.is_symlink()) || !plausible_file_name(&path, model) {
             continue;
@@ -180,6 +175,7 @@ fn local_profile(directory: &Path, model: &str) -> Option<CameraProfile> {
         entries.push(entry);
     }
     entries.sort_by(|a, b| a.path().cmp(&b.path()));
+    entries.truncate(MAX_PROFILE_SCAN);
     for entry in entries {
         let path = entry.path();
         match load(&path) {
