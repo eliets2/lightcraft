@@ -141,10 +141,12 @@ fn cache() -> &'static Mutex<HashMap<String, Option<Arc<CameraProfile>>>> {
 /// Most plausible profile files examined when looking for a local profile by a spelling variant.
 const MAX_PROFILE_SCAN: usize = 64;
 
-/// `model` with case, spacing and `-`/`_` separators folded away, for comparing file names.
+/// `model` with case and spacing folded away, for comparing file names. `-`/`_` separators are
+/// folded only for the Nikon Z variants, whose file names use `_` where EXIF uses a space or `-`;
+/// for other models `A-B` and `A_B` stay distinct.
 fn model_key(model: &str) -> String {
-    let spaced = model.replace(['-', '_'], " ");
-    normalized_model(&spaced).replace(['-', '_'], " ").split_whitespace().collect::<Vec<_>>().join(" ")
+    let folded = normalized_model(&model.replace(['-', '_'], " "));
+    if folded == "nikon z 8" || folded == "nikon z 6_2" { folded } else { normalized_model(model) }
 }
 
 /// Whether `path` is a plausible profile file for `model`: a `.json` file whose stem folds to `model`.
@@ -427,6 +429,20 @@ mod tests {
         assert_eq!(local_profile(&dir, "NIKON Z8"), Some(saved.clone()), "variant spelling must find the local profile");
         assert_eq!(local_profile(&dir, "Nikon Z 8"), Some(saved), "canonical spelling must find the local profile");
         assert_eq!(local_profile(&dir, "NIKON D5300"), None, "a profile for another model must not be returned");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn local_profile_does_not_conflate_separator_variants_for_other_models() {
+        let dir = std::env::temp_dir().join(format!("lc-camera-profile-separator-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut saved = profile();
+        saved.model = "A-B".into();
+        save(&saved, &dir).unwrap();
+        assert_eq!(local_profile(&dir, "A-B"), Some(saved.clone()));
+        assert_eq!(local_profile(&dir, "a-b"), Some(saved));
+        assert_eq!(local_profile(&dir, "A_B"), None, "a profile for A-B must not match A_B");
+        assert_eq!(local_profile(&dir, "A B"), None, "a profile for A-B must not match A B");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
