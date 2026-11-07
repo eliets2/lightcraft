@@ -70,7 +70,6 @@ use pairs::{
     Attempt, Pairs, TONE_FITS, collect_pairs, colour_pair, displayed, fit_attempt, fit_pairs, fit_pairs_ordered, fit_pairs_with, fit_partial,
     fit_tone_with_shadows, luma, rank_correlation_ties, search_ordered,
 };
-#[cfg(test)]
 pub(crate) use proxy::LensGeometry;
 #[cfg(test)]
 use proxy::{
@@ -179,17 +178,9 @@ mod fitted_matrix_test {
             |_, _| panic!("no black-and-white JPEG fit after an accepted fit"),
             |_, _| panic!("no dark tone fit after an accepted fit"),
         );
-        assert_eq!(
-            look.map(|look| look.matrix),
-            Some(Mat3::IDENTITY),
-            "the fitted matrix is folded into the transform, not kept in the look"
-        );
+        assert_eq!(look.map(|look| look.matrix), Some(Mat3::IDENTITY), "the fitted matrix is folded into the transform, not kept in the look");
         assert_eq!(t.matrix, fitted.matrix.mul(&fallback_t.matrix), "the transform must use the fitted matrix, not the fallback one");
-        assert_eq!(
-            xy,
-            fallback_xy,
-            "a neutral-preserving fitted matrix must keep the as-shot white: {xy:?} vs the fallback's {fallback_xy:?}"
-        );
+        assert_eq!(xy, fallback_xy, "a neutral-preserving fitted matrix must keep the as-shot white: {xy:?} vs the fallback's {fallback_xy:?}");
         assert_eq!(t.wb, fallback_t.wb, "the as-shot white balance is kept");
         assert_eq!(t.white_xy, xy, "the transform is at the white it was computed for");
     }
