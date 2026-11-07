@@ -105,9 +105,20 @@ fn parse(json: &[u8], origin: &str) -> Result<CameraProfile, String> {
     Ok(profile)
 }
 
+/// Model spelling with case and spacing folded away, for matching EXIF variants.
+fn normalized_model(model: &str) -> String {
+    let folded = model.split_whitespace().collect::<Vec<_>>().join(" ").to_ascii_lowercase();
+    match folded.as_str() {
+        "nikon z8" => "nikon z 8".to_owned(),
+        "nikon z 6-2" | "nikon z 6 2" => "nikon z 6_2".to_owned(),
+        _ => folded,
+    }
+}
+
 /// The built-in profile for `model`, if any.
 fn bundled(model: &str) -> Option<CameraProfile> {
-    let (_, json) = BUNDLED.iter().find(|(m, _)| *m == model)?;
+    let needle = normalized_model(model);
+    let (_, json) = BUNDLED.iter().find(|(m, _)| normalized_model(m) == needle)?;
     parse(json.as_bytes(), &format!("built-in profile {model}")).inspect_err(|e| eprintln!("lightcraft: ignoring camera profile {e}")).ok()
 }
 
@@ -127,6 +138,55 @@ fn cache() -> &'static Mutex<HashMap<String, Option<Arc<CameraProfile>>>> {
     CACHE.get_or_init(Default::default)
 }
 
+/// Most plausible profile files examined when looking for a local profile by a spelling variant.
+const MAX_PROFILE_SCAN: usize = 64;
+
+/// `model` with case, spacing and `-`/`_` separators folded away, for comparing file names.
+fn model_key(model: &str) -> String {
+    let spaced = model.replace(['-', '_'], " ");
+    normalized_model(&spaced).replace(['-', '_'], " ").split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// Whether `path` is a plausible profile file for `model`: a `.json` file whose stem folds to `model`.
+fn plausible_file_name(path: &Path, model: &str) -> bool {
+    path.extension().is_some_and(|x| x == "json") && path.file_stem().and_then(|s| s.to_str()).is_some_and(|stem| model_key(stem) == model_key(model))
+}
+
+/// The local profile for `model` in `directory`, if any: the exact file first, then plausible
+/// spelling variants of its name. Links are not followed and only a bounded number of entries
+/// are examined; a file that cannot be used is reported like the exact-path case.
+fn local_profile(directory: &Path, model: &str) -> Option<CameraProfile> {
+    let exact = directory.join(file_name(model));
+    let exact_is_file = std::fs::symlink_metadata(&exact).is_ok_and(|m| m.file_type().is_file());
+    if exact_is_file {
+        match load(&exact) {
+            Ok(p) if normalized_model(&p.model) == normalized_model(model) => return Some(p),
+            Ok(p) => eprintln!("lightcraft: ignoring camera profile {}: it is for {:?}, not {model:?}", exact.display(), p.model),
+            Err(e) => eprintln!("lightcraft: ignoring camera profile {e}"),
+        }
+    }
+    let read_dir = std::fs::read_dir(directory).ok()?;
+    let mut entries: Vec<_> = Vec::new();
+    for entry in read_dir.flatten() {
+        let path = entry.path();
+        if path == exact || entry.file_type().is_ok_and(|t| t.is_symlink()) || !plausible_file_name(&path, model) {
+            continue;
+        }
+        entries.push(entry);
+    }
+    entries.sort_by(|a, b| a.path().cmp(&b.path()));
+    entries.truncate(MAX_PROFILE_SCAN);
+    for entry in entries {
+        let path = entry.path();
+        match load(&path) {
+            Ok(p) if normalized_model(&p.model) == normalized_model(model) => return Some(p),
+            Ok(p) => eprintln!("lightcraft: ignoring camera profile {}: it is for {:?}, not {model:?}", path.display(), p.model),
+            Err(e) => eprintln!("lightcraft: ignoring camera profile {e}"),
+        }
+    }
+    None
+}
+
 /// The profile for camera `model`: from [`dir`], else built in; read once per process.
 pub fn get(model: &str) -> Option<Arc<CameraProfile>> {
     let model = model.trim();
@@ -137,21 +197,7 @@ pub fn get(model: &str) -> Option<Arc<CameraProfile>> {
     if let Some(hit) = cache.get(model) {
         return hit.clone();
     }
-    let path = dir().map(|d| d.join(file_name(model)));
-    let profile = match path {
-        Some(path) if path.is_file() => match load(&path) {
-            Ok(p) if p.model.trim() == model => Some(Arc::new(p)),
-            Ok(p) => {
-                eprintln!("lightcraft: ignoring camera profile {}: it is for {:?}, not {model:?}", path.display(), p.model);
-                None
-            }
-            Err(e) => {
-                eprintln!("lightcraft: ignoring camera profile {e}");
-                None
-            }
-        },
-        _ => None,
-    };
+    let profile = dir().and_then(|d| local_profile(&d, model)).map(Arc::new);
     let profile = profile.or_else(|| bundled(model).map(Arc::new));
     cache.insert(model.to_owned(), profile.clone());
     profile
@@ -179,6 +225,9 @@ fn cache_key_for(directory: Option<&Path>) -> u64 {
         .collect();
     files.sort();
     let mut h = lightcraft_preview::Hasher128::new();
+    // Nikon Z variant spellings (Z8, Z 6-2, Z 6 2) now match the bundled
+    // profiles, so renders made before that matching must not be reused.
+    h.str("camera-profile-matching-v2");
     for (name, len, modified) in &files {
         h.str(name).u64(*len).u64(modified.as_secs()).u64(u64::from(modified.subsec_nanos()));
     }
@@ -302,6 +351,32 @@ mod tests {
     }
 
     #[test]
+    fn bundled_profile_matches_nikon_model_spelling_variants() {
+        for (variant, canonical) in [
+            ("Nikon D5300", "NIKON D5300"),
+            ("Nikon  D5300", "NIKON D5300"),
+            (" Nikon D5300 ", "NIKON D5300"),
+            ("Nikon Z 6_2", "NIKON Z 6_2"),
+            ("Nikon  Z  6_2", "NIKON Z 6_2"),
+            ("Nikon Z 8", "NIKON Z 8"),
+            ("Nikon  Z  8", "NIKON Z 8"),
+        ] {
+            let canonical_profile = bundled(canonical);
+            assert!(canonical_profile.is_some(), "canonical Nikon profile {canonical:?} must be bundled");
+            assert_eq!(bundled(variant), canonical_profile, "NEF spelling {variant:?} must find the bundled {canonical:?} profile");
+        }
+    }
+
+    #[test]
+    fn bundled_profile_matches_nikon_model_spelling_variants_review_regression_1() {
+        for (variant, canonical) in [("NIKON Z8", "NIKON Z 8"), ("NIKON Z 6-2", "NIKON Z 6_2"), ("NIKON Z 6 2", "NIKON Z 6_2")] {
+            let canonical_profile = bundled(canonical);
+            assert!(canonical_profile.is_some(), "canonical Nikon profile {canonical:?} must be bundled");
+            assert_eq!(bundled(variant), canonical_profile, "NEF spelling {variant:?} must find the bundled {canonical:?} profile");
+        }
+    }
+
+    #[test]
     fn same_second_profile_replacement_changes_render_cache_key() {
         let dir = std::env::temp_dir().join(format!("lc-camera-profile-cache-{}", std::process::id()));
         let mut first = profile();
@@ -339,6 +414,20 @@ mod tests {
         assert_eq!(file_name(" DSC-RX100M3 "), "DSC-RX100M3.json");
         assert_eq!(file_name("../../etc/passwd"), "______etc_passwd.json");
         assert_eq!(file_name("Ω 1/2"), "__1_2.json");
+    }
+
+    #[test]
+    fn local_profile_matches_variant_spelling_and_rejects_other_models() {
+        let dir = std::env::temp_dir().join(format!("lc-camera-profile-local-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut saved = profile();
+        saved.model = "NIKON Z 8".into();
+        let path = save(&saved, &dir).unwrap();
+        assert_eq!(path.file_name().unwrap(), "NIKON_Z_8.json");
+        assert_eq!(local_profile(&dir, "NIKON Z8"), Some(saved.clone()), "variant spelling must find the local profile");
+        assert_eq!(local_profile(&dir, "Nikon Z 8"), Some(saved), "canonical spelling must find the local profile");
+        assert_eq!(local_profile(&dir, "NIKON D5300"), None, "a profile for another model must not be returned");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
