@@ -25,39 +25,20 @@ pub fn specs() -> Vec<CommandSpec> {
 }
 
 fn find_unrated(vis: &[PhotoId], cur: usize, forward: bool, is_unrated: &dyn Fn(&PhotoId) -> bool) -> Option<PhotoId> {
-    let mut found = None;
     if forward {
-        for (pos, id) in vis.iter().enumerate() {
-            if pos > cur && is_unrated(id) {
-                found = Some(*id);
-                break;
-            }
-        }
-        if found.is_none() {
-            for (pos, id) in vis.iter().enumerate() {
-                if pos <= cur && is_unrated(id) {
-                    found = Some(*id);
-                    break;
-                }
-            }
-        }
+        vis.iter()
+            .enumerate()
+            .find(|(pos, id)| *pos > cur && is_unrated(id))
+            .map(|(_, id)| *id)
+            .or_else(|| vis.iter().enumerate().find(|(pos, id)| *pos <= cur && is_unrated(id)).map(|(_, id)| *id))
     } else {
-        for (pos, id) in vis.iter().enumerate().rev() {
-            if pos < cur && is_unrated(id) {
-                found = Some(*id);
-                break;
-            }
-        }
-        if found.is_none() {
-            for (pos, id) in vis.iter().enumerate().rev() {
-                if pos >= cur && is_unrated(id) {
-                    found = Some(*id);
-                    break;
-                }
-            }
-        }
+        vis.iter()
+            .enumerate()
+            .rev()
+            .find(|(pos, id)| *pos < cur && is_unrated(id))
+            .map(|(_, id)| *id)
+            .or_else(|| vis.iter().enumerate().rev().find(|(pos, id)| *pos >= cur && is_unrated(id)).map(|(_, id)| *id))
     }
-    found
 }
 
 fn step_unrated(s: &mut Session, d: isize) -> Result<serde_json::Value> {
