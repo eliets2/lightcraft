@@ -12,7 +12,7 @@ use lightcraft_raster::{
 };
 use lightcraft_raw::{
     ColorData, RawFormat, RawImage,
-    color::{CameraTransform, camera_transform},
+    color::CameraTransform,
     profile::{HsvTable, ProfileLook, ToneCurve},
 };
 
@@ -36,15 +36,13 @@ pub(super) fn starting_colour_with(
     monochrome: impl FnOnce(&RawImage, &CameraTransform) -> Option<CameraLook>,
     dark: impl FnOnce(&RawImage, &CameraTransform) -> Option<CameraLook>,
 ) -> (Xy, CameraTransform, Option<CameraLook>) {
-    let (xy, t, look) = colour::starting_colour_with(raw, fit, monochrome, dark);
-    fitted_white(raw, xy, t, look)
+    colour::starting_colour_with(raw, fit, monochrome, dark)
 }
 
-/// [`colour::starting_colour`] recomputed at the white the fitted camera-to-working matrix
-/// (`look.matrix · t.matrix`) gives for the as-shot multipliers, so an accepted JPEG fit
-/// returns them with the fitted matrix rather than the fallback model they were fitted on.
-/// A tone-only look carries the identity matrix and keeps its colour on the transform, so
-/// its white is the transform's white already; the hue/saturation table and tone curve stay
+/// [`colour::starting_colour`]: an accepted JPEG fit's matrix is folded into the transform
+/// there (once), at the as-shot white and white balance the fit was made at, so the loader,
+/// DNG conversion and merge all use the same transform. A tone-only look carries the identity
+/// matrix and keeps its colour on the transform; the hue/saturation table and tone curve stay
 /// with the look.
 pub(crate) fn starting_colour(
     raw: &mut RawImage,
@@ -52,33 +50,7 @@ pub(crate) fn starting_colour(
     lens: Option<&LensGeometry>,
     embedded: Option<&lightcraft_develop::EmbeddedLens>,
 ) -> (Xy, CameraTransform, Option<CameraLook>) {
-    let (xy, t, look) = colour::starting_colour(raw, bytes, lens, embedded);
-    fitted_white(raw, xy, t, look)
-}
-
-/// Recompute the white and transform for the fitted camera-to-working matrix
-/// (`look.matrix · t.matrix`) when the look supplies colour. The fitted matrix is now the
-/// camera colour model, so the white the same multipliers give under it is the as-shot white
-/// the transform was fitted at; rebuild the transform at that white.
-fn fitted_white(raw: &RawImage, xy: Xy, mut t: CameraTransform, look: Option<CameraLook>) -> (Xy, CameraTransform, Option<CameraLook>) {
-    let Some(look) = look else { return (xy, t, None) };
-    if look.matrix == Mat3::IDENTITY {
-        return (xy, t, Some(look));
-    }
-    let fitted = look.matrix.mul(&t.matrix);
-    let white = fitted.apply([1.0; 3]);
-    let xy = if white.iter().all(|&v| v.is_finite() && v > 1e-9) {
-        let xyz = bradford(D65, D50).apply(REC2020.to_xyz().apply(white));
-        let next = Xy::from_xyz(xyz);
-        if next.x.is_finite() && next.y.is_finite() && next.y > 0.0 { next } else { xy }
-    } else {
-        xy
-    };
-    let rebuilt = camera_transform(raw, xy);
-    t.matrix = look.matrix.mul(&rebuilt.matrix);
-    t.wb = rebuilt.wb;
-    t.white_xy = xy;
-    (xy, t, Some(look))
+    colour::starting_colour(raw, bytes, lens, embedded)
 }
 
 pub(crate) use hue_sat::HueSat;
@@ -151,64 +123,74 @@ mod tests;
 
 #[cfg(test)]
 mod fitted_matrix_test {
-use super::*;
+    use super::*;
 
-/// An accepted JPEG fit supplies the camera's real colour matrix (for a CR2, fitted from the
-/// embedded JPEG by `fit_preview`): the as-shot white and the camera transform returned alongside
-/// the look must be computed with that matrix, not with the fallback sRGB model they were
-/// computed with before the fit.
-#[test]
-fn starting_colour_uses_fitted_matrix() {
-    let area = lightcraft_raw::Rect::new(0, 0, 2, 2);
-    let mut raw = RawImage {
-        format: RawFormat::Cr2,
-        width: 2,
-        height: 2,
-        cpp: 1,
-        data: lightcraft_raw::RawData::U16(vec![0; 4]),
-        cfa: None,
-        bits: 14,
-        black: Default::default(),
-        white: vec![16383.0],
-        active_area: area,
-        crop: area,
-        orientation: Default::default(),
-        color: ColorData::default(),
-        wb_multipliers: Some([2.0, 1.0, 1.5]),
-        linearized: false,
-        pixel_aspect: 1.0,
-        opcodes: Default::default(),
-        metadata: lightcraft_raw::Metadata { make: Some("Canon".to_owned()), model: Some("Canon EOS 5D Mark IV".to_owned()), ..Default::default() },
-        lens_metadata: Default::default(),
-    };
-    let fallback_xy = lightcraft_raw::color::as_shot_white_xy(&raw);
-    let fallback_t = lightcraft_raw::color::camera_transform(&raw, fallback_xy);
-    assert!(fallback_t.matrix_is_fallback, "a CR2 without matrices starts on the fallback model");
-    let fitted = CameraLook {
-        matrix: Mat3([[1.6, -0.4, -0.2], [-0.2, 1.4, -0.2], [0.0, -0.3, 1.3]]),
-        tone: CameraTone::new(std::array::from_fn(|i| {
-            let x = 0.006 * 1.13f32.powi(i as i32);
-            [x, x]
-        }))
-        .unwrap(),
-        hue_sat: None,
-    };
-    let fitted_clone = fitted.clone();
-    let (xy, t, look) = starting_colour_with(
-        &mut raw,
-        |_, t| {
-            assert!(t.matrix_is_fallback, "the fit sees the raw on the fallback model");
-            (Some(fitted_clone), false)
-        },
-        |_, _| panic!("no black-and-white JPEG fit after an accepted fit"),
-        |_, _| panic!("no dark tone fit after an accepted fit"),
-    );
-    assert_eq!(look.map(|look| look.matrix), Some(fitted.matrix), "the fitted look is kept");
-    assert_ne!(t.matrix, fallback_t.matrix, "the transform must use the fitted matrix, not the fallback one");
-    assert!(
-        (xy.x - fallback_xy.x).abs() + (xy.y - fallback_xy.y).abs() > 0.005,
-        "the as-shot white must be recomputed with the fitted matrix: {xy:?} vs the fallback's {fallback_xy:?}"
-    );
-    assert_eq!(t.white_xy, xy, "the transform is at the white it was computed for");
-}
+    /// An accepted JPEG fit supplies the camera's real colour matrix (for a CR2, fitted from the
+    /// embedded JPEG by `fit_preview`): the as-shot white and the camera transform returned alongside
+    /// the look must be computed with that matrix, not with the fallback sRGB model they were
+    /// computed with before the fit.
+    #[test]
+    fn starting_colour_uses_fitted_matrix() {
+        let area = lightcraft_raw::Rect::new(0, 0, 2, 2);
+        let mut raw = RawImage {
+            format: RawFormat::Cr2,
+            width: 2,
+            height: 2,
+            cpp: 1,
+            data: lightcraft_raw::RawData::U16(vec![0; 4]),
+            cfa: None,
+            bits: 14,
+            black: Default::default(),
+            white: vec![16383.0],
+            active_area: area,
+            crop: area,
+            orientation: Default::default(),
+            color: ColorData::default(),
+            wb_multipliers: Some([2.0, 1.0, 1.5]),
+            linearized: false,
+            pixel_aspect: 1.0,
+            opcodes: Default::default(),
+            metadata: lightcraft_raw::Metadata {
+                make: Some("Canon".to_owned()),
+                model: Some("Canon EOS 5D Mark IV".to_owned()),
+                ..Default::default()
+            },
+            lens_metadata: Default::default(),
+        };
+        let fallback_xy = lightcraft_raw::color::as_shot_white_xy(&raw);
+        let fallback_t = lightcraft_raw::color::camera_transform(&raw, fallback_xy);
+        assert!(fallback_t.matrix_is_fallback, "a CR2 without matrices starts on the fallback model");
+        let fitted = CameraLook {
+            matrix: Mat3([[1.6, -0.4, -0.2], [-0.2, 1.4, -0.2], [0.0, -0.3, 1.3]]),
+            tone: CameraTone::new(std::array::from_fn(|i| {
+                let x = 0.006 * 1.13f32.powi(i as i32);
+                [x, x]
+            }))
+            .unwrap(),
+            hue_sat: None,
+        };
+        let fitted_clone = fitted.clone();
+        let (xy, t, look) = starting_colour_with(
+            &mut raw,
+            |_, t| {
+                assert!(t.matrix_is_fallback, "the fit sees the raw on the fallback model");
+                (Some(fitted_clone), false)
+            },
+            |_, _| panic!("no black-and-white JPEG fit after an accepted fit"),
+            |_, _| panic!("no dark tone fit after an accepted fit"),
+        );
+        assert_eq!(
+            look.map(|look| look.matrix),
+            Some(Mat3::IDENTITY),
+            "the fitted matrix is folded into the transform, not kept in the look"
+        );
+        assert_eq!(t.matrix, fitted.matrix.mul(&fallback_t.matrix), "the transform must use the fitted matrix, not the fallback one");
+        assert_eq!(
+            xy,
+            fallback_xy,
+            "a neutral-preserving fitted matrix must keep the as-shot white: {xy:?} vs the fallback's {fallback_xy:?}"
+        );
+        assert_eq!(t.wb, fallback_t.wb, "the as-shot white balance is kept");
+        assert_eq!(t.white_xy, xy, "the transform is at the white it was computed for");
+    }
 }

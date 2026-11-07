@@ -2632,3 +2632,51 @@ fn a_narrow_black_and_white_curve_that_darkens_the_bright_areas_is_refused() {
         assert!(sky > 0.8, "an accepted curve must not darken what the camera renders at 0.93: {sky}");
     }
 }
+
+#[test]
+fn an_accepted_jpeg_fit_comes_before_the_spectral_matrices_review_regression_1() {
+    let mut raw = raw_of(RawFormat::Cr2, "Canon", "Canon EOS 600D", Default::default());
+    let fallback_xy = lightcraft_raw::color::as_shot_white_xy(&raw);
+    let fallback_t = lightcraft_raw::color::camera_transform(&raw, fallback_xy);
+    assert!(fallback_t.matrix_is_fallback);
+    let fitted = dro_test_look(&std::array::from_fn(|i| 0.006 * 1.13f32.powi(i as i32)), &|x| x.sqrt());
+    assert_ne!(fitted.matrix, Mat3::IDENTITY);
+    assert!(fitted.matrix.apply([1.0; 3]).iter().all(|v| (v - 1.0).abs() < 1e-9), "neutral-preserving fitted matrix");
+    let fitted_clone = fitted.clone();
+    let (xy, t, look) = starting_colour_with(
+        &mut raw,
+        |_, t| {
+            assert!(t.matrix_is_fallback);
+            (Some(fitted_clone), false)
+        },
+        |_, _| panic!("no black-and-white JPEG fit after an accepted fit"),
+        |_, _| panic!("no dark tone fit after an accepted fit"),
+    );
+    let look = look.expect("the accepted fit");
+    assert_eq!(xy, fallback_xy, "a neutral-preserving fitted matrix must keep the as-shot white: {xy:?} vs {fallback_xy:?}");
+    assert_eq!(t.wb, fallback_t.wb, "the fitted matrix must not change the white balance: {:?} vs {:?}", t.wb, fallback_t.wb);
+    assert_eq!(t.white_xy, xy);
+    let loader = look.matrix.mul(&t.matrix);
+    let expected = fitted.matrix.mul(&fallback_t.matrix);
+    for (a, b) in loader.0.iter().zip(expected.0) {
+        for (x, y) in a.iter().zip(b) {
+            assert!((x - y).abs() < 1e-9, "the loader must apply the fitted matrix once: {loader:?} vs {expected:?}");
+        }
+    }
+    let (w, h) = (192usize, 128usize);
+    let level = |x: usize, y: usize| 0.01 + 0.5 * (x as f32 / w as f32) * (0.3 + 0.7 * y as f32 / h as f32);
+    let (mut raw2, bytes) = grey_raw_with_jpeg((w, h), level, level, [1.0, 0.9, 0.8]);
+    let (_, t_loader, look_loader) = starting_colour(&mut raw2.clone(), &bytes, None, None);
+    if let Some(look_loader) = look_loader {
+        let tags = starting_colour_tags(&mut raw2.clone(), &bytes).expect("DNG tags for the fitted raw");
+        let back = lightcraft_raw::color::camera_transform_of(&tags, lightcraft_raw::color::as_shot_white_of(&tags, None));
+        assert_eq!(back.wb, t_loader.wb, "DNG tags must use the loader white balance: {:?} vs {:?}", back.wb, t_loader.wb);
+        let loader_matrix = look_loader.matrix.mul(&t_loader.matrix);
+        let render = |m: &Mat3, wb: [f32; 3], ev: f64, c: [f64; 3]| m.apply(std::array::from_fn(|i| c[i] * wb[i] as f64)).map(|v| v * ev.exp2());
+        for c in [[0.2, 0.3, 0.1], [0.6, 0.6, 0.6]] {
+            let want = render(&loader_matrix, t_loader.wb, t_loader.baseline_exposure, c);
+            let got = render(&back.matrix, back.wb, back.baseline_exposure, c);
+            assert!(want.iter().zip(got).all(|(a, b)| (a - b).abs() < 1e-4), "DNG tags must render like the loader: {want:?} vs {got:?}");
+        }
+    }
+}
