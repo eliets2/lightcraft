@@ -38,7 +38,7 @@ fn find_unrated(vis: &[PhotoId], cur: usize, forward: bool, is_unrated: &dyn Fn(
     }
 }
 
-fn step_unrated(s: &mut Session, d: isize) -> Result<serde_json::Value> {
+fn step_unrated(s: &mut Session, d: isize) -> Result<Value> {
     let vis = s.visible_cloned();
     if vis.is_empty() {
         return ok();
