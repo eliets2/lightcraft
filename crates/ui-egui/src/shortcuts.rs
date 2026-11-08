@@ -568,6 +568,12 @@ fn flag_toast(app: &mut LightcraftApp, ctx: &egui::Context, flag: lightcraft_cat
     );
 }
 
+/// Whether a `library.nextUnrated` / `library.prevUnrated` result should show the
+/// "all rated" toast: only the distinct `allRated` result, not an empty view or a move.
+fn all_rated_toast(v: &Value) -> bool {
+    v.get("allRated").and_then(Value::as_bool) == Some(true)
+}
+
 /// Run one fired command.
 fn fire_command(app: &mut LightcraftApp, ctx: &egui::Context, f: &str, rotate_fires: bool) {
     // a slideshow: ←/→ step (a cut)
@@ -853,12 +859,6 @@ mod enable_filters_tests;
 #[cfg(test)]
 #[path = "shortcuts/tests_filter_bar_key.rs"]
 mod filter_bar_key_tests;
-
-/// Whether a `library.nextUnrated` / `library.prevUnrated` result should show the
-/// "all rated" toast: only the distinct `allRated` result, not an empty view or a move.
-fn all_rated_toast(v: &Value) -> bool {
-    v.get("allRated").and_then(Value::as_bool) == Some(true)
-}
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
