@@ -27,29 +27,19 @@ pub fn specs() -> Vec<CommandSpec> {
 
 fn find_unrated(vis: &[PhotoId], cur: usize, forward: bool, is_unrated: &dyn Fn(&PhotoId) -> bool) -> Option<PhotoId> {
     if forward {
-        for (pos, id) in vis.iter().enumerate() {
-            if pos > cur && is_unrated(id) {
-                return Some(*id);
-            }
-        }
-        for (pos, id) in vis.iter().enumerate() {
-            if pos <= cur && is_unrated(id) {
-                return Some(*id);
-            }
-        }
+        vis.iter()
+            .enumerate()
+            .find(|(pos, id)| *pos > cur && is_unrated(id))
+            .or_else(|| vis.iter().enumerate().find(|(pos, id)| *pos <= cur && is_unrated(id)))
+            .map(|(_, id)| *id)
     } else {
-        for (pos, id) in vis.iter().enumerate().rev() {
-            if pos < cur && is_unrated(id) {
-                return Some(*id);
-            }
-        }
-        for (pos, id) in vis.iter().enumerate().rev() {
-            if pos >= cur && is_unrated(id) {
-                return Some(*id);
-            }
-        }
+        vis.iter()
+            .enumerate()
+            .rev()
+            .find(|(pos, id)| *pos < cur && is_unrated(id))
+            .or_else(|| vis.iter().enumerate().rev().find(|(pos, id)| *pos >= cur && is_unrated(id)))
+            .map(|(_, id)| *id)
     }
-    None
 }
 
 fn step_unrated(s: &mut Session, d: isize) -> Result<Value> {
