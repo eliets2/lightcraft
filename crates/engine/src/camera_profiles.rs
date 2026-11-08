@@ -172,10 +172,15 @@ fn local_profile(directory: &Path, model: &str) -> Option<CameraProfile> {
         if path == exact || entry.file_type().is_ok_and(|t| t.is_symlink()) || !plausible_file_name(&path, model) {
             continue;
         }
-        entries.push(entry);
+        if entries.len() < MAX_PROFILE_SCAN {
+            entries.push(entry);
+        } else if let Some((worst, _)) = entries.iter().enumerate().max_by(|(_, a), (_, b)| a.path().cmp(&b.path())) {
+            if path < entries[worst].path() {
+                entries[worst] = entry;
+            }
+        }
     }
     entries.sort_by(|a, b| a.path().cmp(&b.path()));
-    entries.truncate(MAX_PROFILE_SCAN);
     for entry in entries {
         let path = entry.path();
         match load(&path) {
