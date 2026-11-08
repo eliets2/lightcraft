@@ -861,6 +861,7 @@ fn all_rated_toast(v: &Value) -> bool {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod next_unrated_shortcut_tests {
     use super::{Keymap, all_rated_toast, assign, bindable, fire_command, parse, shortcut_of};
     use serde_json::json;
