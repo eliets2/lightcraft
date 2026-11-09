@@ -128,7 +128,7 @@ pub fn save(profile: &CameraProfile, directory: &Path) -> Result<PathBuf, String
     // a fresh temp file renamed over the profile: never a fixed `.tmp` name, which a planted link
     // would have written through
     lightcraft_catalog::safe_file::write_atomic(&path, &json).map_err(|e| format!("{}: {e}", path.display()))?;
-    cache_guard.retain(|model, _| file_name(model) != saved_name);
+    cache_guard.retain(|model, _| !file_name(model).eq_ignore_ascii_case(&saved_name));
     // The global key always describes dir(), not the directory this save wrote to.
     *key_guard = Some(cache_key_for(crate::camera_profiles::dir().as_deref()));
     Ok(path)
@@ -398,6 +398,23 @@ mod tests {
         let still_cached = cache().lock().unwrap_or_else(std::sync::PoisonError::into_inner).contains_key(&alias);
         let _ = std::fs::remove_dir_all(&dir);
         assert!(!still_cached, "saving a profile must invalidate the cached miss for {alias:?}, which maps to the same file");
+    }
+
+    #[test]
+    fn saved_profile_invalidates_case_insensitive_filename_alias() {
+        let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or_default();
+        let saved_model = format!("TESTCASE-{}-{stamp}", std::process::id());
+        let alias = saved_model.to_ascii_lowercase();
+        assert_ne!(file_name(&alias), file_name(&saved_model));
+        assert!(file_name(&alias).eq_ignore_ascii_case(&file_name(&saved_model)));
+        cache().lock().unwrap_or_else(std::sync::PoisonError::into_inner).insert(alias.clone(), None);
+        let dir = std::env::temp_dir().join(format!("lc-camera-profile-case-alias-{}-{stamp}", std::process::id()));
+        let mut saved = profile();
+        saved.model = saved_model;
+        save(&saved, &dir).unwrap();
+        let still_cached = cache().lock().unwrap_or_else(std::sync::PoisonError::into_inner).contains_key(&alias);
+        let _ = std::fs::remove_dir_all(&dir);
+        assert!(!still_cached, "saving a profile must invalidate the cached miss for {alias:?}, which maps to the same file ignoring case");
     }
 
     #[test]
