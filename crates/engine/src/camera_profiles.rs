@@ -13,9 +13,12 @@
 use lightcraft_color::Mat3;
 use lightcraft_raw::profile::HsvTable;
 use serde::{Deserialize, Serialize};
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock, PoisonError};
+use std::time::SystemTime;
 
 /// Format version of the profile files.
 const VERSION: u32 = 1;
@@ -128,9 +131,22 @@ pub fn save(profile: &CameraProfile, directory: &Path) -> Result<PathBuf, String
     // a fresh temp file renamed over the profile: never a fixed `.tmp` name, which a planted link
     // would have written through
     lightcraft_catalog::safe_file::write_atomic(&path, &json).map_err(|e| format!("{}: {e}", path.display()))?;
-    cache_guard.retain(|model, _| !file_name(model).eq_ignore_ascii_case(&saved_name));
     // The global key always describes dir(), not the directory this save wrote to.
-    *key_guard = Some(cache_key_for(crate::camera_profiles::dir().as_deref()));
+    let global_dir = crate::camera_profiles::dir();
+    let fresh = cache_key_for(global_dir.as_deref());
+    let fresh_mtime = dir_mtime(global_dir.as_deref());
+    let previous = key_guard.as_ref().map(|s| s.fingerprint);
+    if previous != Some(fresh) {
+        // The fingerprint moved since it was last recorded: an external change to another
+        // model (or this save itself) must not be acknowledged while unrelated cached
+        // lookups (hits or misses) survive under the new key. Drop them all; the saved
+        // model's invalidation is included.
+        cache_guard.clear();
+    } else {
+        cache_guard.retain(|model, _| !file_name(model).eq_ignore_ascii_case(&saved_name));
+    }
+    *key_guard = Some(KeyState { fingerprint: fresh, dir: global_dir, dir_mtime: fresh_mtime });
+    KEY_GENERATION.fetch_add(1, Ordering::SeqCst);
     Ok(path)
 }
 
@@ -174,24 +190,131 @@ fn get_from(directory: Option<&Path>, model: &str) -> Option<Arc<CameraProfile>>
     profile
 }
 
-static CACHE_KEY: OnceLock<Mutex<Option<u64>>> = OnceLock::new();
+/// Cached render-cache fingerprint for the profiles directory, with the directory and its
+/// modification time it was computed for: while the directory's modification time is
+/// unchanged, the fingerprint is reused across calls (a batch of thumbnail requests)
+/// without rescanning the directory; a change to the directory starts a new batch.
+#[derive(Clone, PartialEq)]
+struct KeyState {
+    fingerprint: u64,
+    dir: Option<PathBuf>,
+    dir_mtime: Option<SystemTime>,
+}
+
+/// Generation of the cached fingerprint: incremented whenever the fingerprint is published
+/// (by save() or by cache_key() after an external change), so a scan that began before a
+/// save can tell, after acquiring the locks, that its result is outdated and must be rescanned.
+static KEY_GENERATION: AtomicU64 = AtomicU64::new(0);
+
+static CACHE_KEY: OnceLock<Mutex<Option<KeyState>>> = OnceLock::new();
+
+thread_local! {
+    /// Batch-scoped fingerprint reuse: while a batch is active on this thread, cache_key()
+    /// returns the fingerprint computed for the batch without rescanning or statting the
+    /// directory again. (dir, fingerprint, generation it was computed at)
+    static BATCH: RefCell<Option<(Option<PathBuf>, u64, u64)>> = const { RefCell::new(None) };
+    static BATCH_ACTIVE: Cell<bool> = const { Cell::new(false) };
+}
+
+/// A batch of cache_key() calls that reuses one fingerprint scan: while this guard lives on
+/// a thread, cache_key() on that thread scans once and reuses the result for the rest of the
+/// batch; dropping the guard ends the batch, so the next batch scans again and external
+/// changes since the last batch invalidate renders. A save() during the batch (on any
+/// thread) ends the reuse early via the generation check.
+pub struct CacheKeyBatch;
+
+impl Drop for CacheKeyBatch {
+    fn drop(&mut self) {
+        BATCH_ACTIVE.with(|a| a.set(false));
+        BATCH.with(|b| *b.borrow_mut() = None);
+    }
+}
+
+/// Start a batch of cache_key() calls on this thread (see [`CacheKeyBatch`]).
+pub fn begin_cache_key_batch() -> CacheKeyBatch {
+    BATCH_ACTIVE.with(|a| a.set(true));
+    BATCH.with(|b| *b.borrow_mut() = None);
+    CacheKeyBatch
+}
+
+/// The modification time of `directory` (None when it does not exist or cannot be read):
+/// a file added, removed or renamed in the directory changes it, so it marks a new batch.
+fn dir_mtime(directory: Option<&Path>) -> Option<SystemTime> {
+    directory.and_then(|d| std::fs::metadata(d).ok()).and_then(|m| m.modified().ok())
+}
 
 /// Changes when the profiles folder's contents change (per process): part of the render cache
 /// keys, so thumbnails rendered before a profile existed are not reused after.
 pub fn cache_key() -> u64 {
+    let directory = dir();
+    // Batch-scoped reuse: while a batch is active on this thread, return the fingerprint
+    // computed for the batch without rescanning or statting the directory again, unless a
+    // save() (on any thread) has advanced the generation since.
+    if BATCH_ACTIVE.with(|a| a.get()) {
+        let generation = KEY_GENERATION.load(Ordering::SeqCst);
+        if let Some((cached_dir, fingerprint, cached_generation)) = BATCH.with(|b| b.borrow().clone()) {
+            if cached_dir == directory && cached_generation == generation {
+                return fingerprint;
+            }
+        }
+    }
+    // Reuse across calls while the directory's modification time is unchanged (one batch
+    // of thumbnail requests): a file added, removed or renamed in the directory changes
+    // its modification time and starts a new batch that rescans.
+    let current_mtime = dir_mtime(directory.as_deref());
+    {
+        let cache_guard = cache().lock().unwrap_or_else(PoisonError::into_inner);
+        let lock = CACHE_KEY.get_or_init(|| Mutex::new(None));
+        let guard = lock.lock().unwrap_or_else(PoisonError::into_inner);
+        if let Some(state) = guard.as_ref() {
+            if state.dir == directory && state.dir_mtime == current_mtime {
+                let fingerprint = state.fingerprint;
+                drop(guard);
+                drop(cache_guard);
+                if BATCH_ACTIVE.with(|a| a.get()) {
+                    let generation = KEY_GENERATION.load(Ordering::SeqCst);
+                    BATCH.with(|b| *b.borrow_mut() = Some((directory, fingerprint, generation)));
+                }
+                return fingerprint;
+            }
+        }
+    }
     // Scan the folder without holding any lock, so a refresh is not blocked on the IO.
     // The cached key must be revalidated on every call: a profile added by another
     // process (or by a direct write) has to change the key instead of reusing a stale one.
-    let fresh = cache_key_for(dir().as_deref());
+    let generation_before = KEY_GENERATION.load(Ordering::SeqCst);
+    let fresh = cache_key_for(directory.as_deref());
+    let fresh_mtime = dir_mtime(directory.as_deref());
     let lock = CACHE_KEY.get_or_init(|| Mutex::new(None));
     // Lock order is cache, then CACHE_KEY, as in save().
     let mut cache_guard = cache().lock().unwrap_or_else(PoisonError::into_inner);
     let mut guard = lock.lock().unwrap_or_else(PoisonError::into_inner);
-    if *guard != Some(fresh) {
+    // A save() (or another cache_key() that published a new fingerprint) completed while
+    // this call was scanning: its result is outdated and must not replace the saved key.
+    // Rescan now that the locks are held, so the published key reflects the directory
+    // after that save.
+    let fresh = if KEY_GENERATION.load(Ordering::SeqCst) != generation_before {
+        let rescanned = cache_key_for(directory.as_deref());
+        let rescanned_mtime = dir_mtime(directory.as_deref());
+        if guard.as_ref().map(|s| s.fingerprint) != Some(rescanned) {
+            cache_guard.clear();
+            *guard = Some(KeyState { fingerprint: rescanned, dir: directory.clone(), dir_mtime: rescanned_mtime });
+            KEY_GENERATION.fetch_add(1, Ordering::SeqCst);
+        }
+        rescanned
+    } else if guard.as_ref().map(|s| s.fingerprint) != Some(fresh) {
         // The profile set changed outside save(): drop cached lookups (including
         // misses) so a profile added externally is found, not hidden by an old miss.
         cache_guard.clear();
-        *guard = Some(fresh);
+        *guard = Some(KeyState { fingerprint: fresh, dir: directory.clone(), dir_mtime: fresh_mtime });
+        KEY_GENERATION.fetch_add(1, Ordering::SeqCst);
+        fresh
+    } else {
+        fresh
+    };
+    if BATCH_ACTIVE.with(|a| a.get()) {
+        let generation = KEY_GENERATION.load(Ordering::SeqCst);
+        BATCH.with(|b| *b.borrow_mut() = Some((directory, fresh, generation)));
     }
     fresh
 }
@@ -434,17 +557,26 @@ mod tests {
     }
 
     #[test]
+    #[allow(unused_unsafe)]
     fn external_profile_addition_changes_cache_key() {
-        let profiles_dir = dir().unwrap();
-        std::fs::create_dir_all(&profiles_dir).unwrap();
-        let before = cache_key();
         let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or_default();
+        let isolated = std::env::temp_dir().join(format!("lc-camera-profile-external-{}-{stamp}", std::process::id()));
+        std::fs::create_dir_all(&isolated).unwrap();
+        let previous = std::env::var_os("LIGHTCRAFT_CAMERA_PROFILES");
+        unsafe { std::env::set_var("LIGHTCRAFT_CAMERA_PROFILES", &isolated) };
+        assert_eq!(dir(), Some(isolated.clone()));
+        let before = cache_key();
         let mut external = profile();
         external.model = format!("TESTEXT-{}-{stamp}", std::process::id());
-        let path = profiles_dir.join(file_name(&external.model));
+        let path = isolated.join(file_name(&external.model));
         std::fs::write(&path, serde_json::to_vec(&external).unwrap()).unwrap();
         let after = cache_key();
+        match previous {
+            Some(value) => unsafe { std::env::set_var("LIGHTCRAFT_CAMERA_PROFILES", value) },
+            None => unsafe { std::env::remove_var("LIGHTCRAFT_CAMERA_PROFILES") },
+        }
         let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_dir_all(&isolated);
         assert_ne!(before, after, "a profile added outside save() must change the render cache key");
     }
 }
