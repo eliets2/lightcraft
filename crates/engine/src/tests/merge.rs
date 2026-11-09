@@ -666,3 +666,38 @@ fn hdr_batch_preserves_bracket_set_when_stack_contains_merge_result() {
     assert!(merged[0]["path"].as_str().unwrap().ends_with("IMG_0-HDR-2.dng"), "{merged:?}");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// A size-qualifying group with an invalid source does not abort planning for every group:
+/// a valid collapsed stack still plans when selected with a demo group of two, which
+/// `merge_sources` rejects, instead of the whole selection failing.
+#[test]
+fn valid_stack_plus_demo_group_does_not_abort() {
+    let mut s = Session::new();
+    let mut ids = Vec::new();
+    for i in 0..3 {
+        let id = s.catalog.alloc_photo_id();
+        let name = format!("IMG_{i}.dng");
+        let p =
+            lightcraft_catalog::Photo::new(id, lightcraft_catalog::Source::File { path: name.clone() }, &name, "DNG", 96, 64, "2026-01-01T00:00:00");
+        s.catalog.apply(lightcraft_catalog::Op::AddPhoto { photo: Box::new(p) }).unwrap();
+        ids.push(id);
+    }
+    let mut demos = Vec::new();
+    for i in 0..2 {
+        let demo = s.catalog.alloc_photo_id();
+        let name = format!("demo_{i}.jpg");
+        let demo_photo =
+            lightcraft_catalog::Photo::new(demo, lightcraft_catalog::Source::Demo { scene: 1 }, &name, "JPEG", 96, 64, "2026-01-01T00:00:00");
+        s.catalog.apply(lightcraft_catalog::Op::AddPhoto { photo: Box::new(demo_photo) }).unwrap();
+        demos.push(demo);
+    }
+    let op = s.catalog.group_ops(ids[0], &ids, true).unwrap();
+    s.catalog.apply(op).unwrap();
+    let (kind, finish) = crate::merge::parse("merge.hdr", &json!({})).unwrap();
+    let selected = vec![ids[0], demos[0], demos[1]];
+    let planned = s.plan_merges(kind, finish, &selected, true);
+    assert!(planned.is_ok(), "valid stack should still plan when the demo group is invalid: {:?}", planned.err());
+    let jobs = planned.unwrap();
+    assert_eq!(jobs.len(), 1, "the valid stack is kept");
+    assert_eq!(jobs[0].sources.iter().map(|(p, _)| *p).collect::<Vec<_>>(), ids);
+}

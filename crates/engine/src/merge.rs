@@ -434,27 +434,16 @@ impl Session {
         if groups.len() > 1 {
             return Err(EngineError::Other("selection holds more than one merge group; plan one merge per stack with plan_merges".into()));
         }
-        let read = self.merge_reader();
+        let group = groups.into_iter().next().unwrap_or_default();
         let mut seen = std::collections::HashSet::new();
-        let mut planned: Vec<Vec<(PhotoId, String)>> = Vec::new();
-        for group in groups {
-            if Self::fresh_group_size(&group, &seen) < kind.min_photos() {
-                for id in &group {
-                    seen.insert(*id);
-                }
-                continue;
-            }
-            let sources = self.merge_sources(&group, &mut seen)?;
-            if !sources.is_empty() {
-                planned.push(sources);
-            }
-        }
-        let Some(sources) = planned.pop() else {
-            return Err(EngineError::Other(format!("select at least {} photos to merge", kind.min_photos())));
-        };
-        if sources.len() < kind.min_photos() {
+        if Self::fresh_group_size(&group, &seen) < kind.min_photos() {
             return Err(EngineError::Other(format!("select at least {} photos to merge", kind.min_photos())));
         }
+        let sources = self.merge_sources(&group, &mut seen)?;
+        if sources.is_empty() || sources.len() < kind.min_photos() {
+            return Err(EngineError::Other(format!("select at least {} photos to merge", kind.min_photos())));
+        }
+        let read = self.merge_reader();
         Ok(MergeJob { kind, finish, sources, preview: preview.then_some(PREVIEW_EDGE), read })
     }
 
@@ -462,7 +451,9 @@ impl Session {
     /// stack (kept together, as before). Each stack's members are in capture order, once per stack, and a photo
     /// named more than once is merged once. A group with fewer than the merge needs is skipped (reported by
     /// [`Session::merge_now`] as `skipped`) so one undersized loose photo does not stop a valid stack merging;
-    /// if every group is undersized the selection is refused.
+    /// a group whose sources fail validation (e.g. a demo photo) is skipped the same way, so one invalid group
+    /// does not abort planning for every group, matching the partial handling in `run_merge_jobs`; if every group
+    /// is skipped the selection is refused.
     pub fn plan_merges(&self, kind: MergeKind, finish: MergeFinish, ids: &[PhotoId], preview: bool) -> Result<Vec<MergeJob>> {
         Ok(self.plan_merges_inner(kind, finish, ids, preview)?.0)
     }
@@ -488,6 +479,7 @@ impl Session {
         let read = self.merge_reader();
         let mut jobs = Vec::new();
         let mut skipped = Vec::new();
+        let mut failed: Vec<EngineError> = Vec::new();
         let mut seen = std::collections::HashSet::new();
         for group in groups {
             if Self::fresh_group_size(&group, &seen) < kind.min_photos() {
@@ -497,7 +489,17 @@ impl Session {
                 skipped.push(group);
                 continue;
             }
-            let sources = self.merge_sources(&group, &mut seen)?;
+            let sources = match self.merge_sources(&group, &mut seen) {
+                Ok(s) => s,
+                Err(e) => {
+                    // A size-qualifying group with an invalid source is skipped as a whole, so valid
+                    // groups still plan, matching `run_merge_jobs` partial handling. If no group plans,
+                    // the first validation error is reported below.
+                    failed.push(e);
+                    skipped.push(group);
+                    continue;
+                }
+            };
             if sources.is_empty() {
                 continue;
             }
@@ -508,6 +510,9 @@ impl Session {
             jobs.push(MergeJob { kind: kind.clone(), finish: finish.clone(), sources, preview: preview.then_some(PREVIEW_EDGE), read: read.clone() });
         }
         if jobs.is_empty() {
+            if let Some(e) = failed.into_iter().next() {
+                return Err(e);
+            }
             return Err(EngineError::Other(format!("select at least {} photos to merge", kind.min_photos())));
         }
         Ok((jobs, skipped))
