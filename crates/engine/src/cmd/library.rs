@@ -16,6 +16,7 @@ mod specs;
 pub(crate) use filters::covers_other_disks;
 pub use import::{ImportRequest, import_batch_done, import_params, list_auto_import_folder};
 
+/// Library command specs.
 pub fn specs() -> Vec<CommandSpec> {
     let mut v = vec![
         cmd!("library.nextUnrated", "Next Unrated Photo", [], Some("Cmd+Right"), "{}", always, |s, _| step_unrated(s, 1)),
