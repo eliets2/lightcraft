@@ -13,7 +13,6 @@
 use lightcraft_color::Mat3;
 use lightcraft_raw::profile::HsvTable;
 use serde::{Deserialize, Serialize};
-use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -116,6 +115,12 @@ fn bundled(model: &str) -> Option<CameraProfile> {
 
 /// Write `profile` to `directory` (created if needed) as `<model>.json`; returns the path.
 pub fn save(profile: &CameraProfile, directory: &Path) -> Result<PathBuf, String> {
+    save_with_fingerprint_dir(profile, directory, dir())
+}
+
+/// [`save`] with the directory the render-cache key describes: production passes
+/// [`dir`], tests pass an isolated directory so they do not read the global one.
+fn save_with_fingerprint_dir(profile: &CameraProfile, directory: &Path, fingerprint_dir: Option<PathBuf>) -> Result<PathBuf, String> {
     std::fs::create_dir_all(directory).map_err(|e| format!("{}: {e}", directory.display()))?;
     let path = directory.join(file_name(&profile.model));
     let json = serde_json::to_vec_pretty(profile).map_err(|e| e.to_string())?;
@@ -132,9 +137,9 @@ pub fn save(profile: &CameraProfile, directory: &Path) -> Result<PathBuf, String
     // would have written through
     lightcraft_catalog::safe_file::write_atomic(&path, &json).map_err(|e| format!("{}: {e}", path.display()))?;
     // The global key always describes dir(), not the directory this save wrote to.
-    let global_dir = crate::camera_profiles::dir();
-    let fresh_mtime = dir_mtime(global_dir.as_deref());
-    let fresh = cache_key_for(global_dir.as_deref());
+    let fresh_mtime = dir_mtime(fingerprint_dir.as_deref());
+    let fresh_files = file_stats(fingerprint_dir.as_deref());
+    let fresh = fingerprint_for(&fresh_files);
     let previous = key_guard.as_ref().map(|s| s.fingerprint);
     if previous != Some(fresh) {
         // The fingerprint moved since it was last recorded: an external change to another
@@ -145,7 +150,7 @@ pub fn save(profile: &CameraProfile, directory: &Path) -> Result<PathBuf, String
     } else {
         cache_guard.retain(|model, _| !file_name(model).eq_ignore_ascii_case(&saved_name));
     }
-    *key_guard = Some(KeyState { fingerprint: fresh, dir: global_dir, dir_mtime: fresh_mtime });
+    *key_guard = Some(KeyState { fingerprint: fresh, dir: fingerprint_dir, dir_mtime: fresh_mtime, files: fresh_files });
     KEY_GENERATION.fetch_add(1, Ordering::SeqCst);
     Ok(path)
 }
@@ -190,15 +195,16 @@ fn get_from(directory: Option<&Path>, model: &str) -> Option<Arc<CameraProfile>>
     profile
 }
 
-/// Cached render-cache fingerprint for the profiles directory, with the directory and its
-/// modification time it was computed for: while the directory's modification time is
+/// Cached render-cache fingerprint for the profiles directory, with the directory, its
+/// modification time and the JSON files' stats it was computed for: while those are
 /// unchanged, the fingerprint is reused across calls (a batch of thumbnail requests)
-/// without rescanning the directory; a change to the directory starts a new batch.
+/// without hashing the built-in profiles again; a change to any of them rescans.
 #[derive(Clone, PartialEq)]
 struct KeyState {
     fingerprint: u64,
     dir: Option<PathBuf>,
     dir_mtime: Option<SystemTime>,
+    files: Vec<(String, u64, std::time::Duration)>,
 }
 
 /// Generation of the cached fingerprint: incremented whenever the fingerprint is published
@@ -207,35 +213,6 @@ struct KeyState {
 static KEY_GENERATION: AtomicU64 = AtomicU64::new(0);
 
 static CACHE_KEY: OnceLock<Mutex<Option<KeyState>>> = OnceLock::new();
-
-thread_local! {
-    /// Batch-scoped fingerprint reuse: while a batch is active on this thread, cache_key()
-    /// returns the fingerprint computed for the batch without rescanning or statting the
-    /// directory again. (dir, fingerprint, generation it was computed at)
-    static BATCH: RefCell<Option<(Option<PathBuf>, u64, u64)>> = const { RefCell::new(None) };
-    static BATCH_ACTIVE: Cell<bool> = const { Cell::new(false) };
-}
-
-/// A batch of cache_key() calls that reuses one fingerprint scan: while this guard lives on
-/// a thread, cache_key() on that thread scans once and reuses the result for the rest of the
-/// batch; dropping the guard ends the batch, so the next batch scans again and external
-/// changes since the last batch invalidate renders. A save() during the batch (on any
-/// thread) ends the reuse early via the generation check.
-pub struct CacheKeyBatch;
-
-impl Drop for CacheKeyBatch {
-    fn drop(&mut self) {
-        BATCH_ACTIVE.with(|a| a.set(false));
-        BATCH.with(|b| *b.borrow_mut() = None);
-    }
-}
-
-/// Start a batch of cache_key() calls on this thread (see [`CacheKeyBatch`]).
-pub fn begin_cache_key_batch() -> CacheKeyBatch {
-    BATCH_ACTIVE.with(|a| a.set(true));
-    BATCH.with(|b| *b.borrow_mut() = None);
-    CacheKeyBatch
-}
 
 /// The modification time of `directory` (None when it does not exist or cannot be read):
 /// a file added, removed or renamed in the directory changes it, so it marks a new batch.
@@ -251,35 +228,20 @@ pub fn cache_key() -> u64 {
 
 /// [`cache_key`] for a given profiles directory (tests use an isolated one instead of the global [`dir`]).
 fn cache_key_in(directory: Option<PathBuf>) -> u64 {
-    // Batch-scoped reuse: while a batch is active on this thread, return the fingerprint
-    // computed for the batch without rescanning or statting the directory again, unless a
-    // save() (on any thread) has advanced the generation since.
-    if BATCH_ACTIVE.with(|a| a.get()) {
-        let generation = KEY_GENERATION.load(Ordering::SeqCst);
-        if let Some((cached_dir, fingerprint, cached_generation)) = BATCH.with(|b| b.borrow().clone()) {
-            if cached_dir == directory && cached_generation == generation {
-                return fingerprint;
-            }
-        }
-    }
-    // Reuse across calls while the directory's modification time is unchanged (one batch
-    // of thumbnail requests): a file added, removed or renamed in the directory changes
-    // its modification time and starts a new batch that rescans.
+    // Reuse across calls while the directory's modification time and the JSON files'
+    // stats are unchanged (one batch of thumbnail requests): a file added, removed or
+    // renamed changes the directory's modification time, and an in-place overwrite of
+    // an existing file changes that file's length or modification time, so both start
+    // a new batch that rescans instead of reusing a stale fingerprint.
     let current_mtime = dir_mtime(directory.as_deref());
+    let current_files = file_stats(directory.as_deref());
     {
-        let cache_guard = cache().lock().unwrap_or_else(PoisonError::into_inner);
+        let _cache_guard = cache().lock().unwrap_or_else(PoisonError::into_inner);
         let lock = CACHE_KEY.get_or_init(|| Mutex::new(None));
         let guard = lock.lock().unwrap_or_else(PoisonError::into_inner);
         if let Some(state) = guard.as_ref() {
-            if state.dir == directory && state.dir_mtime == current_mtime {
-                let fingerprint = state.fingerprint;
-                drop(guard);
-                drop(cache_guard);
-                if BATCH_ACTIVE.with(|a| a.get()) {
-                    let generation = KEY_GENERATION.load(Ordering::SeqCst);
-                    BATCH.with(|b| *b.borrow_mut() = Some((directory, fingerprint, generation)));
-                }
-                return fingerprint;
+            if state.dir == directory && state.dir_mtime == current_mtime && state.files == current_files {
+                return state.fingerprint;
             }
         }
     }
@@ -288,7 +250,8 @@ fn cache_key_in(directory: Option<PathBuf>) -> u64 {
     // process (or by a direct write) has to change the key instead of reusing a stale one.
     let generation_before = KEY_GENERATION.load(Ordering::SeqCst);
     let fresh_mtime = dir_mtime(directory.as_deref());
-    let fresh = cache_key_for(directory.as_deref());
+    let fresh_files = file_stats(directory.as_deref());
+    let fresh = fingerprint_for(&fresh_files);
     let lock = CACHE_KEY.get_or_init(|| Mutex::new(None));
     // Lock order is cache, then CACHE_KEY, as in save().
     let mut cache_guard = cache().lock().unwrap_or_else(PoisonError::into_inner);
@@ -299,37 +262,34 @@ fn cache_key_in(directory: Option<PathBuf>) -> u64 {
     // after that save.
     let fresh = if KEY_GENERATION.load(Ordering::SeqCst) != generation_before {
         let rescanned_mtime = dir_mtime(directory.as_deref());
-        let rescanned = cache_key_for(directory.as_deref());
+        let rescanned_files = file_stats(directory.as_deref());
+        let rescanned = fingerprint_for(&rescanned_files);
         if guard.as_ref().map(|s| s.fingerprint) != Some(rescanned) {
             cache_guard.clear();
-            *guard = Some(KeyState { fingerprint: rescanned, dir: directory.clone(), dir_mtime: rescanned_mtime });
+            *guard = Some(KeyState { fingerprint: rescanned, dir: directory.clone(), dir_mtime: rescanned_mtime, files: rescanned_files });
             KEY_GENERATION.fetch_add(1, Ordering::SeqCst);
         } else {
-            *guard = Some(KeyState { fingerprint: rescanned, dir: directory.clone(), dir_mtime: rescanned_mtime });
+            *guard = Some(KeyState { fingerprint: rescanned, dir: directory.clone(), dir_mtime: rescanned_mtime, files: rescanned_files });
         }
         rescanned
     } else if guard.as_ref().map(|s| s.fingerprint) != Some(fresh) {
         // The profile set changed outside save(): drop cached lookups (including
         // misses) so a profile added externally is found, not hidden by an old miss.
         cache_guard.clear();
-        *guard = Some(KeyState { fingerprint: fresh, dir: directory.clone(), dir_mtime: fresh_mtime });
+        *guard = Some(KeyState { fingerprint: fresh, dir: directory.clone(), dir_mtime: fresh_mtime, files: fresh_files });
         KEY_GENERATION.fetch_add(1, Ordering::SeqCst);
         fresh
     } else {
         // The fingerprint is unchanged, but the directory or its modification time may
         // have moved (a non-JSON file, a temporary file created and removed): record
         // them so the next call reuses this fingerprint instead of rescanning.
-        *guard = Some(KeyState { fingerprint: fresh, dir: directory.clone(), dir_mtime: fresh_mtime });
+        *guard = Some(KeyState { fingerprint: fresh, dir: directory.clone(), dir_mtime: fresh_mtime, files: fresh_files });
         fresh
     };
-    if BATCH_ACTIVE.with(|a| a.get()) {
-        let generation = KEY_GENERATION.load(Ordering::SeqCst);
-        BATCH.with(|b| *b.borrow_mut() = Some((directory, fresh, generation)));
-    }
     fresh
 }
 
-fn cache_key_for(directory: Option<&Path>) -> u64 {
+fn file_stats(directory: Option<&Path>) -> Vec<(String, u64, std::time::Duration)> {
     let entries = directory.and_then(|d| std::fs::read_dir(d).ok());
     let mut files: Vec<(String, u64, std::time::Duration)> = entries
         .into_iter()
@@ -343,8 +303,12 @@ fn cache_key_for(directory: Option<&Path>) -> u64 {
         })
         .collect();
     files.sort();
+    files
+}
+
+fn fingerprint_for(files: &[(String, u64, std::time::Duration)]) -> u64 {
     let mut h = lightcraft_preview::Hasher128::new();
-    for (name, len, modified) in &files {
+    for (name, len, modified) in files {
         h.str(name).u64(*len).u64(modified.as_secs()).u64(u64::from(modified.subsec_nanos()));
     }
     for (model, json) in BUNDLED {
@@ -415,6 +379,8 @@ impl Pool {
 mod tests {
     use super::*;
 
+    static GLOBAL_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
     fn profile() -> CameraProfile {
         let table = HsvTable { hue_divisions: 4, sat_divisions: 2, val_divisions: 1, data: vec![[5.0, 1.2, 1.0]; 8], srgb_value: false };
         CameraProfile::new("ILCE-7M4", 12, 3456, Mat3([[1.6, -0.5, -0.1], [-0.2, 1.3, -0.1], [-0.1, -0.2, 1.3]]), Some(table))
@@ -422,6 +388,7 @@ mod tests {
 
     #[test]
     fn profiles_round_trip_and_reject_bad_files() {
+        let _global = GLOBAL_LOCK.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         let dir = std::env::temp_dir().join(format!("lc-camera-profiles-{}", std::process::id()));
         let path = save(&profile(), &dir).unwrap();
         assert_eq!(path.file_name().unwrap(), "ILCE-7M4.json");
@@ -468,6 +435,7 @@ mod tests {
 
     #[test]
     fn same_second_profile_replacement_changes_render_cache_key() {
+        let _global = GLOBAL_LOCK.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         let dir = std::env::temp_dir().join(format!("lc-camera-profile-cache-{}", std::process::id()));
         let mut first = profile();
         first.model = "ILCE-7CR".into();
@@ -480,7 +448,7 @@ mod tests {
         };
         let before = set_modified(100);
         assert_eq!(load(&path).unwrap(), first);
-        let before_key = cache_key_for(Some(&dir));
+        let before_key = fingerprint_for(&file_stats(Some(&dir)));
 
         let mut second = first;
         second.matrix[0][0] = 1.7;
@@ -492,7 +460,7 @@ mod tests {
         let after_time = after.modified().unwrap().duration_since(std::time::UNIX_EPOCH).unwrap();
         assert_eq!(before_time.as_secs(), after_time.as_secs());
         assert_ne!(before_time.subsec_nanos(), after_time.subsec_nanos());
-        let after_key = cache_key_for(Some(&dir));
+        let after_key = fingerprint_for(&file_stats(Some(&dir)));
         let _ = std::fs::remove_dir_all(dir);
 
         assert_ne!(before_key, after_key, "a changed profile must not reuse the previous render cache");
@@ -500,6 +468,7 @@ mod tests {
 
     #[test]
     fn saved_profile_is_found_after_earlier_miss() {
+        let _global = GLOBAL_LOCK.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or_default();
         let model = format!("TESTMISS-{}-{stamp}", std::process::id());
         let isolated = std::env::temp_dir().join(format!("lc-camera-profile-miss-{}-{stamp}", std::process::id()));
@@ -519,6 +488,7 @@ mod tests {
 
     #[test]
     fn saved_profile_is_found_after_earlier_miss_review_regression_1() {
+        let _global = GLOBAL_LOCK.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or_default();
         let alias = format!("TESTALIAS {} {stamp}", std::process::id());
         let saved_model = alias.replace(' ', "_");
@@ -535,6 +505,7 @@ mod tests {
 
     #[test]
     fn saved_profile_invalidates_case_insensitive_filename_alias() {
+        let _global = GLOBAL_LOCK.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or_default();
         let saved_model = format!("TESTCASE-{}-{stamp}", std::process::id());
         let alias = saved_model.to_ascii_lowercase();
@@ -568,6 +539,7 @@ mod tests {
 
     #[test]
     fn external_profile_addition_changes_cache_key() {
+        let _global = GLOBAL_LOCK.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or_default();
         let isolated = std::env::temp_dir().join(format!("lc-camera-profile-external-{}-{stamp}", std::process::id()));
         std::fs::create_dir_all(&isolated).unwrap();
@@ -587,5 +559,68 @@ mod tests {
         let _ = std::fs::remove_file(&path);
         let _ = std::fs::remove_dir_all(&isolated);
         assert_ne!(before, after, "a profile added outside save() must change the render cache key");
+    }
+
+    #[test]
+    fn save_clears_unrelated_cached_lookups_when_fingerprint_moved() {
+        let _global = GLOBAL_LOCK.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or_default();
+        let unrelated = format!("TESTUNRELATED-{}-{stamp}", std::process::id());
+        let saved_model = format!("TESTSAVEA-{}-{stamp}", std::process::id());
+        let isolated = std::env::temp_dir().join(format!("lc-camera-profile-clearall-{}-{stamp}", std::process::id()));
+        std::fs::create_dir_all(&isolated).unwrap();
+        let prior_key = CACHE_KEY.get_or_init(|| Mutex::new(None)).lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone();
+        let prior_cache = cache().lock().unwrap_or_else(std::sync::PoisonError::into_inner).clone();
+        let fresh = fingerprint_for(&file_stats(Some(&isolated)));
+        let lock = CACHE_KEY.get_or_init(|| Mutex::new(None));
+        *lock.lock().unwrap_or_else(std::sync::PoisonError::into_inner) =
+            Some(KeyState { fingerprint: fresh.wrapping_add(1), dir: Some(isolated.clone()), dir_mtime: None, files: Vec::new() });
+        cache().lock().unwrap_or_else(std::sync::PoisonError::into_inner).insert(unrelated.clone(), None);
+        let mut saved = profile();
+        saved.model = saved_model;
+        save_with_fingerprint_dir(&saved, &isolated, Some(isolated.clone())).unwrap();
+        let still_cached = cache().lock().unwrap_or_else(std::sync::PoisonError::into_inner).contains_key(&unrelated);
+        *CACHE_KEY.get_or_init(|| Mutex::new(None)).lock().unwrap_or_else(std::sync::PoisonError::into_inner) = prior_key;
+        *cache().lock().unwrap_or_else(std::sync::PoisonError::into_inner) = prior_cache;
+        let _ = std::fs::remove_dir_all(&isolated);
+        assert!(!still_cached, "saving after the fingerprint moved must drop unrelated cached lookups, including {unrelated:?}");
+    }
+
+    #[test]
+    fn in_place_profile_overwrite_changes_cache_key() {
+        let _global = GLOBAL_LOCK.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
+        let stamp = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or_default();
+        let isolated = std::env::temp_dir().join(format!("lc-camera-profile-inplace-{}-{stamp}", std::process::id()));
+        std::fs::create_dir_all(&isolated).unwrap();
+        let mut first = profile();
+        first.model = format!("TESTINPLACE-{}-{stamp}", std::process::id());
+        let path = isolated.join(file_name(&first.model));
+        std::fs::write(&path, serde_json::to_vec(&first).unwrap()).unwrap();
+        let set_file_time = |millis| {
+            let time = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_000) + std::time::Duration::from_millis(millis);
+            let file = std::fs::OpenOptions::new().write(true).open(&path).unwrap();
+            file.set_times(std::fs::FileTimes::new().set_modified(time)).unwrap();
+        };
+        set_file_time(100);
+        if let Ok(dir_file) = std::fs::File::open(&isolated) {
+            let time = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_000) + std::time::Duration::from_millis(100);
+            let _ = dir_file.set_times(std::fs::FileTimes::new().set_modified(time));
+        }
+        let dir_mtime_before = std::fs::metadata(&isolated).unwrap().modified().unwrap();
+        let before = cache_key_in(Some(isolated.clone()));
+        let mut second = first;
+        second.matrix[0][0] = 1.7;
+        std::fs::write(&path, serde_json::to_vec(&second).unwrap()).unwrap();
+        set_file_time(350);
+        if let Ok(dir_file) = std::fs::File::open(&isolated) {
+            let _ = dir_file.set_times(std::fs::FileTimes::new().set_modified(dir_mtime_before));
+        }
+        let after = cache_key_in(Some(isolated.clone()));
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_dir_all(&isolated);
+        assert_ne!(
+            before, after,
+            "an in-place overwrite of an existing profile must change the render cache key even when the directory modification time is unchanged"
+        );
     }
 }
