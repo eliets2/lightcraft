@@ -68,8 +68,13 @@ fn read_bytes(bytes: &[u8]) -> Result<Net, NetError> {
     let mut weights_total = 0usize;
 
     let nodes = &graph.node;
+    let mut fused_leaky = vec![false; nodes.len()];
     let mut i = 0;
     while i < nodes.len() {
+        if fused_leaky.get(i) == Some(&true) {
+            i += 1;
+            continue;
+        }
         if ops.len() >= MAX_OPS {
             return invalid("the network has too many layers");
         }
@@ -95,13 +100,19 @@ fn read_bytes(bytes: &[u8]) -> Result<Net, NetError> {
         let lookup = |name: &str| -> Result<TensorId, NetError> {
             ids.get(name).copied().ok_or_else(|| NetError::Invalid(format!("`{}` reads `{name}`, which nothing makes", node.op_type)))
         };
-        // a LeakyRelu straight after this layer, which nothing else reads, is part of it
+        // a LeakyRelu that reads this layer's output, which nothing else reads, is part of it, wherever it sits in the node list
         let mut fuse_leaky = |out: &str| -> Result<(Option<f32>, String), NetError> {
-            if let Some(next) = nodes.get(i)
-                && next.op_type == "LeakyRelu"
-                && next.input.first().map(String::as_str) == Some(out)
+            let mut found = None;
+            for (at, candidate) in nodes.iter().enumerate().skip(i) {
+                if candidate.op_type == "LeakyRelu" && candidate.input.first().map(String::as_str) == Some(out) {
+                    found = Some(at);
+                    break;
+                }
+            }
+            if let Some(at) = found
                 && readers.get(out).copied() == Some(1)
             {
+                let Some(next) = nodes.get(at) else { return Ok((None, out.to_string())) };
                 if next.input.len() != 1 || next.output.len() != 1 || next.attribute.iter().any(|a| a.name != "alpha") {
                     return invalid("malformed LeakyRelu");
                 }
@@ -111,7 +122,9 @@ fn read_bytes(bytes: &[u8]) -> Result<Net, NetError> {
                     [AttributeProto { f: Some(f), kind: 0 | 1, .. }] => *f,
                     _ => return invalid("LeakyRelu alpha is not a single float"),
                 };
-                i += 1;
+                if let Some(slot) = fused_leaky.get_mut(at) {
+                    *slot = true;
+                }
                 let name = next.output.first().cloned().ok_or_else(|| NetError::Invalid("LeakyRelu without an output".into()))?;
                 return Ok((Some(alpha), name));
             }
@@ -837,5 +850,75 @@ mod tests {
         }
         let many_model = model(&nodes, 1, &prev);
         assert!(matches!(read_bytes(&many_model), Err(NetError::Invalid(_))));
+    }
+
+    #[test]
+    fn interleaved_leaky_relu_is_fused_into_its_conv() {
+        use crate::synthetic_proto::{len_field, value_info_bytes, varint_field};
+
+        fn node(op: &str, inputs: &[&str], output: &str, ints: &[(&str, i64)]) -> Vec<u8> {
+            let mut n = Vec::new();
+            for i in inputs {
+                len_field(1, i.as_bytes(), &mut n);
+            }
+            len_field(2, output.as_bytes(), &mut n);
+            len_field(4, op.as_bytes(), &mut n);
+            for (name, value) in ints {
+                let mut a = Vec::new();
+                len_field(1, name.as_bytes(), &mut a);
+                varint_field(3, *value as u64, &mut a);
+                varint_field(20, 2, &mut a);
+                len_field(5, &a, &mut n);
+            }
+            n
+        }
+
+        fn tensor(name: &str, dims: &[u64], values: &[f32]) -> Vec<u8> {
+            let mut t = Vec::new();
+            for d in dims {
+                varint_field(1, *d, &mut t);
+            }
+            varint_field(2, 1, &mut t);
+            len_field(8, name.as_bytes(), &mut t);
+            let raw: Vec<u8> = values.iter().flat_map(|v| v.to_le_bytes()).collect();
+            len_field(9, &raw, &mut t);
+            t
+        }
+
+        // the LeakyRelu reads the convolution output but an Add sits between them in the node list
+        let mut graph = Vec::new();
+        len_field(1, &node("Conv", &["data", "w1"], "c1", &[("group", 1)]), &mut graph);
+        len_field(1, &node("Add", &["data", "data"], "a1", &[]), &mut graph);
+        len_field(1, &node("LeakyRelu", &["c1"], "l1", &[]), &mut graph);
+        len_field(1, &node("Add", &["l1", "a1"], "a2", &[]), &mut graph);
+        len_field(1, &node("Conv", &["a2", "w2"], "c2", &[("group", 1)]), &mut graph);
+        let mut depth_to_space = node("DepthToSpace", &["c2"], "rgb", &[("blocksize", 2)]);
+        let mut mode = Vec::new();
+        len_field(1, b"mode", &mut mode);
+        len_field(4, b"CRD", &mut mode);
+        varint_field(20, 3, &mut mode);
+        len_field(5, &mode, &mut depth_to_space);
+        len_field(1, &depth_to_space, &mut graph);
+        len_field(5, &tensor("w1", &[4, 4, 1, 1], &[0.1; 16]), &mut graph);
+        len_field(5, &tensor("w2", &[12, 4, 1, 1], &[0.1; 48]), &mut graph);
+        len_field(11, &value_info_bytes("data", 1, &[Ok(1), Ok(4), Ok(8), Ok(8)]), &mut graph);
+        len_field(12, &value_info_bytes("rgb", 1, &[Ok(1), Ok(3), Ok(16), Ok(16)]), &mut graph);
+        let mut ops = Vec::new();
+        len_field(1, b"", &mut ops);
+        varint_field(2, 13, &mut ops);
+        let mut model = Vec::new();
+        varint_field(1, 8, &mut model);
+        len_field(7, &graph, &mut model);
+        len_field(8, &ops, &mut model);
+
+        let net = read_bytes(&model);
+        assert!(net.is_ok(), "an interleaved LeakyRelu model was rejected: {:?}", net.err());
+        let net = net.unwrap();
+        assert_eq!(net.ops().len(), 5, "the LeakyRelu became a separate identity convolution");
+        assert!(
+            matches!(net.ops().first(), Some(crate::net::Op::Conv(c)) if c.leaky == Some(0.01)),
+            "the first convolution does not carry the LeakyRelu: {:?}",
+            net.ops().first()
+        );
     }
 }
