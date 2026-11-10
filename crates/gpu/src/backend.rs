@@ -84,7 +84,8 @@ pub fn default_window_backends(os: &str) -> Backends {
         "windows" => Backends::DX12,
         "macos" | "ios" => Backends::METAL,
         // GL only: a multi-backend set lets wgpu pick Vulkan (e.g. llvmpipe) and the GUI can fail to appear
-        _ => Backends::GL,
+        "linux" => Backends::GL,
+        _ => Backends::PRIMARY,
     }
 }
 
@@ -503,7 +504,9 @@ pub fn window_renderer_order(
         // no Vulkan on Windows: its driver can crash the process uncatchably (issue #136)
         "windows" => vec![Backends::DX12, Backends::GL],
         "macos" | "ios" => vec![Backends::METAL],
-        _ => vec![Backends::GL, Backends::VULKAN],
+        // GL first: a multi-backend set lets wgpu pick Vulkan (e.g. llvmpipe) and the GUI can fail to appear
+        "linux" => vec![Backends::GL, Backends::VULKAN],
+        _ => vec![Backends::PRIMARY],
     };
     let chain = platform.into_iter().map(WindowRenderer::Wgpu).chain([WindowRenderer::Glow]);
     let usable = |r: &WindowRenderer| match r {
@@ -801,6 +804,19 @@ mod tests {
         let automatic = window_renderer_order(None, None, None, "linux", all, true);
         assert_eq!(automatic, [gl, vk, WindowRenderer::Glow]);
         assert_eq!(automatic.first(), Some(&gl));
+    }
+
+    /// Only Linux gets GL alone for the window: other platforms keep the generic default.
+    #[test]
+    fn other_platforms_keep_the_generic_window_default() {
+        let all = Backends::DX12 | Backends::VULKAN | Backends::GL | Backends::METAL;
+        for os in ["android", "freebsd", "openbsd"] {
+            assert_eq!(default_window_backends(os), Backends::PRIMARY, "{os}");
+            assert!(!default_window_backends(os).contains(Backends::GL), "{os}");
+            let order = window_renderer_order(None, None, None, os, all, true);
+            assert_ne!(order.first(), Some(&WindowRenderer::Wgpu(Backends::GL)), "{os}: {order:?}");
+        }
+        assert_eq!(default_window_backends("linux"), Backends::GL);
     }
 
     /// On Linux the window must use GL only: `window_renderer_order` puts GL first, but a
