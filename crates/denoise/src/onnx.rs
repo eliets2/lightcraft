@@ -1,9 +1,9 @@
 //! Reading an `.onnx` file into a [`Net`] with bounded, pure-Rust protobuf decoding.
 //!
-//! Only what the denoise U-Nets are made of is understood: `Conv` (3 × 3 "same" or 1 × 1, stride 1, no groups, no
+ //! Only what the denoise U-Nets are made of is understood: `Conv` (3 × 3 "same" or 1 × 1, stride 1, no groups, no
 //! dilation) optionally followed by `LeakyRelu`, `ConvTranspose` (2 × 2, stride 2) likewise, `MaxPool` (2 × 2, stride 2),
-//! a two-input `Concat` on the channels that feeds a convolution, an `Add` of two same-shape tensors (as a 1 × 1
-//! identity convolution over both sources), a standalone `LeakyRelu` (as a 1 × 1 identity convolution with the
+//! a two-input `Concat` on the channels that feeds a convolution, an `Add` of two same-shape tensors (elementwise),
+//! a standalone `LeakyRelu` (as a 1 × 1 identity convolution with the
 //! activation, when its source has more than one reader), and a final `DepthToSpace` (2, `CRD`). Any other
 //! operator or attribute is [`NetError::Unsupported`], which is reported to the user by both runners.
 
@@ -229,9 +229,9 @@ fn read_bytes(bytes: &[u8]) -> Result<Net, NetError> {
                 let out = node.output.first().ok_or_else(|| NetError::Invalid("Add without an output".into()))?;
                 let (ca, la) = shapes.get(src).copied().ok_or_else(|| NetError::Invalid("Add reads a tensor with no shape".into()))?;
                 let (cb, lb) = shapes.get(src2).copied().ok_or_else(|| NetError::Invalid("Add reads a tensor with no shape".into()))?;
-                // same-shape addition as a 1x1 identity convolution over both sources (src2 channels follow src's):
-                // O(C^2) per pixel where elementwise addition is O(C). initializer broadcast is not a residual
-                // connection, reject it.
+                // elementwise addition of two same-shape tensors; initializer broadcast is not a residual
+                // connection, reject it. No dense weights are stored: the logical dense size is counted
+                // toward MAX_WEIGHTS so excessive wide Adds are still rejected without allocating O(C^2).
                 if ca != cb || la != lb {
                     return unsupported("Add of tensors of different shapes");
                 }
@@ -246,18 +246,9 @@ fn read_bytes(bytes: &[u8]) -> Result<Net, NetError> {
                 if weights_total > MAX_WEIGHTS {
                     return invalid("the network has too many weights");
                 }
-                let mut weight = vec![0.0f32; nn];
-                for c in 0..ca {
-                    if let Some(w) = weight.get_mut(c * ca * 2 + c) {
-                        *w = 1.0;
-                    }
-                    if let Some(w) = weight.get_mut(c * ca * 2 + ca + c) {
-                        *w = 1.0;
-                    }
-                }
                 ids.insert(out.clone(), this);
                 shapes.push((ca, la));
-                ops.push(Op::Conv(Conv { src, src2: Some(src2), cin: ca * 2, cout: ca, k: 1, weight, bias: vec![0.0; ca], leaky: None }));
+                ops.push(Op::Add { src, src2 });
             }
             "LeakyRelu" => {
                 let [a] = node.input.as_slice() else { return invalid("malformed LeakyRelu") };
@@ -597,14 +588,8 @@ mod tests {
             model
         }
 
-        let concat_model = model(
-            &[
-                node("Concat", &["data", "data"], "joined", &[("axis", 1)]),
-                node("Add", &["joined", "data"], "a1", &[]),
-            ],
-            4,
-            "a1",
-        );
+        let concat_model =
+            model(&[node("Concat", &["data", "data"], "joined", &[("axis", 1)]), node("Add", &["joined", "data"], "a1", &[])], 4, "a1");
         assert!(matches!(read_bytes(&concat_model), Err(NetError::Unsupported(_))));
 
         let oversized_model = model(&[node("Add", &["data", "data"], "a1", &[])], 4097, "a1");

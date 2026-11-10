@@ -72,6 +72,11 @@ pub enum Op {
     DepthToSpace2 {
         src: TensorId,
     },
+    /// Elementwise addition of two same-shape tensors.
+    Add {
+        src: TensorId,
+        src2: TensorId,
+    },
 }
 
 /// What a tensor looks like: its channels, and its resolution as a power of two below the input's (a negative
@@ -157,6 +162,26 @@ impl Net {
                     }
                     Shape { channels: a.channels / 4, level: a.level - 1 }
                 }
+                Op::Add { src, src2 } => {
+                    let a = shape_of(*src)?;
+                    let b = shape_of(*src2)?;
+                    if a.channels != b.channels || a.level != b.level {
+                        return invalid(format!("layer {i} adds tensors of different shapes"));
+                    }
+                    if a.channels == 0 || a.channels > MAX_CHANNELS {
+                        return invalid(format!("layer {i}: an add of {} channels does not fit", a.channels));
+                    }
+                    let logical = a
+                        .channels
+                        .checked_mul(a.channels)
+                        .and_then(|n| n.checked_mul(2))
+                        .ok_or_else(|| NetError::Invalid(format!("layer {i}: add channel count overflows")))?;
+                    weights = weights.saturating_add(logical).saturating_add(a.channels);
+                    if weights > MAX_WEIGHTS {
+                        return invalid("the network has too many weights");
+                    }
+                    Shape { channels: a.channels, level: a.level }
+                }
             };
             shapes.push(out);
         }
@@ -213,6 +238,7 @@ impl Net {
                     Op::Conv(c) => out.saturating_mul((c.cin * c.cout * c.k * c.k) as u64),
                     // every input pixel makes a 2 × 2 block: as many multiply-adds as the 2 × 2-wide kernel has weights
                     Op::ConvT2(c) => pixels(self.shapes.get(c.src).map_or(0, |s| s.level)).saturating_mul((c.cin * c.cout * 4) as u64),
+                    Op::Add { src, .. } => out.saturating_mul(self.shapes.get(*src).map_or(0, |s| s.channels) as u64),
                     _ => 0,
                 }
             })

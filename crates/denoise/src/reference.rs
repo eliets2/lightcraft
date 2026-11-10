@@ -52,7 +52,13 @@ pub fn run(net: &Net, tile: usize, input: &[f32]) -> Result<Vec<f32>, NetError> 
     };
     for op in net.ops() {
         let out = match op {
-            Op::Conv(c) => {
+                    Op::Add { src, src2 } => {
+                        let a = &tensors[*src];
+                        let b = &tensors[*src2];
+                        let data: Vec<f32> = a.data.iter().zip(&b.data).map(|(a, b)| a + b).collect();
+                        T { channels: a.channels, side: a.side, data }
+                    }
+                    Op::Conv(c) => {
                 let a = get(&tensors, c.src)?;
                 let b = c.src2.map(|s| get(&tensors, s)).transpose()?;
                 let side = tensors[a].side;

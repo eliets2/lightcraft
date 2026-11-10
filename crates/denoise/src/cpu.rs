@@ -35,6 +35,7 @@ fn sources(op: &Op) -> (usize, Option<usize>) {
     match op {
         Op::Conv(c) => (c.src, c.src2),
         Op::ConvT2(c) => (c.src, None),
+        Op::Add { src, src2 } => (*src, Some(*src2)),
         Op::MaxPool2 { src } | Op::DepthToSpace2 { src } => (*src, None),
     }
 }
@@ -99,6 +100,14 @@ impl NetRunner {
                         return Err(bad("a join has different sizes"));
                     }
                     (c.cout, a.side)
+                }
+                Op::Add { .. } => {
+                    if let Some(s) = src2
+                        && tensors.get(s).is_none_or(|b| b.side != a.side || b.channels != a.channels)
+                    {
+                        return Err(bad("an add has different sizes"));
+                    }
+                    (a.channels, a.side)
                 }
                 Op::ConvT2(c) => (c.cout, a.side.checked_mul(2).ok_or_else(|| bad("size overflow"))?),
                 Op::MaxPool2 { .. } => {
@@ -206,6 +215,7 @@ impl NetRunner {
             let dest = dest.get_mut(..count(out.channels, out.side)?).ok_or_else(|| bad("short output buffer"))?;
             match op {
                 Op::Conv(c) => conv(c, a, b, shape.side, dest, &mut w.lower, &mut w.product)?,
+                Op::Add { .. } => add(a, b, dest)?,
                 Op::ConvT2(c) => up(
                     c,
                     a,
@@ -345,6 +355,16 @@ fn up(c: &crate::net::ConvT2, a: &[f32], side: usize, dest: &mut [f32], weights:
                 }
             }
         }
+    }
+    Ok(())
+}
+fn add(a: &[f32], b: Option<&[f32]>, dest: &mut [f32]) -> Result<()> {
+    let b = b.ok_or_else(|| bad("an add needs two sources"))?;
+    if a.len() != dest.len() || b.len() != dest.len() {
+        return Err(bad("an add has mismatched sizes"));
+    }
+    for (d, (&x, &y)) in dest.iter_mut().zip(a.iter().zip(b.iter())) {
+        *d = x + y;
     }
     Ok(())
 }
