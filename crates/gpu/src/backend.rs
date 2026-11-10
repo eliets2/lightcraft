@@ -5,7 +5,7 @@
 //! adapters, even when it then picks another one: with Vulkan in the set, a broken Vulkan driver
 //! can crash the process (an access violation inside the driver DLL, which nothing can catch)
 //! although DX12 would have been used. So Windows defaults to DX12 alone. macOS uses Metal,
-//! Linux GL for the window (eframe's default); compute may still use Vulkan.
+//! Linux uses GL alone for the window (Vulkan only when asked for); compute may still use Vulkan.
 //!
 //! Overrides, read once per process:
 //! - `LIGHTCRAFT_GPU_BACKEND` = `dx12` | `vulkan` | `metal` | `gl` (comma lists allowed), `auto`
@@ -82,8 +82,10 @@ pub fn default_window_backends(os: &str) -> Backends {
     match os {
         "windows" => Backends::DX12,
         "macos" | "ios" => Backends::METAL,
-        // eframe's default (GL only when the build has it)
-        _ => Backends::GL,
+        // GL only: a Vulkan set can select the software rasterizer and the GUI never appears
+        "linux" => Backends::GL,
+        // other platforms keep the previous default (eframe's: Vulkan-capable plus GL)
+        _ => Backends::PRIMARY | Backends::GL,
     }
 }
 
@@ -494,7 +496,8 @@ pub fn window_renderer_order(
         // no Vulkan on Windows: its driver can crash the process uncatchably (issue #136)
         "windows" => vec![Backends::DX12, Backends::GL],
         "macos" | "ios" => vec![Backends::METAL],
-        _ => vec![Backends::GL],
+        "linux" => vec![Backends::GL],
+        _ => vec![Backends::VULKAN, Backends::GL],
     };
     let chain = platform.into_iter().map(WindowRenderer::Wgpu).chain([WindowRenderer::Glow]);
     let usable = |r: &WindowRenderer| match r {
@@ -502,10 +505,10 @@ pub fn window_renderer_order(
         WindowRenderer::Wgpu(b) => !b.is_empty() && compiled.contains(*b),
     };
     let not_failed = |r: &WindowRenderer| Some(*r) != failed;
-    // On Windows the Vulkan driver is loaded only when the environment asks for it (the forced
-    // renderer): a broken one crashes the process uncatchably (issue #136). So neither the
+    // On Windows and Linux the Vulkan driver is loaded only when the environment asks for it (the
+    // forced renderer): a broken one crashes the process uncatchably (issue #136). So neither the
     // renderer remembered from the last run nor the one the last start died in can bring it back.
-    let no_vulkan = |r: &WindowRenderer| os != "windows" || !matches!(r, WindowRenderer::Wgpu(b) if b.contains(Backends::VULKAN));
+    let no_vulkan = |r: &WindowRenderer| !matches!(os, "windows" | "linux") || !matches!(r, WindowRenderer::Wgpu(b) if b.contains(Backends::VULKAN));
     let candidates = forced
         .into_iter()
         .chain(remembered.filter(|r| not_failed(r) && no_vulkan(r)))
@@ -794,6 +797,36 @@ mod tests {
         let automatic = window_renderer_order(None, None, None, "linux", all, true);
         assert!(!automatic.contains(&vk), "the automatic Linux chain must not contain Vulkan: {automatic:?}");
         assert_eq!(automatic.first(), Some(&gl));
+    }
+
+    /// Linux: a Vulkan renderer remembered or left behind as failed never comes back on its own,
+    /// only when the environment forces it.
+    #[test]
+    fn linux_failed_or_remembered_vulkan_is_not_retried() {
+        let all = Backends::DX12 | Backends::VULKAN | Backends::GL | Backends::METAL;
+        let vk = WindowRenderer::Wgpu(Backends::VULKAN);
+        let gl = WindowRenderer::Wgpu(Backends::GL);
+        let from_memory = window_renderer_order(None, Some(vk), None, "linux", all, true);
+        assert!(!from_memory.contains(&vk), "remembered Vulkan on Linux: {from_memory:?}");
+        let after_crash = window_renderer_order(None, None, Some(vk), "linux", all, true);
+        assert!(!after_crash.contains(&vk), "failed Vulkan on Linux: {after_crash:?}");
+        assert_eq!(after_crash.first(), Some(&gl));
+        let forced = window_renderer_order(Some(vk), None, None, "linux", all, true);
+        assert_eq!(forced.first(), Some(&vk), "an environment-forced Vulkan still wins: {forced:?}");
+    }
+
+    /// Regression control: platforms other than Windows, macOS and Linux keep the previous
+    /// policy, Vulkan first with GL behind it, and keep Vulkan in the default set.
+    #[test]
+    fn other_platforms_keep_vulkan_fallback() {
+        let all = Backends::DX12 | Backends::VULKAN | Backends::GL | Backends::METAL;
+        let vk = WindowRenderer::Wgpu(Backends::VULKAN);
+        let gl = WindowRenderer::Wgpu(Backends::GL);
+        let default = default_window_backends("freebsd");
+        assert!(default.contains(Backends::VULKAN | Backends::GL), "freebsd default: {default:?}");
+        let automatic = window_renderer_order(None, None, None, "freebsd", all, true);
+        assert_eq!(automatic.first(), Some(&vk), "freebsd chain: {automatic:?}");
+        assert!(automatic.contains(&gl));
     }
 
     #[test]
