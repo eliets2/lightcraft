@@ -282,6 +282,8 @@ pub struct LayoutImage {
     pub opacity: f32,
     /// How dark the photo is outside the graphic's box, 0..=1 (0: not darkened).
     pub matte: f32,
+    /// The loupe grid over the photo (View ▸ Loupe Overlay ▸ Grid).
+    pub loupe_grid: LoupeGrid,
     /// Bumped by each Choose Layout Image…, so choosing the same file again reads it again (after
     /// it was edited elsewhere).
     #[serde(skip)]
@@ -290,7 +292,7 @@ pub struct LayoutImage {
 
 impl Default for LayoutImage {
     fn default() -> Self {
-        LayoutImage { path: String::new(), show: false, opacity: 1.0, matte: 0.0, revision: 0 }
+        LayoutImage { path: String::new(), show: false, opacity: 1.0, matte: 0.0, loupe_grid: LoupeGrid::default(), revision: 0 }
     }
 }
 
@@ -298,6 +300,15 @@ impl LayoutImage {
     /// The opacity and matte steps View ▸ Loupe Overlay offers.
     pub const OPACITY_STEPS: [f32; 4] = [0.25, 0.5, 0.75, 1.0];
     pub const MATTE_STEPS: [f32; 4] = [0.0, 0.25, 0.5, 0.75];
+}
+
+/// View ▸ Loupe Overlay ▸ Grid: evenly spaced lines over the photo in the loupe, to judge
+/// alignment and straightness. The lines stay inside the photo and follow its zoom and pan.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LoupeGrid {
+    /// Shown over the photo.
+    pub show: bool,
 }
 
 /// Lights Out (View ▸ Lights Out, Shift+L cycles On → Dim → Off → On; Esc turns the lights back
