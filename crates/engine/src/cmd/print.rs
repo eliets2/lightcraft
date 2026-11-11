@@ -7,7 +7,7 @@
 //!
 //! * `print.get`, `print.set {layout?, image?, page?, guides?, job?}`, `print.reset`
 //! * `print.cell.add|move|resize|delete|stack|photo|page`, `print.layout.autoLayout|newPage|clear`
-//! * `print.exportPdf {path, ids?}`
+//! * `print.exportPdf {path, ids?}`, `print.exportJpeg {path, ids?}`
 //! * `print.template.list|save|apply|delete`, `print.template.export|import` (`.lcprint` files)
 use serde_json::{Value, json};
 
@@ -267,7 +267,75 @@ fn export_pdf(s: &mut Session, p: &Value) -> Result<Value> {
     Ok(json!({"path": path, "pages": pages.len(), "photos": ids.len(), "bytes": bytes.len()}))
 }
 
-// ---- templates ------------------------------------------------------------------------------
+/// JPEG quality for printed pages (1..=100).
+const JPEG_QUALITY: u8 = 92;
+
+/// `print.exportJpeg`: composes the pages like `print.exportPdf` and writes every page as its own
+/// JPEG — `path` for page 1, `path-N.jpg` (extension `.jpg` when `path` has none) for page N.
+fn export_jpeg(s: &mut Session, p: &Value) -> Result<Value> {
+    const ID: &str = "print.exportJpeg";
+    let path = p.get("path").and_then(Value::as_str).filter(|s| !s.trim().is_empty()).ok_or_else(|| bad(ID, "missing path"))?;
+    if let Some(k) = p.as_object().and_then(|o| o.keys().find(|k| !matches!(k.as_str(), "path" | "ids" | "id"))) {
+        return Err(bad(ID, format!("unknown parameter `{k}` (one of path, ids; change the print with print.set)")));
+    }
+    if p.get("ids").is_some_and(|v| v.as_array().is_none_or(|a| a.iter().any(|v| v.as_u64().is_none()))) {
+        return Err(bad(ID, "ids must be an array of photo ids"));
+    }
+    if p.get("id").is_some_and(|v| v.as_u64().is_none()) {
+        return Err(bad(ID, "id must be a photo id"));
+    }
+    s.check_write_target(path).map_err(|e| bad(ID, e))?;
+    let ids = s.targets(p)?;
+    let settings = s.print.clone();
+    // a printer profile that can't be used fails the print before anything renders
+    crate::print_color::PrintColorJob::new(&settings.job.color).map_err(|e| bad(ID, e))?;
+    let work = crate::print::compose::prepare(s, &settings, &ids).map_err(|e| bad(ID, e))?;
+    let total = work.len() as u64;
+    let row = s.activity.start("export", "Printing to JPEG", crate::activity::Cancel::No);
+    row.progress(0, total);
+    let pages = work
+        .run(&mut |done, name| {
+            row.progress(done as u64, total);
+            row.detail(name);
+            true
+        })
+        .map_err(|e| bad(ID, e))?;
+    let mut bytes = 0usize;
+    for (index, page) in pages.iter().enumerate() {
+        let image = crate::print::output::page_to_srgb8(page).map_err(|e| bad(ID, e))?;
+        let jpeg = lightcraft_codecs::encode_jpeg(
+            &lightcraft_codecs::EncodeImage::rgba8(&image),
+            JPEG_QUALITY,
+            lightcraft_codecs::ChromaSubsampling::S444,
+            &lightcraft_codecs::EncodeMeta::default(),
+        )
+        .map_err(|e| bad(ID, e.to_string()))?;
+        let page_path = page_path(path, index + 1);
+        s.check_write_target(&page_path).map_err(|e| bad(ID, e))?;
+        crate::export::write_file(&page_path, &jpeg).map_err(|e| bad(ID, e))?;
+        bytes = bytes.saturating_add(jpeg.len());
+    }
+    Ok(json!({"path": path, "pages": pages.len(), "photos": ids.len(), "bytes": bytes}))
+}
+
+/// The destination of page `n` (1-based): `path` itself for page 1, otherwise `path` with `-n`
+/// inserted before the extension.
+fn page_path(path: &str, page: usize) -> String {
+    if page == 1 {
+        return path.to_string();
+    }
+    let p = std::path::Path::new(path);
+    let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or("print");
+    let ext = p.extension().and_then(|s| s.to_str()).unwrap_or("jpg");
+    let mut out = std::path::PathBuf::new();
+    if let Some(d) = p.parent() {
+        out.push(d);
+    }
+    out.push(format!("{stem}-{page}.{ext}"));
+    out.to_string_lossy().to_string()
+}
+
+// ---- templates ---------------------------------------------------------------------------------
 
 fn template_list(s: &Session) -> Value {
     json!({"templates": s.print_templates.iter().map(|t| json!({"name": t.name, "style": t.settings.pointer("/layout/style"), "settings": t.settings})).collect::<Vec<_>>()})
@@ -405,6 +473,9 @@ pub fn specs() -> Vec<CommandSpec> {
         cmd!(query "print.exportPdf", "Print to PDF", [], None,
             "{path, ids?: photo ids (default selection)} → {path, pages, photos, bytes}; prints the current print.get settings; replaces an existing output, never an original",
             always, export_pdf),
+        cmd!(query "print.exportJpeg", "Print to JPEG", [], None,
+            "{path, ids?: photo ids (default selection)} → {path, pages, photos, bytes}; prints every page as its own JPEG at `path` (page N: `path-N.jpg`); prints the current print.get settings; replaces an existing output, never an original",
+            always, export_jpeg),
         cmd!(query "print.template.list", "Print Templates", [], None, "{} → {templates: [{name, style, settings}]}", always, |s, _| Ok(template_list(s))),
         cmd!(query "print.template.save", "Save Print Template", [], None,
             "{name} — saves the layout, image settings, page and job (not the cells' photos or the guides); an existing name (any case) is replaced → print.template.list",
