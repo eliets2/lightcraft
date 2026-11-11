@@ -981,27 +981,38 @@ pub struct SidecarSaved {
 }
 
 /// The new contents for the sidecar at `path`: `fresh` merged into the existing file, if any.
-/// Returns (contents, merged, backup).
-fn sidecar_contents(path: &Path, fresh: String, stamp: &str) -> std::io::Result<(String, bool, Option<PathBuf>)> {
+/// Returns (contents, merged, backup, previous_develop_settings).
+fn sidecar_contents(path: &Path, fresh: String, stamp: &str) -> std::io::Result<(String, bool, Option<PathBuf>, Option<DevelopSettings>)> {
     let bytes = match std::fs::read(path) {
         Ok(b) => b,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok((fresh, false, None)),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok((fresh, false, None, None)),
         // can't see what is there: never overwrite it blindly
         Err(e) => return Err(e),
     };
     if bytes.iter().all(u8::is_ascii_whitespace) {
-        return Ok((fresh, false, None));
+        return Ok((fresh, false, None, None));
     }
+    let old_xmp = match std::str::from_utf8(&bytes) {
+        Ok(s) => s,
+        Err(_) => {
+            let b = backup(path, stamp)?;
+            log::warn!("{}: not readable as UTF-8; kept a copy as {} before replacing it", path.display(), b.display());
+            return Ok((fresh, false, Some(b), None));
+        }
+    };
+    // Extract previous lc:settings from the old sidecar before merging
+    let previous_develop = lightcraft_meta::parse_xmp(old_xmp)
+        .ok()
+        .and_then(|d| d.lc_settings)
+        .and_then(|j| serde_json::from_str::<Value>(&j).ok())
+        .and_then(|v| DevelopSettings::from_untrusted_json(&v).ok());
     let rules = lightcraft_meta::MergeRules { owned: OWNED, owned_if_present: OWNED_IF_STATED };
-    match std::str::from_utf8(&bytes)
-        .map_err(|e| e.to_string())
-        .and_then(|old| lightcraft_meta::merge_xmp(old, &fresh, rules).map_err(|e| e.to_string()))
-    {
-        Ok(merged) => Ok((merged, true, None)),
+    match lightcraft_meta::merge_xmp(old_xmp, &fresh, rules).map_err(|e| e.to_string()) {
+        Ok(merged) => Ok((merged, true, None, previous_develop)),
         Err(why) => {
             let b = backup(path, stamp)?;
             log::warn!("{}: not readable as XMP ({why}); kept a copy as {} before replacing it", path.display(), b.display());
-            Ok((fresh, false, Some(b)))
+            Ok((fresh, false, Some(b), None))
         }
     }
 }
@@ -1363,32 +1374,16 @@ impl Session {
         self.validate_sidecar_packets_for_paths(std::slice::from_ref(&path), &crate::rename::RealFs)?;
         let p = self.catalog.photo(id).ok_or(lightcraft_catalog::CatalogError::NoPhoto(id))?;
         let err = |e: std::io::Error| EngineError::Other(format!("{}: {e}", path.display()));
-        let (mut data, merged, backup) = sidecar_contents(&path, sidecar_packet(p, &self.catalog), &(self.clock)()).map_err(err)?;
+        let (mut data, merged, backup, previous_develop) = sidecar_contents(&path, sidecar_packet(p, &self.catalog), &(self.clock)()).map_err(err)?;
         // Write the develop settings other applications understand as `crs:` fields back into
         // their existing block, updating it in place so the next read from that application
         // sees our edit instead of preferring our `lc:settings` over its stale `crs:` values
         // (issue #934). Fields we don't state are left as the other application wrote them.
         if self.xmp.write_crs {
-            // Parse the previous develop settings from the existing sidecar's `lc:settings` (if any)
-            // to compute which `crs:` fields actually changed.
-            let previous = if merged {
-                // The sidecar was merged, so `data` now contains the merged packet with our new `lc:settings`.
-                // We need the *old* sidecar's `lc:settings` before the merge. Read it from the backup if we made one,
-                // or re-read the original file before it was merged (not available here). For simplicity, parse from
-                // the merged data's `lc:settings` would give the new settings, not the old. Instead, we read the
-                // original file again if it wasn't backed up, but that's racy. The practical approach: when merging,
-                // the old `lc:settings` is lost in `data`. We approximate by reading the file before merge in
-                // `sidecar_contents`, but that requires a signature change. For now, only write `crs:` on non-merged
-                // saves (new sidecar) or when we have a backup (unreadable sidecar replaced). On merged saves, skip
-                // `crs:` writes to avoid overwriting foreign values with stale data. This is safe because merged
-                // saves happen on explicit user saves, not auto-writes.
-                None
-            } else {
-                // New sidecar or replaced unreadable sidecar: no previous `lc:settings` to compare against.
-                // Write all non-zero fields (matching the documented behavior for fresh sidecars).
-                None
-            };
-            let crs = crate::crs::crs_settings(&*p.develop, previous);
+            // Use the previous develop settings extracted from the old sidecar (if any) to compute
+            // which `crs:` fields actually changed. For merged saves, `previous_develop` contains the
+            // old `lc:settings`; for new/replaced sidecars it is `None`.
+            let crs = crate::crs::crs_settings(&*p.develop, previous_develop.as_ref());
             if !crs.is_empty() {
                 // Write the develop settings other applications understand as `crs:` attributes back
                 // into the packet, updating them in place so the edit reaches the other application

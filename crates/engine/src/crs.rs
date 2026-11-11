@@ -624,7 +624,7 @@ pub fn crs_settings(settings: &DevelopSettings, previous: Option<&DevelopSetting
         ("GrainSize", grain.size, prev_grain.map(|g| g.size)),
         ("GrainFrequency", grain.roughness, prev_grain.map(|g| g.roughness)),
         // Optics (manual corrections; lens profiles are ours, only the switch carries over)
-        ("AutoLateralCA", optics.remove_ca, prev_optics.map(|o| o.remove_ca)),
+        ("AutoLateralCA", if optics.remove_ca { 1.0 } else { 0.0 }, prev_optics.map(|o| if o.remove_ca { 1.0 } else { 0.0 })),
         ("LensManualDistortionAmount", optics.distortion, prev_optics.map(|o| o.distortion)),
         ("VignetteAmount", optics.vignetting, prev_optics.map(|o| o.vignetting)),
         ("VignetteMidpoint", optics.vignetting_midpoint, prev_optics.map(|o| o.vignetting_midpoint)),
