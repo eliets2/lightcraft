@@ -954,16 +954,20 @@ fn loupe_request_job(
 ) -> lightcraft_engine::media::RenderJob {
     // editing: the photo is rendered from its source, which stays decoded for the first slider
     // draft (a cached view render would show at once but leave the source unread until then)
-    // an explicit Preview size asks for that source edge: a kept view of a smaller render would
-    // be taken for it, since the display fit accepts any view that covers the drawn size
-    if prep_mode(app) == lightcraft_engine::prep::Mode::Develop || app.ui.settings.preview_limit != 0 {
+    if prep_mode(app) == lightcraft_engine::prep::Mode::Develop {
         job.view_cache = None;
     }
+    // an explicit Preview size keeps a sufficiently sized cached view: the display fit accepts any
+    // view that covers the drawn size, and an undersized one is rejected below instead of throwing
+    // the whole cache away. The render is still written back to the view cache.
     let job = if interacting { job.draft() } else { job };
     // at rest the render is shrunk to exactly the size it is drawn at with a Lanczos filter on
     // the worker, so the window draws it texel for texel instead of shrinking it with 2-tap
     // sampling (the render is up to a 64 px step larger, or the preview level)
     let mut job = if interacting { job } else { job.with_display_fit(fit_px[0], fit_px[1]) };
+    // the cache policy (Automatic vs an explicit Preview size) is part of the job's identity:
+    // switching between them must not leave a softer retained texture in place
+    job.key ^= (app.ui.settings.preview_limit as u64).wrapping_mul(0x9e37_79b9_7f4a_7c15);
     // Only reject undersized cached views when an explicit preview limit is set.
     // In Automatic mode (preview_limit == 0), the display-fit shortcut should still
     // allow a smaller cached view to satisfy the request, as the engine's fit_cached
@@ -1577,9 +1581,10 @@ mod tests {
     }
 
     /// The loupe at rest with an explicit Preview size, on a warmed view cache built at that size:
-    /// the cache is not kept for the request, so the render comes from the source at the edge asked for.
+    /// a sufficiently sized cached view is reused instead of rendering from the source again, and
+    /// the result is still written back to the view cache.
     #[test]
-    fn explicit_preview_limit_does_not_reuse_warmed_view_cache() {
+    fn explicit_preview_limit_reuses_a_sufficiently_large_warmed_view_cache() {
         use super::loupe_request_job;
         let mut app = crate::LightcraftApp::new(lightcraft_engine::Session::with_demo(), crate::Services::default());
         // not the Develop panels, where the view cache is dropped anyway
@@ -1590,6 +1595,23 @@ mod tests {
         let job = app.session.loupe_job(id, 3840, 3840, true).unwrap();
         assert!(job.cached_view().is_some(), "the warmed 3840 view cache is present before the request");
         let job = loupe_request_job(&app, job, false, [1920, 1920]);
-        assert!(job.cached_view().is_none(), "a warmed view cache must not be reused for an explicit Preview size at rest");
+        assert!(job.cached_view().is_some(), "a sufficiently large warmed view cache is reused for an explicit Preview size at rest");
+    }
+
+    /// The preview cache policy (Automatic vs an explicit Preview size) is part of the loupe job's
+    /// identity: two requests for the same size under different policies get different keys, so
+    /// `Renderer::request` does not keep a texture rendered under the old policy when the policy changes.
+    #[test]
+    fn a_preview_limit_change_gives_the_loupe_job_a_new_identity() {
+        use super::loupe_request_job;
+        let mut app = crate::LightcraftApp::new(lightcraft_engine::Session::with_demo(), crate::Services::default());
+        app.ui.right = crate::state::RightPanel::None;
+        let id = app.session.active().unwrap();
+        app.session.execute("library.buildPreviews", &serde_json::json!({"ids": [id.0], "edge": 3840, "wait": true})).unwrap();
+        let base = app.session.loupe_job(id, 3840, 3840, true).unwrap();
+        let automatic = loupe_request_job(&app, base.clone(), false, [1920, 1920]).key;
+        app.ui.settings.preview_limit = 3840;
+        let explicit = loupe_request_job(&app, base, false, [1920, 1920]).key;
+        assert_ne!(automatic, explicit, "the cache policy is part of the job identity");
     }
 }
