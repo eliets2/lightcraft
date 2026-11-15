@@ -330,3 +330,35 @@ fn import_button_describes_its_shortcut_as_this_platform_writes_it() {
     let help = lightcraft_ui_egui::menubar::shortcut_text(sc, mac);
     assert!(button_described(&h, "Import Photos…", &help), "a button named \"Import Photos…\" describing {help:?}");
 }
+
+
+#[cfg(test)]
+mod tests {
+    /// Holding H toggles the mask pins once: `matches` ignores `repeat`, so a held H key
+    /// reports as pressed on every repeat frame and `h_press` toggles `view.maskPins`
+    /// repeatedly while H is held. Only the non-repeat press may toggle.
+    #[test]
+    fn holding_h_toggles_mask_pins_only_once() {
+        let mut h = super::harness(
+            lightcraft_ui_egui::state::ViewMode::Detail,
+            lightcraft_ui_egui::state::RightPanel::Masking,
+        );
+        assert!(h.state().ui.mask_pins, "mask pins start on");
+        // the first press is not a repeat: it toggles the pins off
+        h.key_press(egui::Key::H);
+        h.run_steps(1);
+        assert!(!h.state().ui.mask_pins, "H hides the pins");
+        // repeats of the held key must not toggle again
+        for _ in 0..3 {
+            h.event(egui::Event::Key {
+                key: egui::Key::H,
+                physical_key: None,
+                pressed: true,
+                repeat: true,
+                modifiers: egui::Modifiers::NONE,
+            });
+            h.run_steps(1);
+        }
+        assert!(!h.state().ui.mask_pins, "held H toggles the pins only once");
+    }
+}

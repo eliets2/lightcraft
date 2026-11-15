@@ -2,6 +2,7 @@
 //! Keyboard Shortcuts, `app.setShortcut`) and dispatch UI and engine commands.
 
 use std::collections::BTreeMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::OnceLock;
 
 use egui::{Key, Modifiers};
@@ -293,7 +294,7 @@ fn matches(i: &egui::InputState, m: Modifiers, k: Key) -> bool {
     let clipboard = if i.modifiers.command { i.modifiers } else { Modifiers::COMMAND };
     i.events.iter().any(|e| {
         let (key, physical_key, modifiers) = match e {
-            egui::Event::Key { key, physical_key, pressed: true, modifiers, .. } => (key, physical_key, modifiers),
+            egui::Event::Key { key, physical_key, pressed: true, repeat: false, modifiers, .. } => (key, physical_key, modifiers),
             egui::Event::Copy => (&Key::C, &None, &clipboard),
             egui::Event::Cut => (&Key::X, &None, &clipboard),
             egui::Event::Paste(_) => (&Key::V, &None, &clipboard),
@@ -410,6 +411,10 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context) {
     }
 }
 
+/// Whether an unmodified H key was pressed on the previous frame, so holding H only toggles the
+/// mask pins once instead of on every repeat frame.
+static H_WAS_PRESSED: AtomicBool = AtomicBool::new(false);
+
 /// The keys pressed this frame: the commands to fire, the aliases (command and params) to run, and
 /// whether an unmodified H that no keymap assignment has claimed was pressed (the Masking panel's
 /// pin toggle, see `handle`).
@@ -474,7 +479,20 @@ fn pressed_commands(app: &LightcraftApp, ctx: &egui::Context) -> (Vec<String>, V
             }
         }
         fixed_photo_keys(i, &native, &taken, grid_navigation, &mut fire);
-        h_press = matches(i, Modifiers::NONE, Key::H) && !native("H") && !taken.contains(&(Modifiers::NONE, Key::H));
+        // Only a non-repeat press of an unclaimed H toggles the mask pins: a held
+        // key repeats every frame and must not toggle the pins again.
+        let h_pressed_now = i.events.iter().any(|e| matches!(e, egui::Event::Key { key: Key::H, pressed: true, repeat: false, modifiers, .. } if *modifiers == Modifiers::NONE));
+        // Remember whether H was pressed so a held key only toggles once, not every repeat frame.
+        // Only a release clears it: an empty frame between the press and a repeat must not
+        // re-arm the toggle, or the repeat (seen as a fresh press) toggles the pins again.
+        let h_released = i.events.iter().any(|e| matches!(e, egui::Event::Key { key: Key::H, pressed: false, .. }));
+        let h_pressed_was = H_WAS_PRESSED.load(Ordering::Relaxed);
+        if h_released {
+            H_WAS_PRESSED.store(false, Ordering::Relaxed);
+        } else if h_pressed_now {
+            H_WAS_PRESSED.store(true, Ordering::Relaxed);
+        }
+        h_press = h_pressed_now && !h_pressed_was && !h_released && !native("H") && !taken.contains(&(Modifiers::NONE, Key::H));
     });
     (fire, aliased, h_press)
 }
