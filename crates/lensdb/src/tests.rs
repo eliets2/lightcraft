@@ -243,3 +243,41 @@ fn tokens_split_names_like_exif_writes_them() {
     assert_eq!(tokens("FE 24-105mm F4.0 G OSS"), ["fe", "24", "105", "mm", "f", "4", "g", "oss"]);
     assert_eq!(tokens("f/2.8"), ["f", "2.8"]);
 }
+
+#[test]
+fn teleconverter_combo_does_not_inherit_base_profile() {
+    // The database has only the bare 400 mm profile. A teleconverter combo is a
+    // different optical system, so find_lens must not return the base profile --
+    // not even when the converter is a digit-free suffix such as "Z TC".
+    let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<lensdatabase version="2">
+  <lens>
+    <maker>Nikon</maker>
+    <model>NIKKOR Z 400mm f/4.5 VR S</model>
+    <mount>Z</mount>
+    <calibration>
+      <distortion model="poly3" focal="400" k1="0.001" />
+    </calibration>
+  </lens>
+</lensdatabase>"#;
+    let db = LensDb::parse(xml).unwrap();
+    assert!(
+        db.find_lens(Some("Nikon"), "NIKKOR Z 400mm f/4.5 VR S", None)
+            .is_some(),
+        "the base profile matches its own name",
+    );
+    // A digit-free teleconverter suffix wrongly inherits the 400 mm profile today:
+    // name_score finds every base-profile number token present and scores 0.78.
+    assert!(
+        db.find_lens(Some("Nikon"), "NIKKOR Z 400mm f/4.5 VR S Z TC", None)
+            .is_none(),
+        "teleconverter combos do not inherit the base profile",
+    );
+    // A converter factor ("1.4") is a numeric token the base profile lacks, so the
+    // combo matches nothing today either.
+    assert!(
+        db.find_lens(Some("Nikon"), "NIKKOR Z 400mm f/4.5 VR S Z TC-1.4x", None)
+            .is_none(),
+        "teleconverter combos do not inherit the base profile",
+    );
+}
