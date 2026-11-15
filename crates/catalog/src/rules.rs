@@ -651,6 +651,21 @@ pub fn field_kind(field: &str) -> Option<Kind> {
     FIELDS.iter().find(|f| f.0 == field).map(|f| f.2)
 }
 
+/// The range and step for a number field's value in the editor: (lowest, highest, step).
+/// Exposure bias is in EV and can be negative, so its range starts below zero; the other
+/// number fields are counts, sizes or non-negative measurements.
+pub fn number_range(field: &str) -> (f64, f64, f64) {
+    match field {
+        "rating" => (0.0, 5.0, 0.05),
+        "iso" => (0.0, 409_600.0, 10.0),
+        "aperture" => (0.0, 64.0, 0.05),
+        "keywordCount" | "personCount" => (0.0, 1000.0, 0.05),
+        "longEdge" | "shortEdge" => (0.0, 100_000.0, 10.0),
+        "exposureBias" => (-10.0, 10.0, 0.05),
+        _ => (0.0, 100_000.0, 0.5),
+    }
+}
+
 thread_local! {
     static NOW: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
 }

@@ -60,3 +60,35 @@ fn a_file_path_rule_allocates_nothing_per_photo() {
     let tests = 100 * rules.len() * photos.len();
     assert!(blocks < 64, "{blocks} heap blocks for {tests} rule tests");
 }
+
+#[cfg(test)]
+mod exposure_bias_tests {
+    use super::*;
+
+    #[test]
+    fn exposure_bias_negative_threshold_matches() {
+        let cat = Catalog::new();
+        let mut p = photo(1, "/tmp/a.jpg");
+        p.meta.exposure_bias = Some(-0.67);
+        let lt: RuleSet = serde_json::from_value(serde_json::json!({"rules": [{"field": "exposureBias", "op": "lt", "value": -0.3}]})).unwrap();
+        assert!(lt.matches(&p, &cat), "a -0.67 exposure bias is below a -0.3 threshold");
+        let between: RuleSet =
+            serde_json::from_value(serde_json::json!({"rules": [{"field": "exposureBias", "op": "between", "value": [-1.0, -0.3]}]})).unwrap();
+        assert!(between.matches(&p, &cat), "a -0.67 exposure bias is between -1.0 and -0.3");
+        let is: RuleSet = serde_json::from_value(serde_json::json!({"rules": [{"field": "exposureBias", "op": "is", "value": -0.67}]})).unwrap();
+        assert!(is.matches(&p, &cat), "a -0.67 exposure bias is -0.67");
+        let gt: RuleSet = serde_json::from_value(serde_json::json!({"rules": [{"field": "exposureBias", "op": "gt", "value": 0}]})).unwrap();
+        assert!(!gt.matches(&p, &cat), "a -0.67 exposure bias is not above 0");
+        // The editor must be able to enter that negative threshold: `number_value` in
+        // `crates/ui-egui/src/dialogs/rules_editor.rs` is the only place that range is
+        // decided, and it currently clamps every field, `exposureBias` included, to
+        // `0.0..=100_000.0`, so a -0.3 threshold cannot be typed or dragged to.
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../ui-egui/src/dialogs/rules_editor.rs");
+        let src = std::fs::read_to_string(&path).expect("rules_editor.rs is readable");
+        let editor_line = src.lines().find(|l| l.contains("\"exposureBias\"")).unwrap_or("");
+        assert!(
+            editor_line.contains("(-") || editor_line.contains("(-".trim_start_matches('(')),
+            "number_value must give exposureBias a range with a negative lower bound, got: {editor_line:?}"
+        );
+    }
+}
