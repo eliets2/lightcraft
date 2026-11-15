@@ -344,9 +344,10 @@ fn a_proxy_from_the_previous_look_version_is_stale() {
     let path = dir.join("p.lcsp");
     std::fs::write(&path, &bytes).unwrap();
     assert!(!is_stale(&path), "this build's own proxy is up to date");
-    // a proxy fitted at the previous look version, with no profile for the camera, is rebuilt
+    // a proxy fitted at look version 13, the one before the Nikon profile change, with no profile for the camera, is rebuilt.
+    // Written as the literal 13, so a revert of LOOK_VERSION to 13 fails this test.
     let mut older = head.as_object().cloned().unwrap_or_default();
-    older.insert(LOOK_FIELD.to_owned(), serde_json::json!(crate::camera_preview::LOOK_VERSION - 1));
+    older.insert(LOOK_FIELD.to_owned(), serde_json::json!(13));
     let mut old = MAGIC.to_vec();
     old.extend_from_slice(serde_json::Value::Object(older).to_string().as_bytes());
     old.extend_from_slice(&bytes[nl..]);
