@@ -100,11 +100,15 @@ pub struct PageStyle {
     pub page_info: bool,
     /// Marks at the corners of each photo to cut along.
     pub crop_marks: bool,
+    /// The photo's file name centred under the photo (a strip one text line high is
+    /// reserved in the cell for it).
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub photo_info: bool,
 }
 
 impl Default for PageStyle {
     fn default() -> Self {
-        Self { background: [255; 3], page_numbers: false, page_info: false, crop_marks: false }
+        Self { background: [255; 3], page_numbers: false, page_info: false, crop_marks: false, photo_info: false }
     }
 }
 
@@ -452,6 +456,8 @@ struct Marks {
     crop: Option<(usize, usize, usize)>,
     numbers: bool,
     info: Option<String>,
+    names: bool,
+    strip: usize,
     ink: [u16; 3],
     text_px: f32,
     /// The printable area: the text sits in the margin below it, aligned with its sides.
@@ -463,21 +469,41 @@ impl Marks {
         let on = has_page_options(settings.layout.style);
         let page = &settings.page;
         let px = |inches: f64| (inches * ppi).round() as usize;
+        let names = on && page.photo_info;
+        let text_px = (PAGE_TEXT_PT / 72.0 * ppi) as f32;
+        let strip = if names { (PAGE_TEXT_PT / 72.0 * ppi).round() as usize } else { 0 };
         Marks {
             crop: (on && page.crop_marks).then(|| (px(CROP_MARK_IN), px(CROP_MARK_GAP_IN), px(CROP_MARK_PT / 72.0).max(1))),
             numbers: on && page.page_numbers,
             info: (on && page.page_info).then(|| page_info_text(settings)),
+            names,
+            strip,
             ink: rec2020_from_srgb8(mark_ink(page.background)),
-            text_px: (PAGE_TEXT_PT / 72.0 * ppi) as f32,
+            text_px,
             area: settings.layout.printable().ok().and_then(|a| px_rect(&a, ppi, pw, ph)),
         }
     }
 
-    /// Draws the marks of page `number` (one-based) around `photos`, the photos on it.
-    fn draw(&self, page: &mut Image16, photos: &[PxRect], number: usize) {
+    /// Draws the marks of page `number` (one-based) around `photos`, the photos on it
+    /// (with their file names, for Photo Info).
+    fn draw(&self, page: &mut Image16, photos: &[(PxRect, &str)], cells: &[PxRect], number: usize) {
+        let rects: Vec<PxRect> = photos.iter().map(|(r, _)| *r).collect();
         if let Some((len, gap, weight)) = self.crop {
-            for r in photos {
-                crop_marks(page, r, len, gap, weight, photos, self.ink);
+            for r in &rects {
+                crop_marks(page, r, len, gap, weight, &rects, self.ink);
+            }
+        }
+        if self.names && self.strip > 0 {
+            for ((r, name), cell) in photos.iter().zip(cells) {
+                let Some(shown) = fit_text(name, self.text_px, r.w as f32) else { continue };
+                let Some(t) = crate::text::TextLayout::new(&shown, self.text_px, false, crate::fonts::CRAFT_FONTS) else { continue };
+                let strip_top = cell.y.saturating_add(cell.h).saturating_sub(self.strip) as f32;
+                // centre the name vertically in the strip
+                let y = (strip_top + (self.strip as f32 - t.height) / 2.0).max(0.0);
+                let x = (r.x as f32 + (r.w as f32 - t.width) / 2.0).round().max(0.0);
+                draw_text(page, &t, x, y, self.ink);
+                draw_text(page, &t, x + 1.0, y, self.ink);
+                draw_text(page, &t, x, y + 1.0, self.ink);
             }
         }
         let area = self.area.unwrap_or(PxRect { x: 0, y: 0, w: page.w, h: page.h });
@@ -526,6 +552,43 @@ fn crop_marks(page: &mut Image16, r: &PxRect, len: usize, gap: usize, weight: us
     }
 }
 
+/// `name` shortened with an ellipsis to fit `max_width` pixels at `px`, or `None` when it
+/// cannot fit at all (including an ellipsis).
+fn fit_text(name: &str, px: f32, max_width: f32) -> Option<String> {
+    if max_width <= 0.0 {
+        return None;
+    }
+    let width = |s: &str| crate::text::TextLayout::new(s, px, false, crate::fonts::CRAFT_FONTS).map(|t| t.width);
+    if width(name).is_some_and(|w| w <= max_width) {
+        return Some(name.to_string());
+    }
+    let bounds: Vec<usize> = name.char_indices().map(|(i, _)| i).chain(std::iter::once(name.len())).collect();
+    let count = bounds.len().saturating_sub(1);
+    if width("…").is_none_or(|w| w > max_width) {
+        return None;
+    }
+    let (mut lo, mut hi) = (0usize, count);
+    while lo < hi {
+        let mid = (lo + hi + 1) / 2;
+        let mut cand = String::with_capacity(name.len() + 3);
+        if let Some(&at) = bounds.get(mid) {
+            cand.push_str(name.get(..at).unwrap_or(name));
+        }
+        cand.push('…');
+        if width(&cand).is_some_and(|w| w <= max_width) {
+            lo = mid;
+        } else {
+            hi = mid - 1;
+        }
+    }
+    let mut out = String::new();
+    if let Some(&at) = bounds.get(lo) {
+        out.push_str(name.get(..at).unwrap_or(name));
+    }
+    out.push('…');
+    if width(&out).is_some_and(|w| w <= max_width) { Some(out) } else { None }
+}
+
 /// Blends text in `ink` into `page` with its top-left corner at (`x`, `y`).
 fn draw_text(page: &mut Image16, text: &crate::text::TextLayout, x: f32, y: f32, ink: [u16; 3]) {
     let (w, h) = (page.w, page.h);
@@ -550,6 +613,8 @@ struct Item {
     page: usize,
     name: String,
     cell: PxRect,
+    /// The cell minus the Photo Info strip, when that is on.
+    photo: PxRect,
     key: (u64, usize, usize),
     job: RenderJob,
 }
@@ -591,6 +656,8 @@ impl Prepared {
         for (index, &(w, h)) in self.pages.iter().enumerate() {
             let mut page = Image16::filled(w, h, self.background)?;
             let mut placed = Vec::new();
+            let mut cells = Vec::new();
+            let mut names = Vec::new();
             while let Some(item) = items.next_if(|i| i.page == index) {
                 if !progress(done, &item.name) {
                     return Err("Print cancelled".into());
@@ -609,9 +676,12 @@ impl Prepared {
                     }
                 };
                 let photo = &cache.get(at).ok_or("render cache lost an entry")?.1;
-                placed.push(draw_cell(&mut page, photo, item.cell, &self.style).map_err(|e| format!("{}: {e}", item.name))?);
+                placed.push(draw_cell(&mut page, photo, item.photo, &self.style).map_err(|e| format!("{}: {e}", item.name))?);
+                cells.push(item.cell);
+                names.push(item.name.clone());
             }
-            self.marks.draw(&mut page, &placed, index + 1);
+            let photos: Vec<(PxRect, &str)> = placed.iter().zip(names.iter()).map(|(r, n)| (*r, n.as_str())).collect();
+            self.marks.draw(&mut page, &photos, &cells, index + 1);
             out.push(PageRaster { width: w as u32, height: h as u32, ppi: self.ppi, rgb: page.rgb });
         }
         if !progress(done, "") {
@@ -649,6 +719,8 @@ pub fn prepare(session: &mut Session, settings: &PrintSettings, photos: &[PhotoI
         return Err("the print is too large for memory; lower the print resolution or print fewer pages".into());
     }
     let style = CellStyle::of(&settings, ppi);
+    let marks = Marks::of(&settings, ppi, pw, ph);
+    let strip = marks.strip;
     let mut items = Vec::new();
     for (page, cells) in plan.iter().enumerate() {
         for (rect, id) in cells {
@@ -656,12 +728,13 @@ pub fn prepare(session: &mut Session, settings: &PrintSettings, photos: &[PhotoI
             let photo = session.catalog.photo(*id).ok_or_else(|| format!("no photo {}", id.0))?;
             let name = photo.file_name.clone();
             let (nw, nh) = output_size(photo, &ExportOptions::default());
-            let border = style.border_px.min(cell.w.min(cell.h).saturating_sub(1) / 2);
-            let (aw, ah) = (cell.w - 2 * border, cell.h - 2 * border);
+            let photo_rect = if strip > 0 && cell.h > strip { PxRect { h: cell.h - strip, ..cell } } else { cell };
+            let border = style.border_px.min(photo_rect.w.min(photo_rect.h).saturating_sub(1) / 2);
+            let (aw, ah) = (photo_rect.w - 2 * border, photo_rect.h - 2 * border);
             let p = place(nw as f64, nh as f64, aw, ah, style.fill, style.rotate).ok_or("a photo has no size")?;
             let (rw, rh) = p.unturned();
             let job = session.export_job(*id, rw, rh, OutputSpace::Rec2020, OutputDepth::U16)?;
-            items.push(Item { page, name, cell, key: (id.0, rw, rh), job });
+            items.push(Item { page, name, cell, photo: photo_rect, key: (id.0, rw, rh), job });
         }
     }
     Ok(Prepared {
@@ -670,7 +743,7 @@ pub fn prepare(session: &mut Session, settings: &PrintSettings, photos: &[PhotoI
         ppi: ppi as f32,
         background: rec2020_from_srgb8(settings.page.background),
         style,
-        marks: Marks::of(&settings, ppi, pw, ph),
+        marks,
         color: settings.job.color.clone(),
     })
 }

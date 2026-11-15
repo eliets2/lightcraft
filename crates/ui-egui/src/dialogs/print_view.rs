@@ -473,6 +473,7 @@ fn settings(app: &mut LightcraftApp, ui: &mut Ui, t: &Tokens, pu: &mut PrintUi, 
         for (id, label, on, key) in [
             ("printPageNumbers", "Page Numbers", p.page_numbers, "pageNumbers"),
             ("printPageInfo", "Page Info", p.page_info, "pageInfo"),
+            ("printPhotoInfo", "Photo Info", p.photo_info, "photoInfo"),
             ("printCropMarks", "Crop Marks", p.crop_marks, "cropMarks"),
         ] {
             if let Some(v) = check(ui, id, label, on) {
@@ -854,8 +855,11 @@ fn paint_cell(
     } else {
         0.0
     };
+    let info = compose::has_page_options(st.layout.style) && st.page.photo_info;
+    let strip = if info { (compose::PAGE_TEXT_PT as f32 / 72.0 * sheet.scale).max(4.0) } else { 0.0 };
     let avail = cell.shrink(border);
-    if avail.width() < 1.0 || avail.height() < 1.0 {
+    let photo_area = Rect::from_min_max(avail.min, pos2(avail.max.x, (avail.bottom() - strip).max(avail.top())));
+    if photo_area.width() < 1.0 || photo_area.height() < 1.0 {
         return None;
     }
     // the photo's shape: its cropped size, or 3:2 for a placeholder
@@ -864,17 +868,17 @@ fn paint_cell(
         (w as f64, h as f64)
     });
     let scale = 8.0; // sub-point resolution for the rounding in `place`
-    let aw = (f64::from(avail.width()) * scale).round() as usize;
-    let ah = (f64::from(avail.height()) * scale).round() as usize;
+    let aw = (f64::from(photo_area.width()) * scale).round() as usize;
+    let ah = (f64::from(photo_area.height()) * scale).round() as usize;
     let p = place(nw, nh, aw, ah, im.zoom_to_fill, im.rotate_to_fit)?;
-    let shown = Rect::from_center_size(avail.center(), vec2(p.w as f32, p.h as f32) / scale as f32);
-    let visible = shown.intersect(avail);
+    let shown = Rect::from_center_size(photo_area.center(), vec2(p.w as f32, p.h as f32) / scale as f32);
+    let visible = shown.intersect(photo_area);
     if border > 0.0 {
         let frame = visible.expand(border);
         let c = im.border_color;
         painter.rect_filled(frame.intersect(cell), 0.0, Color32::from_rgb(c[0], c[1], c[2]));
     }
-    let clip = painter.with_clip_rect(avail.intersect(painter.clip_rect()));
+    let clip = painter.with_clip_rect(photo_area.intersect(painter.clip_rect()));
     let tex = photo.and_then(|id| {
         // Use the library's thumbnail when there is one. A thumbnail is kept at one size, so asking
         // for another size here every frame made the preview and the grid behind the dialog
@@ -912,6 +916,17 @@ fn paint_cell(
         let w = (im.stroke_width_pt as f32 / 72.0 * sheet.scale).max(1.0).min(visible.width().min(visible.height()) / 2.0);
         let c = im.stroke_color;
         painter.rect_stroke(visible, 0.0, Stroke::new(w, Color32::from_rgb(c[0], c[1], c[2])), StrokeKind::Inside);
+    }
+    if info
+        && let Some(id) = photo
+        && let Some(p) = app.session.catalog.photo(id)
+    {
+        let ink = compose::mark_ink(st.page.background);
+        let ink = Color32::from_rgb(ink[0], ink[1], ink[2]);
+        let font = egui::FontId::proportional(strip.max(4.0));
+        let name = painter.layout(p.file_name.clone(), font, ink, visible.width().max(1.0));
+        let at = pos2(cell.center().x - name.size().x / 2.0, avail.bottom() - name.size().y);
+        painter.galley(at, name, ink);
     }
     if st.guides.show_dimensions {
         let text = format!("{} × {}", fmt_len(inches.w, st.guides.units), fmt_len(inches.h, st.guides.units));

@@ -425,3 +425,57 @@ fn caps_and_hostile_settings_are_refused() {
     big.job.ppi = 720.0;
     assert!(prepare(&mut s, &big, &vec![ids[0]; 60]).is_err());
 }
+
+#[test]
+fn a_photo_info_page_option_prints_each_photo_s_file_name_under() {
+    use serde_json::json;
+    // `photoInfo` is a Page Option: it deserialises as a page field and, when true, survives a
+    // round trip through `print.set {page: {photoInfo}}` (page::serde).
+    let on: PageStyle = serde_json::from_value(json!({
+        "background": [255, 255, 255], "pageNumbers": false, "pageInfo": false,
+        "cropMarks": false, "photoInfo": true,
+    }))
+    .unwrap_or_default();
+    assert_eq!(
+        serde_json::to_value(&on).unwrap(),
+        json!({
+            "background": [255, 255, 255], "pageNumbers": false, "pageInfo": false,
+            "cropMarks": false, "photoInfo": true,
+        })
+    );
+    // Off by default: an old page keeps serialising without the field, so old templates still load.
+    assert_eq!(
+        serde_json::to_value(&PageStyle::default()).unwrap(),
+        json!({
+            "background": [255, 255, 255], "pageNumbers": false, "pageInfo": false, "cropMarks": false,
+        })
+    );
+
+    // Each photo fills the printable area 50..350 x 50..550 of a 400x600 page at 100 ppi; with
+    // Photo Info on, a strip of one text line (PAGE_TEXT_PT at 100 ppi ≈ 13 px) is reserved at
+    // the bottom of the cell and the file name prints centred in it in the mark ink: white on a
+    // dark page, so count the pure-white pixels of the strip. Off, the photo fills the strip.
+    let dark = [20; 3];
+    let page_json = |on: bool| {
+        json!({
+            "background": dark, "pageNumbers": false, "pageInfo": false,
+            "cropMarks": false, "photoInfo": on,
+        })
+    };
+    let style = |on: bool| serde_json::from_value::<PageStyle>(page_json(on)).unwrap_or_default();
+    let whites = |p: &PageRaster| (537..550).flat_map(|y| (0..400).map(move |x| (x, y))).filter(|&(x, y)| rgb(p, x, y) == WHITE).count();
+    let mut s = Session::with_demo();
+    let off = page_options_pages(&mut s, Style::SingleImage, style(false));
+    let on = page_options_pages(&mut s, Style::SingleImage, style(true));
+    for (o, n) in off.iter().zip(&on) {
+        assert!(whites(n) > whites(o) + 50, "the file name prints white in the strip under the photo");
+        assert_eq!(rgb(n, 60, 549), rec2020_from_srgb8(dark), "the strip is bare page behind the text");
+        assert_ne!(rgb(o, 60, 549), rec2020_from_srgb8(dark), "with the option off the photo fills the strip");
+    }
+    assert_ne!(whites(&on[0]), whites(&on[1]), "each photo's own file name prints");
+    // The packages have no Page Options: nothing is drawn there.
+    let package = page_options_pages(&mut s, Style::PicturePackage, style(true));
+    for p in &package {
+        assert_eq!(whites(p), 0, "packages ignore Photo Info");
+    }
+}
