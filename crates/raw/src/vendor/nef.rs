@@ -345,22 +345,29 @@ fn uncompressed(bytes: &[u8], info: &ImageInfo, order: ByteOrder, mn: Option<&ma
 /// Nikon Huffman-compressed strip (see [`super::nefc`]); the decode table is maker note `0x0096`. Decodes the first
 /// `rows` rows of the `info.height`.
 fn compressed(bytes: &[u8], info: &ImageInfo, mn: Option<&makernote::MakerNote>, rows: usize) -> Result<RawData> {
-    let starts_with = |magic: &[u8]| {
-        let start = info.chunks(bytes.len() as u64).first().and_then(|c| usize::try_from(c.offset).ok());
-        start.and_then(|o| bytes.get(o..o.checked_add(magic.len())?)) == Some(magic)
+    // A `0x0096` linearization table means a lossless Huffman strip: it is consulted before the JPEG
+    // XS magic, because a lossless stream can begin with `FF 10 FF 50` by chance and such a file must
+    // be decoded as Huffman data instead of being reported as High Efficiency. No camera-model string
+    // is consulted.
+    let table = mn.and_then(|m| Some((m.ifd.bytes(LINEARIZATION_TABLE)?, m.order)));
+    let Some((table, order)) = table else {
+        let starts_with = |magic: &[u8]| {
+            let start = info.chunks(bytes.len() as u64).first().and_then(|c| usize::try_from(c.offset).ok());
+            start.and_then(|o| bytes.get(o..o.checked_add(magic.len())?)) == Some(magic)
+        };
+        if starts_with(&JPEG_XS_START) {
+            return Err(RawError::Unsupported(HIGH_EFFICIENCY.into()));
+        }
+        return Err(RawError::Unsupported(
+            "Nikon compressed NEF without a linearization table (maker note 0x96)".into(),
+        ));
     };
-    if starts_with(&JPEG_XS_START) {
-        return Err(RawError::Unsupported(HIGH_EFFICIENCY.into()));
-    }
     // (some Z bodies label uncompressed, row-padded data 34713 without a table: not handled here yet)
-    let table = mn
-        .and_then(|m| Some((m.ifd.bytes(LINEARIZATION_TABLE)?, m.order)))
-        .ok_or_else(|| RawError::Unsupported("Nikon compressed NEF without a linearization table (maker note 0x96)".into()))?;
     if info.samples_per_pixel != 1 {
         return Err(RawError::Unsupported(format!("Nikon compressed NEF with {} samples per pixel", info.samples_per_pixel)));
     }
     let bits = info.bits() as u32;
-    let table = nefc::parse_table(table.0, table.1, bits)?;
+    let table = nefc::parse_table(table, order, bits)?;
     // one strip in every sample; several would be contiguous parts of the same bit stream
     let chunks = info.chunks(bytes.len() as u64);
     let (Some(first), Some(last)) = (chunks.first(), chunks.last()) else { return Err(RawError::Corrupt("NEF: no image data".into())) };
@@ -818,5 +825,20 @@ mod tests {
         // a strip too short to hold the markers is still the missing-table case, not a panic
         let short = nef(34713, 14, vec![vec![0xff, 0x10]], 1, 1, 1);
         assert!(matches!(crate::decode(&short), Err(RawError::Unsupported(w)) if w.contains("linearization table")));
+    }
+
+    /// A lossless NEF (compression 34713 with a valid `0x0096` table) whose first strip happens to begin
+    /// with the JPEG XS bytes `FF 10 FF 50` is decoded as Huffman data instead of being reported as High
+    /// Efficiency: the `0x0096` table is checked before the magic, and no camera-model string is consulted.
+    #[test]
+    fn lossless_nef_starting_with_jpeg_xs_magic_is_not_he() {
+        let mut strip = JPEG_XS_START.to_vec();
+        strip.extend_from_slice(&[0x00, 0x22]);
+        strip.resize(64, 0);
+        let mut mn = IfdBuilder::new();
+        mn.set(LINEARIZATION_TABLE, Value::Undefined(vec![0x46, 0x00, 0, 0, 0, 0, 0, 0, 0, 0]));
+        let bytes = nef_with_note(34713, 14, vec![strip], 8, 8, 8, Some(mn));
+        assert!(crate::decode(&bytes).is_ok());
+        assert!(crate::probe_info(&bytes).is_ok());
     }
 }
