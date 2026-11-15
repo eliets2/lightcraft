@@ -928,7 +928,7 @@ pub fn text_button(ui: &mut Ui, id: &str, label: &str, active: bool) -> Response
     let (r, resp) = ui.allocate_exact_size(size, Sense::click());
     resp.widget_info(|| egui::WidgetInfo::selected(egui::Role::Button, true, active, label));
     register(ui, format!("button:{id}"), r);
-    let fill = if active {
+    let fill = if active || resp.is_pointer_button_down_on() {
         t.pressed
     } else if resp.hovered() {
         t.hover
@@ -971,7 +971,7 @@ pub fn segmented(ui: &mut Ui, id: &str, items: &[(&str, &str)], active: Option<u
                 let (r, resp) = ui.allocate_exact_size(vec2(seg_w, 24.0), Sense::click());
                 crate::widgets::announce_selected(&resp, label.to_string(), active == Some(i));
                 register(ui, format!("button:{id}-{key}"), r);
-                let fill = if active == Some(i) {
+                let fill = if active == Some(i) || resp.is_pointer_button_down_on() {
                     t.pressed
                 } else if resp.hovered() {
                     t.hover
@@ -1026,6 +1026,8 @@ pub fn icon_button(ui: &mut Ui, id: &str, icon: Icon, size: egui::Vec2, active: 
     let sq = Rect::from_center_size(r.center(), vec2(32.0f32.min(size.x), 32.0f32.min(size.y)));
     if active {
         p.rect_filled(sq, 4.0, t.tool_active);
+    } else if resp.is_pointer_button_down_on() && enabled {
+        p.rect_filled(sq, 4.0, t.pressed.gamma_multiply(0.7));
     } else if resp.hovered() && enabled {
         p.rect_filled(sq, 4.0, t.hover.gamma_multiply(0.7));
     }
@@ -1058,6 +1060,9 @@ pub fn dropdown_within(ui: &mut Ui, id: &str, text: &str, font: egui::FontId, co
     let (r, resp) = ui.allocate_exact_size(size, Sense::click());
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::ComboBox, true, text));
     register(ui, format!("dropdown:{id}"), r);
+    if resp.is_pointer_button_down_on() {
+        ui.painter().rect_filled(r, 4.0, t.pressed);
+    }
     let c = if resp.hovered() { t.text } else { color };
     ui.painter().galley(pos2(r.left(), r.center().y - galley.size().y / 2.0), galley, c);
     paint(ui.painter(), Rect::from_center_size(pos2(r.right() - 10.0, r.center().y), vec2(16.0, 16.0)), Icon::ChevronDown, c);
@@ -1197,6 +1202,56 @@ mod tests {
         for bad in ["", "abc", "1.2.3", "NaN", "inf", "--1"] {
             assert_eq!(typed_value(contrast, bad), None, "{bad:?}");
         }
+    }
+
+    /// A pointer press on a text button paints the pressed fill, not the hover or idle fill.
+    #[test]
+    fn text_button_shows_pressed_fill_on_pointer_down() {
+        use crate::headless::HeadlessView;
+        let mut view = HeadlessView::new();
+        let t = crate::theme::Tokens::get(&view.ctx);
+        assert_ne!(t.pressed, t.hover, "the pressed fill must differ from hover to tell them apart");
+        let mut time = 0.0;
+        let mut rect = Rect::NOTHING;
+        for _ in 0..3 {
+            time += 0.02;
+            view.run(HeadlessView::raw_input(vec2(200.0, 60.0), 1.0, time, vec![]), |ui| {
+                rect = text_button(ui, "press", "Auto", false).rect;
+            });
+        }
+        let press_at = rect.center();
+        let fill = |view: &HeadlessView| -> Vec<Color32> {
+            view.painted_shapes()
+                .iter()
+                .filter_map(|s| match s {
+                    egui::epaint::Shape::Rect(rs) if (rs.rect.center() - press_at).length() < 0.5 => Some(rs.fill),
+                    _ => None,
+                })
+                .collect()
+        };
+        time += 0.02;
+        view.run(HeadlessView::raw_input(vec2(200.0, 60.0), 1.0, time, vec![egui::Event::PointerMoved(press_at)]), |ui| {
+            text_button(ui, "press", "Auto", false);
+        });
+        assert_eq!(fill(&view), vec![t.hover], "hover paints the hover fill");
+        time += 0.02;
+        view.run(
+            HeadlessView::raw_input(
+                vec2(200.0, 60.0),
+                1.0,
+                time,
+                vec![egui::Event::PointerButton {
+                    pos: press_at,
+                    button: egui::PointerButton::Primary,
+                    pressed: true,
+                    modifiers: egui::Modifiers::NONE,
+                }],
+            ),
+            |ui| {
+                text_button(ui, "press", "Auto", false);
+            },
+        );
+        assert_eq!(fill(&view), vec![t.pressed], "pointer down paints the pressed fill, not the hover fill");
     }
 }
 
