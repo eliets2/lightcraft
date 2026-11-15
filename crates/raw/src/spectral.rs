@@ -50,8 +50,8 @@ impl Camera {
 /// `(make, model as sold, table model)`: bodies sharing a table camera's sensor that rawtoaces-data's alias list
 /// doesn't name, kept here because the table is generated. Fujifilm's 26.1 MP X-Trans CMOS 4 bodies use the X-T3's
 /// or X-T4's sensor (X-T30 issue: a black-and-white Acros camera JPEG gives no colour to fit, and without matrices the photo
-/// opened in the muted neutral fallback). The GFX100S II is not listed: its 102MP CMOS II sensor is not established
-/// as the GFX 100's sensor, so it borrows no GFX 100 matrices here.
+/// opened in the muted neutral fallback). The GFX100S II and GFX100 II are not listed: their 102MP CMOS II / CMOS II HS
+/// sensors are not established as the GFX 100's sensor, so they borrow no GFX 100 matrices here.
 const SAME_SENSOR: &[(&str, &str, &str)] = &[
     ("Fujifilm", "X-T30", "X-T3"),
     ("Fujifilm", "X-T30 II", "X-T3"),
@@ -87,20 +87,27 @@ fn brand(make: &str) -> String {
 /// The table's camera for a file's Exif make and model, directly or through an alias. Without a make, the model
 /// alone must match.
 pub fn find(make: Option<&str>, model: &str) -> Option<&'static Camera> {
-    // No spectral, CFA or matrix evidence establishes the GFX100S II as the GFX 100's sensor, so it must not
-    // borrow the GFX 100's matrices through an alias or a same-sensor row.
-    if key("FUJIFILM", model) == "GFX100S II" {
-        return None;
-    }
     let make = make.map(brand).filter(|b| !b.is_empty());
     let same = |row_make: &str, row_model: &str| {
         let row_brand = brand(row_make);
         let wanted = key(&row_brand, model);
         make.as_ref().is_none_or(|m| *m == row_brand) && !wanted.is_empty() && key(&row_brand, row_model) == wanted
     };
+    // A direct table row for the model itself always wins, so a future row with its own
+    // matrices for one of these bodies is not blocked by the borrowing guard below.
+    if let Some(c) = cameras().find(|c| same(c.make, c.model)) {
+        return Some(c);
+    }
+    // No spectral, CFA or matrix evidence establishes the GFX100S II (CMOS II) or the GFX100 II
+    // (CMOS II HS) as the GFX 100's sensor, so neither may borrow the GFX 100's matrices through
+    // an alias or a same-sensor row. Spacing variants (GFX 100S II, GFX100SII) are the same model.
+    let normalized = key("FUJIFILM", model).replace(' ', "");
+    if normalized == "GFX100SII" || normalized == "GFX100II" {
+        return None;
+    }
     match table::ALIASES.iter().chain(SAME_SENSOR).find(|(m, alias, _)| same(m, alias)) {
         Some((m, _, target)) => table::CAMERAS.iter().find(|c| brand(c.make) == brand(m) && c.model == *target),
-        None => cameras().find(|c| same(c.make, c.model)),
+        None => None,
     }
 }
 
@@ -185,12 +192,20 @@ mod tests {
     }
 
     #[test]
-    fn gfx100s_ii_uses_gfx_100_matrices_review_regression_1() {
+    fn gfx100s_ii_does_not_borrow_gfx_100_matrices() {
         // GFX100S II sharing the GFX 100's sensor or colour matrices is an unsupported
         // claim: no table row, alias or donor evidence establishes it. GFX100S II must
-        // not borrow the GFX 100's matrices through SAME_SENSOR, so it must not be found
-        // at all until evidence-backed evidence exists.
-        assert_eq!(find(Some("FUJIFILM"), "GFX100S II"), None);
+        // not borrow the GFX 100's matrices through an alias or SAME_SENSOR, so it must
+        // not be found at all until evidence-backed matrices for it exist. The same holds
+        // for the GFX100 II (CMOS II HS), and for spaced or joined spellings of either.
+        for model in ["GFX100S II", "GFX 100S II", "GFX100SII", "GFX100 II", "GFX 100 II", "GFX100II"] {
+            assert_eq!(find(Some("FUJIFILM"), model), None, "{model}");
+            assert_eq!(find(None, model), None, "{model}");
+            assert_eq!(find_camera(&format!("FUJIFILM {model}")), None, "{model}");
+        }
+        // The GFX 100 itself and the GFX100S (no II) still reach the GFX 100 row.
+        assert_eq!(find(Some("FUJIFILM"), "GFX 100").map(|c| c.model), Some("GFX 100"));
+        assert_eq!(find(Some("FUJIFILM"), "GFX100S").map(|c| c.model), Some("GFX 100"));
     }
 
     #[test]
