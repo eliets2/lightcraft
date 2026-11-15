@@ -369,6 +369,72 @@ fn shift_click_paints_a_straight_line_from_the_last_stroke() {
     h.settle(SETTLE);
 }
 
+/// Holding ⇧ while dragging constrains the brush stroke to a straight line from the last stroke's
+/// end; the wiggle between drag samples is discarded (issue #2082). One undo step removes it.
+#[test]
+fn shift_drag_paints_a_constrained_line_from_the_last_stroke() {
+    let mut h = detail("panel.masking");
+    exec(&mut h, "tool.brush", json!({}));
+    brush_at(&mut h, 0.2, 0.5);
+    let r = h.request(
+        "ui.pointer",
+        json!({"events": [
+        {"kind": "down", "x": 0.6, "y": 0.8},
+        {"kind": "drag", "x": 0.55, "y": 0.3},
+        {"kind": "drag", "x": 0.65, "y": 0.6},
+        {"kind": "up", "x": 0.8, "y": 0.2}
+    ], "shift": true}),
+        T,
+    );
+    assert_eq!(r["ok"], true, "{r}");
+    let d = develop(&h);
+    let MaskShape::Brush { strokes } = &d.masks[0].components[0].shape else { panic!("brush") };
+    assert_eq!(strokes.len(), 2, "{strokes:?}");
+    assert_eq!(strokes[1].points.len(), 2, "constrained line has exactly 2 points: {strokes:?}");
+    let last = &strokes[1].points[1];
+    assert!((last.x - 0.8).abs() < 1e-3, "release x: {last:?}");
+    assert!((last.y - 0.2).abs() < 1e-3, "release y: {last:?}");
+    for (x, y) in [(50, 35), (35, 43)] {
+        assert!(mask_coverage(&h, 0, x, y) > 0.5, "the line passes ({x}, {y})");
+    }
+    assert!(mask_coverage(&h, 0, 65, 60) < 0.01, "the wiggle point is not painted");
+    exec(&mut h, "edit.undo", json!({}));
+    let d = develop(&h);
+    let MaskShape::Brush { strokes } = &d.masks[0].components[0].shape else { panic!("brush") };
+    assert_eq!(strokes.len(), 1, "one undo step takes the line back");
+    h.settle(SETTLE);
+}
+
+/// A ⇧-drag with no prior stroke draws the line from the press point (issue #2082). Exactly 2
+/// points are committed; without the fix the drag would commit 3 samples.
+#[test]
+fn shift_drag_without_a_last_stroke_draws_from_the_press() {
+    let mut h = detail("panel.masking");
+    exec(&mut h, "tool.brush", json!({}));
+    let r = h.request(
+        "ui.pointer",
+        json!({"events": [
+        {"kind": "down", "x": 0.3, "y": 0.7},
+        {"kind": "drag", "x": 0.5, "y": 0.4},
+        {"kind": "up", "x": 0.6, "y": 0.3}
+    ], "shift": true}),
+        T,
+    );
+    assert_eq!(r["ok"], true, "{r}");
+    let d = develop(&h);
+    let MaskShape::Brush { strokes } = &d.masks[0].components[0].shape else { panic!("brush") };
+    assert_eq!(strokes.len(), 1, "{strokes:?}");
+    assert_eq!(strokes[0].points.len(), 2, "plain stroke from press to release: {strokes:?}");
+    let first = &strokes[0].points[0];
+    let last = &strokes[0].points[1];
+    assert!((first.x - 0.3).abs() < 1e-3 && (first.y - 0.7).abs() < 1e-3, "press: {first:?}");
+    assert!((last.x - 0.6).abs() < 1e-3 && (last.y - 0.3).abs() < 1e-3, "release: {last:?}");
+    exec(&mut h, "edit.undo", json!({}));
+    let d = develop(&h);
+    assert!(d.masks.is_empty() || d.masks[0].components.is_empty(), "undo removes the only stroke");
+    h.settle(SETTLE);
+}
+
 #[test]
 fn brush_strokes_carry_auto_mask() {
     let mut h = detail("panel.masking");

@@ -42,6 +42,9 @@ pub struct LiveStroke {
     /// Samples stamped so far, and the last one (buffer pixels).
     placed: usize,
     last: Option<Point>,
+    /// The screen position last offered for stamping. A ⇧-drag replaces the tail every frame
+    /// without growing the sample count, so the live line must follow the pointer (issue #2082).
+    tail: Option<Pos2>,
     /// The pen pressure of the last stamped sample.
     last_pressure: f32,
     /// Buffer pixels painted since the last upload: (x0, y0, x1, y1), exclusive ends.
@@ -54,7 +57,7 @@ impl LiveStroke {
         let scale = buffer_scale(params.clip, params.scale);
         let params = LiveParams { scale, ..params };
         let (w, h) = buffer_size(params.clip, scale);
-        LiveStroke { params, w, h, alpha: vec![0.0; w * h], placed: 0, last: None, last_pressure: 1.0, dirty: None, texture: None }
+        LiveStroke { params, w, h, alpha: vec![0.0; w * h], placed: 0, last: None, tail: None, last_pressure: 1.0, dirty: None, texture: None }
     }
 
     /// Stroke coverage (0..1) at buffer pixel `(x, y)`; 0 outside.
@@ -74,6 +77,7 @@ impl LiveStroke {
     /// painted, at the pen pressures `pressure` (one per point; empty: full pressure), as the
     /// pipeline scales them. Returns `true` when anything new was painted.
     pub fn stamp(&mut self, points: &[Pos2], pressure: &[f32]) -> bool {
+        self.tail = points.last().copied();
         let Some(new) = points.get(self.placed..) else { return false };
         if new.is_empty() {
             return false;
@@ -180,15 +184,24 @@ fn buffer_size(clip: Rect, scale: f32) -> (usize, usize) {
     (side(clip.width()), side(clip.height()))
 }
 
+/// Whether `paint` must rebuild the stroke: parameters differ, the sample list was truncated, or
+/// a ⇧-drag moved the tail without adding samples (issue #2082 — same sample count, moved tail).
+fn fresh(s: &LiveStroke, params: LiveParams, points: &[Pos2]) -> bool {
+    let same = s.params == LiveParams { scale: buffer_scale(params.clip, params.scale), ..params };
+    if !same || points.len() < s.placed {
+        return true;
+    }
+    if points.len() == s.placed && s.tail != points.last().copied() {
+        return true;
+    }
+    false
+}
+
 /// Paint the live stroke whose samples so far are `points` (screen positions) into `painter`,
 /// keeping its buffer in `slot` (a new stroke, or new parameters, start it afresh).
 pub fn paint(slot: &mut Option<LiveStroke>, ctx: &egui::Context, painter: &egui::Painter, params: LiveParams, points: &[Pos2], pressure: &[f32]) {
     let fresh = match slot {
-        Some(s) => {
-            // the same stroke when painted with the same parameters (at the scale it settled on)
-            let same = s.params == LiveParams { scale: buffer_scale(params.clip, params.scale), ..params };
-            !same || points.len() < s.placed
-        }
+        Some(s) => fresh(s, params, points),
         None => true,
     };
     if fresh {
@@ -278,5 +291,60 @@ mod tests {
         let mut odd = LiveStroke::new(params());
         odd.stamp(&pts, &[f32::NAN]);
         assert!(odd.alpha.iter().all(|v| v.is_finite()));
+    }
+}
+
+#[cfg(test)]
+mod brush_live_tests {
+    use super::*;
+
+    fn params() -> LiveParams {
+        LiveParams {
+            clip: Rect::from_min_max(pos2(0.0, 0.0), pos2(100.0, 100.0)),
+            scale: 1.0,
+            r: 10.0,
+            hard: 5.0,
+            flow: 1.0,
+            density: 1.0,
+            color: [255, 255, 255],
+            opacity: 1.0,
+        }
+    }
+
+    #[test]
+    fn fresh_keeps_stroke_for_same_samples() {
+        let mut s = LiveStroke::new(params());
+        let pts = vec![pos2(10.0, 10.0), pos2(20.0, 20.0)];
+        s.stamp(&pts, &[0.5, 0.5]);
+        assert!(!fresh(&s, params(), &pts));
+    }
+
+    /// Issue #2082: a ⇧-drag replaces the tail with the same sample count — the stroke restarts
+    /// so the live line follows the pointer.
+    #[test]
+    fn fresh_restarts_on_moved_tail_same_count() {
+        let mut s = LiveStroke::new(params());
+        let pts1 = vec![pos2(10.0, 10.0), pos2(20.0, 20.0)];
+        s.stamp(&pts1, &[0.5, 0.5]);
+        let pts2 = vec![pos2(10.0, 10.0), pos2(30.0, 30.0)];
+        assert!(fresh(&s, params(), &pts2));
+    }
+
+    #[test]
+    fn fresh_no_restart_on_grown_tail() {
+        let mut s = LiveStroke::new(params());
+        let pts1 = vec![pos2(10.0, 10.0), pos2(20.0, 20.0)];
+        s.stamp(&pts1, &[0.5, 0.5]);
+        let pts2 = vec![pos2(10.0, 10.0), pos2(20.0, 20.0), pos2(30.0, 30.0)];
+        assert!(!fresh(&s, params(), &pts2));
+    }
+
+    #[test]
+    fn fresh_restarts_on_truncated_tail() {
+        let mut s = LiveStroke::new(params());
+        let pts1 = vec![pos2(10.0, 10.0), pos2(20.0, 20.0), pos2(30.0, 30.0)];
+        s.stamp(&pts1, &[0.5, 0.5, 0.5]);
+        let pts2 = vec![pos2(10.0, 10.0), pos2(20.0, 20.0)];
+        assert!(fresh(&s, params(), &pts2));
     }
 }

@@ -1,5 +1,12 @@
 # What's new in LightCraft
 
+## 2026-10-17
+
+### Straight brush strokes with ⇧-drag
+- Holding ⇧ while brushing now also draws a straight line live from the last stroke's end (or from where you pressed
+  when nothing came before), and the line follows the pointer until release — the ⇧-click line, aimable while you drag
+  (issue #2082). Still one undo step, with the same tapering when the brush's size, feather or flow changed.
+
 ## 2026-10-14
 
 ### Lightroom radial masks on the right side

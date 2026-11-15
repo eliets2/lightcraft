@@ -1993,6 +1993,50 @@ fn color_range_pick(app: &mut LightcraftApp, ui: &egui::Ui, resp: &egui::Respons
     }
 }
 
+/// The last point of the active mask's last brush stroke — the same anchor the engine's
+/// `connect` looks up (last brush component, last stroke, last point). `None` when there is no
+/// active brush stroke to connect from. Mirrors crates/engine/src/cmd/masks.rs exactly so the UI's
+/// ⇧-stroke anchor matches what `mask.brushStroke` will use.
+fn brush_anchor(d: &DevelopSettings, active: Option<u32>) -> Option<Point> {
+    let id = active?;
+    let mask = d.masks.iter().find(|m| m.id == id)?;
+    let component = mask.components.iter().rev().find(|c| matches!(c.shape, MaskShape::Brush { .. }))?;
+    let MaskShape::Brush { strokes } = &component.shape else { return None };
+    strokes.last().and_then(|s| s.points.last().copied())
+}
+
+/// One pointer sample of a brush gesture. Without ⇧: today's freehand semantics verbatim — skip a
+/// repeated point, `record_pressure`, push. With ⇧ and an anchor: replace the samples with
+/// `[anchor, at]`; the pressure list becomes two values — the list's first value at the line's
+/// start and `force` (else the last known) at its end, mirroring `record_pressure`'s rule that a
+/// pen's first force covers earlier points; no-op when the points already are that line (the
+/// pointer paused on it). With ⇧ and no anchor: no-op. (Issue #2082: ⇧-drag constrains the brush
+/// to a straight line.)
+fn brush_gesture_at(points: &mut Vec<Point>, pressure: &mut Vec<f32>, anchor: Option<Point>, shift: bool, at: Point, force: Option<f32>) {
+    if !shift {
+        if points.last() == Some(&at) {
+            return;
+        }
+        record_pressure(pressure, points.len(), force);
+        points.push(at);
+        return;
+    }
+    let Some(anchor) = anchor else { return };
+    // the line the pointer already sits on: a lone sample at the anchor stays alone (a ⇧-click
+    // with nothing behind it commits one point, as it always did), and the constrained line is
+    // not rebuilt while the pointer pauses on it
+    if points.as_slice() == [anchor, at] || (anchor == at && points.as_slice() == [at]) {
+        return;
+    }
+    *points = vec![anchor, at];
+    *pressure = match (force, pressure.first().copied()) {
+        (Some(f), Some(a)) => vec![a, f],
+        (Some(f), None) => vec![f, f],
+        (None, Some(b)) => vec![b, b],
+        (None, None) => Vec::new(),
+    };
+}
+
 /// The Masking tool on the photo: outlines and handles of the selected mask, a pin per mask
 /// component (click selects its mask, drag moves the component), and brush painting. The mask
 /// itself shows as a rendered overlay ([`view_overlay`]).
@@ -2135,12 +2179,12 @@ fn mask_overlay(app: &mut LightcraftApp, ui: &mut egui::Ui, resp: &egui::Respons
         {
             let n = map.norm(q);
             let force = if app.ui.brush_pressure { ui.input(pen_force) } else { None };
+            let active = app.session.active_mask;
+            let shift = resp.ctx.input(|i| i.modifiers.shift);
             match &mut app.gesture {
-                // a held, unmoving pointer records nothing: coverage builds by passes, not time (#518)
-                Some(Gesture::Brush { points, .. }) if points.last() == Some(&n) => {}
                 Some(Gesture::Brush { points, pressure }) => {
-                    record_pressure(pressure, points.len(), force);
-                    points.push(n);
+                    let anchor = brush_anchor(d, active).or_else(|| points.first().copied());
+                    brush_gesture_at(points, pressure, anchor, shift, n, force);
                 }
                 _ => {
                     let mut pressure = Vec::new();
@@ -2176,12 +2220,26 @@ fn mask_overlay(app: &mut LightcraftApp, ui: &mut egui::Ui, resp: &egui::Respons
             // holding ⌥ (Alt) paints with the other mode: Erase while adding, Add while erasing
             let (alt, shift) = resp.ctx.input(|i| (i.modifiers.alt, i.modifiers.shift));
             let erase = app.ui.brush_erase != alt;
-            // a ⇧-click draws a straight line from where the last stroke ended, as in Lightroom
-            let connect = shift && resp.clicked() && pts.len() == 1;
+            let active = app.session.active_mask;
+            // Issue #2082: a ⇧ stroke with an anchor commits just the release point so the engine
+            // draws the tapered line from the last stroke's end (connect). A ⇧ stroke without an
+            // anchor commits both ends as a plain stroke.
+            let connect = if shift && brush_anchor(d, active).is_some() {
+                true
+            } else {
+                // a ⇧-click draws a straight line from where the last stroke ended, as in Lightroom
+                shift && resp.clicked() && pts.len() == 1
+            };
+            let (pts_to_send, pressure_to_send) = if shift && brush_anchor(d, active).is_some() {
+                let last = pts.last().copied().unwrap_or_default();
+                (vec![last], pressure.last().copied().map(|p| vec![p]).unwrap_or_default())
+            } else {
+                (pts, pressure)
+            };
             let _ = app.run(
                 "mask.brushStroke",
-                json!({"points": pts, "size": app.ui.brush_size, "feather": app.ui.brush_feather, "flow": app.ui.brush_flow,
-                       "erase": erase, "autoMask": app.ui.brush_auto_mask, "pressure": pressure, "connect": connect}),
+                json!({"points": pts_to_send, "size": app.ui.brush_size, "feather": app.ui.brush_feather, "flow": app.ui.brush_flow,
+                       "erase": erase, "autoMask": app.ui.brush_auto_mask, "pressure": pressure_to_send, "connect": connect}),
             );
         }
         return;
@@ -3047,6 +3105,82 @@ mod pen_tests {
         assert_eq!(pen_force(&i), Some(0.3), "the latest usable force");
         i.events = vec![touch(Some(4.0))];
         assert_eq!(pen_force(&i), Some(1.0));
+    }
+}
+
+#[cfg(test)]
+mod brush_gesture_tests {
+    use super::*;
+
+    #[test]
+    fn shift_drag_replaces_wiggle_with_constrained_line() {
+        let mut points = vec![Point::new(0.1, 0.2), Point::new(0.3, 0.5), Point::new(0.4, 0.4)];
+        let mut pressure = vec![0.8, 0.8, 0.4];
+        let anchor = Point::new(0.9, 0.5);
+        brush_gesture_at(&mut points, &mut pressure, Some(anchor), true, Point::new(0.2, 0.7), Some(0.7));
+        assert_eq!(points, vec![anchor, Point::new(0.2, 0.7)]);
+        assert_eq!(pressure, vec![0.8, 0.7]);
+    }
+
+    #[test]
+    fn shift_drag_paused_on_line_is_noop() {
+        let anchor = Point::new(0.1, 0.1);
+        let at = Point::new(0.5, 0.5);
+        let mut points = vec![anchor, at];
+        let mut pressure = vec![0.8, 0.7];
+        brush_gesture_at(&mut points, &mut pressure, Some(anchor), true, at, Some(0.9));
+        assert_eq!(points, vec![anchor, at]);
+        assert_eq!(pressure, vec![0.8, 0.7]);
+    }
+
+    #[test]
+    fn shift_without_anchor_is_noop() {
+        let mut points = vec![Point::new(0.3, 0.7)];
+        let mut pressure = vec![0.5];
+        brush_gesture_at(&mut points, &mut pressure, None, true, Point::new(0.6, 0.4), Some(0.6));
+        assert_eq!(points, vec![Point::new(0.3, 0.7)]);
+        assert_eq!(pressure, vec![0.5]);
+    }
+
+    /// A ⇧-click with nothing behind it (the anchor is the click itself) stays one point, so the
+    /// commit is the single-point dab it always was (issue #2082).
+    #[test]
+    fn degenerate_shift_click_keeps_its_single_point() {
+        let mut points = vec![Point::new(0.4, 0.4)];
+        let mut pressure = vec![0.5];
+        brush_gesture_at(&mut points, &mut pressure, Some(Point::new(0.4, 0.4)), true, Point::new(0.4, 0.4), None);
+        assert_eq!(points, vec![Point::new(0.4, 0.4)]);
+        assert_eq!(pressure, vec![0.5]);
+    }
+
+    #[test]
+    fn shift_release_resumes_freehand_from_line_end() {
+        let mut points = vec![Point::new(0.1, 0.1), Point::new(0.5, 0.5)];
+        let mut pressure = vec![0.8, 0.7];
+        let anchor = Point::new(0.1, 0.1);
+        brush_gesture_at(&mut points, &mut pressure, Some(anchor), true, Point::new(0.5, 0.5), Some(0.7));
+        // release ⇧, continue freehand from the line's end
+        brush_gesture_at(&mut points, &mut pressure, Some(anchor), false, Point::new(0.7, 0.6), Some(0.5));
+        assert_eq!(points, vec![Point::new(0.1, 0.1), Point::new(0.5, 0.5), Point::new(0.7, 0.6)]);
+        assert_eq!(pressure, vec![0.8, 0.7, 0.5]);
+    }
+
+    #[test]
+    fn mouse_empty_pressure_stays_empty() {
+        let mut points = vec![Point::new(0.1, 0.1)];
+        let mut pressure: Vec<f32> = Vec::new();
+        brush_gesture_at(&mut points, &mut pressure, None, false, Point::new(0.2, 0.2), None);
+        assert_eq!(points, vec![Point::new(0.1, 0.1), Point::new(0.2, 0.2)]);
+        assert!(pressure.is_empty());
+    }
+
+    #[test]
+    fn repeated_freehand_point_not_recorded() {
+        let mut points = vec![Point::new(0.1, 0.1)];
+        let mut pressure = vec![0.5];
+        brush_gesture_at(&mut points, &mut pressure, None, false, Point::new(0.1, 0.1), Some(0.9));
+        assert_eq!(points, vec![Point::new(0.1, 0.1)]);
+        assert_eq!(pressure, vec![0.5]);
     }
 }
 
