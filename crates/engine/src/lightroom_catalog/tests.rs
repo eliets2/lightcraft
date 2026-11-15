@@ -862,8 +862,23 @@ fn inverted_radial_mask_keeps_its_inversion_on_import() {
     // the orientation is applied: (x, y) → (1 − y, x), a quarter turn clockwise; the radii swap
     let shape = &c["shape"];
     assert!(close(&shape["center"]["x"], 0.8) && close(&shape["center"]["y"], 0.1), "{shape}");
-    // but the effect stays outside the ellipse
-    assert!(c["invert"].as_bool().unwrap_or(false) || shape["invert"].as_bool().unwrap_or(false), "{c}");
+    // but the effect stays outside the ellipse: the inversion is the radial's own
+    // outside effect, exactly one flag, not both (which would cancel it) and not neither
+    assert!(shape["invert"].as_bool().unwrap_or(false) != c["invert"].as_bool().unwrap_or(false), "exactly one inversion flag: {c}");
+    assert!(shape["invert"].as_bool().unwrap_or(false), "inversion is the radial's own outside effect: {c}");
+    assert!(!c["invert"].as_bool().unwrap_or(false), "inversion must not also be the component's, or the two cancel: {c}");
+}
+
+#[test]
+fn inverted_radial_mask_keeps_its_inversion_on_import_review_regression_1() {
+    let s = r#"s = { MaskGroupBasedCorrections = { { What = "Correction", CorrectionAmount = 1, LocalExposure2012 = 0.1, CorrectionMasks = {
+        { What = "Mask/CircularGradient", Left = 0, Right = 0.2, Top = 0.1, Bottom = 0.3, Angle = 10, Feather = 50, Version = 2, Flipped = true, Inverted = false } } } } }"#;
+    let (partial, _) = mapped_settings(s, crate::crs::Target::RawAbsolute, 1.5, Orientation::Rotate90, 1.5, Orientation::Normal).unwrap();
+    let c = &partial["masks"][0]["components"][0];
+    let shape = &c["shape"];
+    assert!(shape["invert"].as_bool().unwrap_or(false) != c["invert"].as_bool().unwrap_or(false), "exactly one inversion flag: {c}");
+    assert!(shape["invert"].as_bool().unwrap_or(false), "inversion is the radial's own outside effect: {c}");
+    assert!(!c["invert"].as_bool().unwrap_or(false), "inversion must not also be the component's, or the two cancel: {c}");
 }
 
 /// The `crs` corners and angle Lightroom would store for LightCraft crop `g` on a stored image
