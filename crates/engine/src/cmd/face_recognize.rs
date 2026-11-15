@@ -78,6 +78,54 @@ fn name_faces(s: &mut Session, p: &Value) -> Result<Value> {
     Ok(json!({"named": named, "photos": photos, "name": name}))
 }
 
+/// `faces.rejectFaces {faces: [{photo, index}]}`: remove several face regions at once, as one undo step.
+/// Indices are positions in each photo's `meta.regions`. Indices for one photo are removed in descending
+/// order so that removing one region does not shift the indices of the regions still to be removed.
+fn reject_faces(s: &mut Session, p: &Value) -> Result<Value> {
+    const C: &str = "faces.rejectFaces";
+    let list = p.get("faces").and_then(Value::as_array).ok_or_else(|| bad(C, "missing `faces`"))?;
+    if list.len() > 5000 {
+        return Err(bad(C, "at most 5000 faces at a time"));
+    }
+    let mut by_photo: std::collections::BTreeMap<u64, Vec<usize>> = std::collections::BTreeMap::new();
+    for f in list {
+        let (Some(photo), Some(index)) =
+            (f.get("photo").and_then(Value::as_u64), f.get("index").and_then(Value::as_u64).and_then(|i| usize::try_from(i).ok()))
+        else {
+            return Err(bad(C, "each face needs a `photo` and an `index`"));
+        };
+        by_photo.entry(photo).or_default().push(index);
+    }
+    let mut ops = Vec::new();
+    let mut rejected = 0usize;
+    for (photo, mut indexes) in by_photo {
+        let id = lightcraft_catalog::PhotoId(photo);
+        let Some(photo) = s.catalog.photo(id) else { continue };
+        indexes.sort_unstable();
+        indexes.dedup();
+        indexes.reverse();
+        let mut meta = photo.meta.clone();
+        let mut count = 0usize;
+        for i in indexes {
+            if i < meta.regions.len() && meta.regions[i].kind == lightcraft_meta::RegionKind::Face {
+                meta.regions.remove(i);
+                rejected += 1;
+                count += 1;
+            }
+        }
+        if count > 0 {
+            ops.push(Op::SetMeta { id, meta: Box::new(meta) });
+        }
+    }
+    if ops.is_empty() {
+        return Err(bad(C, "none of those faces exist"));
+    }
+    let photos = ops.len();
+    s.commit("Reject Faces", Op::Batch { ops })?;
+    s.skip_auto_write = true;
+    Ok(json!({"rejected": rejected, "photos": photos}))
+}
+
 /// `faces.setName {id?, index, name}`: name (or, with `null` or an empty name, un-name) one face region. Naming
 /// makes the face yours: a later "Detect Faces" run no longer replaces it.
 fn set_name(s: &mut Session, p: &Value) -> Result<Value> {
@@ -1158,6 +1206,15 @@ pub fn specs() -> Vec<CommandSpec> {
             "{faces: [{photo, index}], name} → {named, photos} — name (or, with a null or empty name, clear) many face regions as one undoable step; the sidecar is not touched",
             super::always,
             name_faces
+        ),
+        cmd!(
+            "faces.rejectFaces",
+            "Reject Faces",
+            [],
+            None,
+            "{faces: [{photo, index}]} → {rejected, photos} — remove several face regions as one undoable step; indices for one photo are removed in descending order so shifting indices do not delete the wrong regions; the sidecar is not touched",
+            super::always,
+            reject_faces
         ),
         cmd!(
             query "faces.person",

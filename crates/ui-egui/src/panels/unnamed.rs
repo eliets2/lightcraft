@@ -104,6 +104,12 @@ fn name(app: &mut LightcraftApp, faces: &[(u64, usize)], name: &str) {
     let _ = app.run("faces.nameFaces", json!({"faces": list, "name": name}));
 }
 
+/// Reject (remove) `faces` (photo, region) as one undo step.
+fn reject(app: &mut LightcraftApp, faces: &[(u64, usize)]) {
+    let list: Vec<Value> = faces.iter().map(|(photo, index)| json!({"photo": photo, "index": index})).collect();
+    let _ = app.run("faces.rejectFaces", json!({"faces": list}));
+}
+
 /// The bar above the faces while some are selected: how many, a box to name them all, and the people already named.
 pub fn naming_bar(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     if app.ui.unnamed_selected.is_empty() {
@@ -127,6 +133,7 @@ pub fn naming_bar(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     };
     let mut submit: Option<String> = None;
     let mut clear = false;
+    let mut do_reject = false;
     ui.horizontal(|ui| {
         ui.add_space(super::people::PAD - 4.0);
         let n = selected.len();
@@ -151,6 +158,9 @@ pub fn naming_bar(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         let c = ui.button(crate::i18n::tr("Clear"));
         register(ui.ctx(), "unnamed:clear", c.rect);
         clear = c.clicked() || field.cancelled();
+        let r = ui.button(crate::i18n::tr("Reject"));
+        register(ui.ctx(), "unnamed:reject", r.rect);
+        do_reject = r.clicked();
     });
     // the people already named, matching what is typed (a click names the faces)
     let typed = app.ui.unnamed_name.trim().to_lowercase();
@@ -176,6 +186,11 @@ pub fn naming_bar(app: &mut LightcraftApp, ui: &mut egui::Ui) {
         app.ui.unnamed_name.clear();
         app.ui.unnamed_anchor = None;
     } else if clear {
+        app.ui.unnamed_selected.clear();
+        app.ui.unnamed_name.clear();
+        app.ui.unnamed_anchor = None;
+    } else if do_reject {
+        reject(app, &selected);
         app.ui.unnamed_selected.clear();
         app.ui.unnamed_name.clear();
         app.ui.unnamed_anchor = None;

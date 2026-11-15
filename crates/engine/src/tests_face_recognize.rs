@@ -450,6 +450,27 @@ fn unnamed_faces_come_with_look_alikes_together_and_the_name_the_named_ones_sugg
     let _ = std::fs::remove_dir_all(&d);
 }
 
+/// Rejecting two unnamed faces of one photo takes exactly those two regions: `faces.unnamed` gives the index a face
+/// has in the photo's regions, and removing a region shifts the ones after it, so the faces of one photo cannot be
+/// taken one by one by index.
+#[test]
+fn rejecting_two_faces_of_one_photo_removes_the_right_regions() {
+    let mut s = Session::with_demo();
+    let (a, _) = two_photos(&s);
+    set_regions(&mut s, a, vec![region(0.1, Some("Ann")), region(0.3, None), region(0.5, None), region(0.7, None)]);
+    // the unnamed faces of the photo, as the panel lists them
+    let r = s.execute("faces.unnamed", &json!({})).unwrap();
+    let indexes: Vec<u64> =
+        r["faces"].as_array().unwrap().iter().filter(|f| f["photo"].as_u64() == Some(a.0)).map(|f| f["index"].as_u64().unwrap()).collect();
+    assert_eq!(indexes, vec![1, 2, 3], "{r}");
+    // rejecting the first two of them, with the indices the list gave, takes those two and no other
+    s.execute("faces.rejectFaces", &json!({"faces": [{"photo": a.0, "index": 1}, {"photo": a.0, "index": 2}]})).unwrap();
+    let regions = s.catalog.photo(a).unwrap().meta.regions.clone();
+    assert_eq!(regions.len(), 2, "the two rejected faces are gone: {regions:?}");
+    assert_eq!(regions[0].name.as_deref(), Some("Ann"), "the named face stays: {regions:?}");
+    assert!((regions[1].rect.x0 - 0.7).abs() < 1e-6, "the face that was not rejected is left: {:?}", regions[1].rect);
+}
+
 #[test]
 fn every_scanned_face_is_shown_by_the_same_kind_of_box() {
     let d = temp("view");
