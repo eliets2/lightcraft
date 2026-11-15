@@ -3844,4 +3844,55 @@ mod tests {
         assert_eq!(render_weight(0, 0, SourceLevel::Full, 0), 0);
         assert!(render_weight(usize::MAX, 1, SourceLevel::Full, usize::MAX) > 0, "no overflow");
     }
+
+    /// Issue #2104: the Instagram sharing presets must not leak a photo's GPS location into the
+    /// exported JPEG EXIF. They inherit `MetadataPolicy::All`, so each preset must set
+    /// `removeLocation: true` so the export path strips GPS before encoding.
+    #[test]
+    fn instagram_presets_remove_location() {
+        use lightcraft_catalog::{Op, Photo, PhotoId, Source};
+
+        let presets: Vec<_> = builtin_presets()
+            .into_iter()
+            .filter(|p| p.name == "Instagram Feed" || p.name == "Instagram Story / Reel")
+            .collect();
+        assert_eq!(presets.len(), 2, "both Instagram presets must be defined");
+
+        // A demo photo carrying a GPS location, added to the catalog so the real export path
+        // (encode_with_metadata writing EXIF GPS) can read it.
+        let mut photo = Photo::new(
+            PhotoId(9_497),
+            Source::Demo { scene: 0 },
+            "gps.jpg",
+            "jpeg",
+            200,
+            200,
+            "2026-09-30T00:00:00",
+        );
+        photo.meta.gps = Some((43.0, -110.0));
+        let mut s = crate::Session::with_demo();
+        s.catalog.apply(Op::AddPhoto { photo: Box::new(photo) }).unwrap();
+
+        for preset in &presets {
+            let options =
+                ExportOptions::from_params(&preset.params).unwrap_or_else(|e| {
+                    panic!("{}: preset params must parse: {e}", preset.name)
+                });
+            assert!(
+                options.remove_location,
+                "{} preset must set removeLocation so GPS is stripped",
+                preset.name
+            );
+            let exported =
+                export_photo(&mut s, PhotoId(9_497), &options, 1).unwrap_or_else(|e| {
+                    panic!("{}: export must succeed: {e}", preset.name)
+                });
+            let decoded = lightcraft_meta::extract(&exported.bytes);
+            assert!(
+                decoded.gps.is_none(),
+                "{} preset must not write GPS to the JPEG EXIF",
+                preset.name
+            );
+        }
+    }
 }
