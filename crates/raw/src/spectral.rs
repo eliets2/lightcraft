@@ -170,6 +170,16 @@ mod tests {
     }
 
     #[test]
+    fn gfx100s_ii_uses_gfx_100_matrices() {
+        // GFX100S II is not in the table, so its raws never get step 4's measured matrices
+        // and fall back to step 5's neutral camera-RGB-approximately-sRGB.
+        assert_eq!(
+            find(Some("FUJIFILM"), "GFX100S II").map(|c| c.model),
+            Some("GFX 100"),
+        );
+    }
+
+    #[test]
     fn other_cameras_and_other_makes_find_nothing() {
         assert_eq!(find(Some("Canon"), "Canon EOS 7D"), None);
         assert_eq!(find(Some("SONY"), "ILCE-7M2"), None);
