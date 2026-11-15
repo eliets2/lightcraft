@@ -376,25 +376,45 @@ pub fn specs() -> Vec<CommandSpec> {
                 Ok(json!({"mix": m}))
             }
         ),
-        cmd!("develop.auto", "Auto Settings", ["Photo"], Some("Shift+A"), "{}", has_active, |s, _| {
-            let id = active(s, "develop.auto")?;
-            let src = s.source_now(id, SourceLevel::Thumb).map_err(|e| bad("develop.auto", e))?;
-            let info = s.source_info(id);
-            let d = s.develop_of(id).unwrap_or_default();
-            let a = lightcraft_pipeline::auto::auto_tone(&src, &info, &d);
-            edit(s, "develop.auto", "Auto", |d| {
-                d.light.exposure = a.exposure;
-                d.light.contrast = a.contrast;
-                d.light.highlights = a.highlights;
-                d.light.shadows = a.shadows;
-                d.light.whites = a.whites;
-                d.light.blacks = a.blacks;
-                d.color.vibrance = a.vibrance;
-                d.color.saturation = a.saturation;
-                Ok(())
-            })?;
-            Ok(serde_json::to_value(a).unwrap_or_default())
-        }),
+        cmd!(
+            "develop.auto",
+            "Auto Settings",
+            ["Photo"],
+            Some("Shift+A"),
+            "{ids?} — auto tone for every target photo (`ids`, else the selection), each from its own analysis, in one undo step → the first target's tone",
+            has_selection,
+            |s, p| {
+                let c = "develop.auto";
+                let ids = s.targets(p)?;
+                let mut first_tone: Option<Value> = None;
+                let mut ops: Vec<Op> = Vec::new();
+                for id in ids {
+                    let src = s.source_now(id, SourceLevel::Thumb).map_err(|e| bad(c, e))?;
+                    let info = s.source_info(id);
+                    let d = s.develop_of(id).unwrap_or_default();
+                    let a = lightcraft_pipeline::auto::auto_tone(&src, &info, &d);
+                    let mut nd = (*d).clone();
+                    nd.light.exposure = a.exposure;
+                    nd.light.contrast = a.contrast;
+                    nd.light.highlights = a.highlights;
+                    nd.light.shadows = a.shadows;
+                    nd.light.whites = a.whites;
+                    nd.light.blacks = a.blacks;
+                    nd.color.vibrance = a.vibrance;
+                    nd.color.saturation = a.saturation;
+                    if let Some(op) = s.develop_op(id, nd, "Auto") {
+                        ops.push(op);
+                    }
+                    if first_tone.is_none() {
+                        first_tone = Some(serde_json::to_value(a).unwrap_or_default());
+                    }
+                }
+                if !ops.is_empty() {
+                    s.commit("Auto", Op::Batch { ops })?;
+                }
+                Ok(first_tone.unwrap_or_default())
+            }
+        ),
         cmd!(
             "develop.wb",
             "White Balance",
