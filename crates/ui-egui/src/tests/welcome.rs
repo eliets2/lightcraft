@@ -249,3 +249,33 @@ fn the_web_tour_names_export_alone_not_the_desktop_print_menu() {
     assert_eq!(welcome_opening(4, "File › Export… · File › Print…", Some("Ctrl+P"), false), "File › Export… · File › Print… (Ctrl+P).");
     assert_eq!(welcome_opening(4, "File › Export… · File › Print…", None, false), "File › Export… · File › Print…");
 }
+
+/// Regression: the Back / Skip / Next row must stay usable at both the default
+/// viewport and a narrow viewport narrower than the three buttons' desired
+/// widths plus their gaps. At the narrow width the row adapts (wraps,
+/// truncates or scrolls) without clipping or losing any hit target: every
+/// button still answers a click.
+#[test]
+fn welcome_button_row_fits_available_width() {
+    // Default viewport: normal layout, every button answers a click.
+    let mut h = tour(0);
+    click(&mut h, "button:welcomeNext");
+    assert_eq!(page_of(&h), Some(1), "{:?}", h.app.ui.dialog);
+    click(&mut h, "button:welcomeBack");
+    assert_eq!(page_of(&h), Some(0), "{:?}", h.app.ui.dialog);
+
+    // Narrow viewport: narrower than the combined desired widths of the three
+    // buttons plus their gaps. The row must adapt without losing hit targets.
+    let services = Services { png: None, ..Default::default() };
+    let mut app = LightcraftApp::new(lightcraft_engine::Session::with_demo(), services);
+    app.ui.dialog = Some(Dialog::Welcome { page: 0 });
+    let mut narrow = Headless::new(app, [200.0, 800.0], 1.0);
+    narrow.step();
+    narrow.settle(Duration::from_secs(5));
+    click(&mut narrow, "button:welcomeNext");
+    assert_eq!(page_of(&narrow), Some(1), "{:?}", narrow.app.ui.dialog);
+    click(&mut narrow, "button:welcomeBack");
+    assert_eq!(page_of(&narrow), Some(0), "{:?}", narrow.app.ui.dialog);
+    click(&mut narrow, "button:welcomeSkip");
+    assert!(narrow.app.ui.dialog.is_none(), "{:?}", narrow.app.ui.dialog);
+}
