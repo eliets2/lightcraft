@@ -157,7 +157,10 @@ pub(crate) fn decode(bytes: &[u8], mode: Mode) -> Result<RawImage> {
     let track = main_track(&container.tracks).ok_or_else(|| RawError::Unsupported("CR3 without a Bayer raw track".into()))?;
     let coding = track.compression(bytes).ok_or_else(|| RawError::Corrupt("CR3 raw track has an invalid CMP1 descriptor".into()))?;
     if coding.planes != 4 || coding.encoding != 0 {
-        return Err(RawError::Unsupported(format!("Canon CR3 encoding {} with {} planes", coding.encoding, coding.planes)));
+        return Err(RawError::Unsupported(format!(
+            "Canon CR3 encoding {} with {} planes; note: sRAW/mRAW are CR2-era YCbCr codings and do not occur in CR3",
+            coding.encoding, coding.planes
+        )));
     }
     let (width, height) = (coding.width as usize, coding.height as usize);
     let samples = width.checked_mul(height).filter(|&n| n > 0 && n <= MAX_SAMPLES).ok_or(RawError::Limit("CR3 sensor dimensions"))?;
