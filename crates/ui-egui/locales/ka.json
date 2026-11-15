@@ -723,6 +723,7 @@
   "Export can write PSD too (flat, 8- or 16-bit).": "ექსპორტს PSD-ის ჩაწერაც შეუძლია (ერთშრიანი, 8 ან 16 ბიტი).",
   "Export file names use the Rename Photos tokens ({title}, {seq:2}, {date:%Y-%m-%d}…), plus new {num}, {folder}, {lens}, {iso}, {rating}, {creator}.": "ექსპორტირებული ფაილების სახელები იყენებს ფოტოების გადარქმევის ტეგებს ({title}, {seq:2}, {date:%Y-%m-%d}…) და ახალ {num}, {folder}, {lens}, {iso}, {rating}, {creator}-ს.",
   "Export renders JPEG, PNG, TIFF, WebP and more, sized as you like; Print lays a photo out on a page as PDF.": "ექსპორტი ქმნის JPEG, PNG, TIFF, WebP და სხვა ფორმატებს სასურველი ზომით; დაბეჭდვა ფოტოს PDF-ად გვერდზე განათავსებს.",
+  "Export renders JPEG, PNG, TIFF, WebP and more, sized as you like.": "ექსპორტი ქმნის JPEG, PNG, TIFF, WebP და სხვა ფორმატებს სასურველი ზომით.",
   "Export stopped unexpectedly": "ექსპორტი მოულოდნელად შეწყდა",
   "Export with Preset": "ექსპორტი პრესეტით",
   "Export with Previous": "ექსპორტი წინა პარამეტრებით",

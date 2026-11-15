@@ -61,19 +61,21 @@ fn welcome_last_page_gets_started_closes() {
     assert!(h.app.ui.dialog.is_none(), "{:?}", h.app.ui.dialog);
 }
 
-/// The web build omits the tour page that names the desktop-only launch flow (`--control`,
+/// The browser build omits the tour page that names the desktop-only launch flow (`--control`,
 /// `lightcraft-cli mcp --connect`): a browser has no control port for an agent to attach to.
 /// The host is a compile-time fact (wasm32), so this harness — native, a desktop host — tests
-/// the pure decision ([`crate::dialogs::welcome_pages`]) for both answers.
+/// the pure decision ([`crate::dialogs::welcome_pages`]) for both answers. The browser tour
+/// also keeps the Print command out of its Share page body: the browser build's File menu
+/// disables Print, so that sentence names Export alone.
 #[test]
-fn the_web_tour_omits_the_desktop_only_mcp_page() {
-    let all = crate::dialogs::WELCOME_PAGES.as_slice();
-    assert_eq!(crate::dialogs::welcome_pages(false), all, "the desktop shows every page");
-    let web = crate::dialogs::welcome_pages(true);
+fn the_web_tour_print_sentence_absent() {
+    use crate::dialogs::{WELCOME_PAGES, WELCOME_SHARE_WEB, welcome_pages};
+    let all = WELCOME_PAGES.as_slice();
+    assert_eq!(welcome_pages(false), all, "the desktop shows every page");
+    let web = welcome_pages(true);
     assert_eq!(web, &all[..all.len() - 1], "the web tour drops the last page");
-    // the dropped page is the desktop-only one: its opening names the launch flow
-    let (_, _, opening) = all.last().unwrap();
-    assert!(opening.contains("--control 7980") && opening.contains("lightcraft-cli"), "{opening}");
+    assert!(!WELCOME_SHARE_WEB.contains("Print"), "{WELCOME_SHARE_WEB}");
+    assert!(WELCOME_PAGES[4].1.contains("Print"), "the desktop keeps the Print sentence");
 }
 
 /// The first frame decides the launch dialog, but records nothing until the dialog is presented:
@@ -283,5 +285,12 @@ fn welcome_button_row_fits_available_width() {
     assert!(
         right <= 200.0,
         "welcome button row overflows the available width: right edge {right} > 200 (back={back:?}, skip={skip:?}, next={next:?})"
+    );
+    // A stacked row must also stay inside the viewport on the left: a right-aligned
+    // stack wide enough for its longest label still fits a 200px viewport.
+    let left = back.left().min(skip.left()).min(next.left());
+    assert!(
+        left >= 0.0,
+        "welcome buttons fall off the left edge: left edge {left} < 0 (back={back:?}, skip={skip:?}, next={next:?})"
     );
 }

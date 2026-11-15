@@ -142,11 +142,11 @@ fn catalogs_agree_on_placeholders() {
 /// it), so their `{keys}` forms are pinned in every `*-formats.json` too.
 #[test]
 fn the_welcome_tour_is_translated_in_every_catalog() {
-    use crate::dialogs::{WELCOME_NEXT, WELCOME_PAGES, WELCOME_START, WELCOME_TITLE};
+    use crate::dialogs::{WELCOME_NEXT, WELCOME_PAGES, WELCOME_SHARE_WEB, WELCOME_START, WELCOME_TITLE};
     let keys: Vec<&str> = WELCOME_PAGES
         .iter()
         .flat_map(|(title, text, opening)| [*title, *text, *opening])
-        .chain([WELCOME_TITLE, WELCOME_NEXT, WELCOME_START])
+        .chain([WELCOME_TITLE, WELCOME_NEXT, WELCOME_START, WELCOME_SHARE_WEB])
         .collect();
     let format_keys = [
         "Bring photos in with File \u{203a} Import Photos\u{2026} ({keys}).",

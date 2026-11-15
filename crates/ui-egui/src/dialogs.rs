@@ -58,6 +58,10 @@ pub(crate) const WELCOME_TITLE: &str = "Welcome";
 pub(crate) const WELCOME_NEXT: &str = "Next";
 pub(crate) const WELCOME_START: &str = "Get Started";
 
+/// The browser build's Share page: the same as the Share page above without its last
+/// clause, which names Print, a command the browser build's File menu disables.
+pub(crate) const WELCOME_SHARE_WEB: &str = "Export renders JPEG, PNG, TIFF, WebP and more, sized as you like.";
+
 /// The first-run tour's pages: (title, what it does, where to find it). Every menu path names a
 /// real command (`file.addPhotos`, `view.photoGrid`, `view.detail`, `view.beforeAfter`,
 /// `dialog.cull`, `dialog.export`, `dialog.print`); `›` paints (the menu triangle `▸` does not).
@@ -149,6 +153,8 @@ fn welcome_body(app: &LightcraftApp, ui: &mut egui::Ui, t: &Tokens, page: &mut u
     let last = pages.len() - 1;
     *page = (*page).min(last);
     let (title, text, opening) = pages[*page];
+    let web_host = cfg!(target_arch = "wasm32");
+    let text = if *page == WELCOME_PRINT_PAGE && web_host { WELCOME_SHARE_WEB } else { text };
     ui.add_space(2.0);
     ui.label(egui::RichText::new(crate::i18n::tr(title)).font(t.semibold(16.0)).color(t.text));
     ui.label(egui::RichText::new(crate::i18n::tr(text)).color(t.text_label));
@@ -158,9 +164,10 @@ fn welcome_body(app: &LightcraftApp, ui: &mut egui::Ui, t: &Tokens, page: &mut u
     // a hard-coded key. A command whose binding was removed shows the menu path alone.
     let mac = ui.ctx().os() == egui::os::OperatingSystem::Mac;
     let keys = welcome_page_command(*page)
+        .filter(|_| !web_host || *page != WELCOME_PRINT_PAGE)
         .and_then(|id| crate::shortcuts::shortcut_of(&app.ui.settings.keymap, id))
         .map(|sc| crate::menus::menubar::shortcut_text(sc, mac));
-    let opening = welcome_opening(*page, opening, keys.as_deref(), cfg!(target_arch = "wasm32"));
+    let opening = welcome_opening(*page, opening, keys.as_deref(), web_host);
     ui.label(egui::RichText::new(opening).color(t.text_dim));
     ui.add_space(8.0);
     // progress dots, centred: the active page's is the accent
@@ -178,26 +185,46 @@ fn welcome_body(app: &LightcraftApp, ui: &mut egui::Ui, t: &Tokens, page: &mut u
     let next_label = if *page == last { crate::i18n::tr(WELCOME_START) } else { crate::i18n::tr(WELCOME_NEXT) };
     let next = Button::new(next_label).kind(Kind::Primary).widget("button:welcomeNext").min_width(84.0);
     let gap = ui.spacing().item_spacing.x;
-    let row_w = ui.available_width().max(ui.min_rect().width()).max(1.0);
+    let row_w = ui.available_width().max(1.0);
     let back_size = back.desired_size(ui);
     let skip_size = skip.desired_size(ui);
     let next_size = next.desired_size(ui);
     let total_w = back_size.x + skip_size.x + next_size.x + 2.0 * gap;
-    let scale = if total_w > row_w && total_w > 0.0 { row_w / total_w } else { 1.0 };
-    let back_w = back_size.x * scale;
-    let skip_w = skip_size.x * scale;
-    let next_w = next_size.x * scale;
+    // A viewport too narrow for all three labels stacks them instead of shrinking their
+    // rects below their labels' text, which would leave the buttons unusable.
+    if total_w > row_w {
+        let h = back_size.y + gap + skip_size.y + gap + next_size.y;
+        ui.allocate_ui_with_layout(egui::vec2(row_w, h), egui::Layout::top_down(egui::Align::RIGHT), |ui| {
+            let (rect, _) = ui.allocate_exact_size(back_size, egui::Sense::hover());
+            if back.show_at(ui, rect).clicked() {
+                *page -= 1;
+            }
+            let (rect, _) = ui.allocate_exact_size(skip_size, egui::Sense::hover());
+            if skip.show_at(ui, rect).clicked() {
+                *close = true;
+            }
+            let (rect, _) = ui.allocate_exact_size(next_size, egui::Sense::hover());
+            if next.show_at(ui, rect).clicked() {
+                if *page == last {
+                    *close = true;
+                } else {
+                    *page += 1;
+                }
+            }
+        });
+        return;
+    }
     ui.allocate_ui_with_layout(egui::vec2(row_w, next_size.y), egui::Layout::left_to_right(egui::Align::Center), |ui| {
-        let (rect, _) = ui.allocate_exact_size(egui::vec2(back_w, back_size.y), egui::Sense::hover());
+        let (rect, _) = ui.allocate_exact_size(back_size, egui::Sense::hover());
         if back.show_at(ui, rect).clicked() {
             *page -= 1;
         }
-        ui.add_space((ui.available_width() - skip_w - next_w - 2.0 * gap).max(0.0));
-        let (rect, _) = ui.allocate_exact_size(egui::vec2(skip_w, skip_size.y), egui::Sense::hover());
+        ui.add_space((row_w - back_size.x - skip_size.x - next_size.x - 2.0 * gap).max(0.0));
+        let (rect, _) = ui.allocate_exact_size(skip_size, egui::Sense::hover());
         if skip.show_at(ui, rect).clicked() {
             *close = true;
         }
-        let (rect, _) = ui.allocate_exact_size(egui::vec2(next_w, next_size.y), egui::Sense::hover());
+        let (rect, _) = ui.allocate_exact_size(next_size, egui::Sense::hover());
         if next.show_at(ui, rect).clicked() {
             if *page == last {
                 *close = true;
