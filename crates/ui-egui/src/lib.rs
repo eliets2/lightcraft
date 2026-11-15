@@ -71,12 +71,10 @@ pub use widgets::progress;
 pub use widgets::rating;
 pub use widgets::text_field;
 
-mod app;
 mod caches;
 mod clock;
 mod services;
 
-use app::{detect_summary, import_tick_allowed, sam_download_ended, shot_ready};
 pub(crate) use caches::key_of;
 pub use caches::{FilterValues, LibraryCounts, RulesView};
 use clock::AppClock;
@@ -87,7 +85,40 @@ pub use services::{
     CheckEditorFn, HostAction, OpenAllWithFn, OpenUrlFn, OpenWithFn, PickFiles, PickFolder, PngEncode, RevealFn, SaveFile, ScreenProfileFn, Services,
     SharedWrite, SystemThemeFn, WriteFn,
 };
-use state::{GestureFrame, InjectedPress};
+use state::{GestureFrame, InjectedDrop, InjectedPress};
+
+pub(crate) fn detect_summary(v: &Value) -> String {
+    let photos = v["photos"].as_array().map(Vec::as_slice).unwrap_or_default();
+    let counts: Vec<usize> = photos.iter().map(|p| p["faces"].as_array().map_or(0, Vec::len)).collect();
+    let (faces, with) = (counts.iter().sum::<usize>(), counts.iter().filter(|n| **n > 0).count());
+    let plural = |n: usize, w: &str| format!("{n} {w}{}", if n == 1 { "" } else { "s" });
+    match (faces, photos.len()) {
+        (0, 1) => "No faces found".into(),
+        (0, n) => format!("No faces found in {}", plural(n, "photo")),
+        (f, 1) => format!("Found {}", plural(f, "face")),
+        (f, _) => format!("Found {} in {}", plural(f, "face"), plural(with, "photo")),
+    }
+}
+
+pub(crate) fn sam_download_ended(download: &lightcraft_engine::segment::DownloadStatus) -> Option<(String, bool)> {
+    match &download.error {
+        Some(_) if download.cancelled => {
+            Some((crate::i18n::tr("SAM 3 download stopped: it resumes where it left off next time.").to_string(), false))
+        }
+        Some(e) => Some((crate::i18n::tr_format!("The SAM 3 download failed: {e}", e = e), true)),
+        None if download.finished => Some((crate::i18n::tr("The SAM 3 model is installed: Object and Describe masks are ready.").to_string(), true)),
+        None => None,
+    }
+}
+
+pub(crate) fn import_tick_allowed(ctx: &egui::Context) -> bool {
+    ctx.current_pass_index() == 0
+}
+
+pub(crate) fn shot_ready(now_ms: f64, shot: &PendingShot, busy: bool, ui_passes: u64) -> bool {
+    let settled = ui_passes.saturating_sub(shot.admitted_passes) >= SHOT_SETTLE_FRAMES && now_ms >= shot.not_before_ms;
+    settled && (!busy || now_ms >= shot.force_ms)
+}
 
 const TOAST_SECONDS: f64 = 1.4;
 /// The `path` of a display profile read from the screen rather than chosen as a file.
@@ -387,6 +418,7 @@ impl LightcraftApp {
             slideshow_hidden_at: None,
             slideshow_auto_paused: false,
             dropped_files: vec![],
+            deferred_dropped_file_count: 0,
             synthetic_in_flight: false,
             ui_passes: 0,
             #[cfg(test)]
