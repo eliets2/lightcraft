@@ -221,10 +221,10 @@ pub fn builtin_presets() -> Vec<ExportPreset> {
         p("JPEG (Large)", serde_json::json!({"format": "jpeg", "quality": 92, "longEdge": 0, "colorSpace": "srgb"})),
         p("Original + Settings", serde_json::json!({"format": "original"})),
         p("DNG", serde_json::json!({"format": "dng"})),
-        p("Instagram Feed", serde_json::json!({"format": "jpeg", "quality": 85, "longEdge": 1080, "colorSpace": "srgb", "sharpen": "screen"})),
+        p("Instagram Feed", serde_json::json!({"format": "jpeg", "quality": 85, "longEdge": 1080, "colorSpace": "srgb", "sharpen": "screen", "removeLocation": true})),
         p(
             "Instagram Story / Reel",
-            serde_json::json!({"format": "jpeg", "quality": 85, "longEdge": 1920, "colorSpace": "srgb", "sharpen": "screen"}),
+            serde_json::json!({"format": "jpeg", "quality": 85, "longEdge": 1920, "colorSpace": "srgb", "sharpen": "screen", "removeLocation": true}),
         ),
         p("Web / Portfolio", serde_json::json!({"format": "jpeg", "quality": 85, "longEdge": 2048, "colorSpace": "srgb", "metadata": "copyright"})),
         p("Full Resolution Master", serde_json::json!({"format": "jpeg", "quality": 95, "longEdge": 0, "colorSpace": "displayP3"})),
@@ -3843,5 +3843,57 @@ mod tests {
         assert_eq!(render_weight(1000 * 500, 1000, SourceLevel::Preview, 0), 1000 * 500 * 12);
         assert_eq!(render_weight(0, 0, SourceLevel::Full, 0), 0);
         assert!(render_weight(usize::MAX, 1, SourceLevel::Full, usize::MAX) > 0, "no overflow");
+    }
+
+    /// The two sharing presets must opt into location stripping: `builtin_presets()` must set
+    /// `removeLocation` on them, because the defaults (`MetadataPolicy::All`,
+    /// `remove_location: false`) leave GPS in the exported JPEG EXIF. Fails until the presets
+    /// set `"removeLocation": true`.
+    #[test]
+    fn instagram_presets_remove_location() {
+        use lightcraft_catalog::{Op, Photo, PhotoId, Source};
+
+        let presets: Vec<_> = builtin_presets()
+            .into_iter()
+            .filter(|p| p.name == "Instagram Feed" || p.name == "Instagram Story / Reel")
+            .collect();
+        assert_eq!(presets.len(), 2, "both Instagram presets must be defined");
+
+        // A demo photo carrying a GPS location, added to the catalog so the real export path
+        // (encode_with_metadata writing EXIF GPS) can read it.
+        let mut photo = Photo::new(
+            PhotoId(9_497),
+            Source::Demo { scene: 0 },
+            "gps.jpg",
+            "jpeg",
+            200,
+            200,
+            "2026-09-30T00:00:00",
+        );
+        photo.meta.gps = Some((43.0, -110.0));
+        let mut s = crate::Session::with_demo();
+        s.catalog.apply(Op::AddPhoto { photo: Box::new(photo) }).unwrap();
+
+        for preset in &presets {
+            let options =
+                ExportOptions::from_params(&preset.params).unwrap_or_else(|e| {
+                    panic!("{}: preset params must parse: {e}", preset.name)
+                });
+            assert!(
+                options.remove_location,
+                "{} preset must set removeLocation so GPS is stripped",
+                preset.name
+            );
+            let exported =
+                export_photo(&mut s, PhotoId(9_497), &options, 1).unwrap_or_else(|e| {
+                    panic!("{}: export must succeed: {e}", preset.name)
+                });
+            let decoded = lightcraft_meta::extract(&exported.bytes);
+            assert!(
+                decoded.gps.is_none(),
+                "{} preset must not write GPS to the JPEG EXIF",
+                preset.name
+            );
+        }
     }
 }
