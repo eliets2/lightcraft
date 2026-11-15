@@ -238,6 +238,22 @@ mod tests {
         #[cfg(unix)]
         assert_eq!(file_hash("/dev/zero"), None, "a device never ends");
     }
+
+    #[test]
+    fn find_missing_searches_beyond_three_levels_deep() {
+        let dir = Scratch(std::env::temp_dir().join(format!("lc-find-deep-{}", std::process::id())));
+        let _ = std::fs::remove_dir_all(&dir.0);
+        let deep = dir.0.join("a/b/c/d/e");
+        std::fs::create_dir_all(&deep).unwrap();
+        let found = deep.join("target.png");
+        let bytes = b"deep-pixels";
+        std::fs::write(&found, bytes.as_slice()).unwrap();
+        let missing = dir.0.join("gone/target.png");
+        let candidate = FindCandidate { id: PhotoId(1), path: missing.to_string_lossy().to_string(), size: bytes.len() as u64, hash: None };
+        let plan = plan_find_missing(std::slice::from_ref(&candidate), dir.0.to_str().unwrap()).unwrap();
+        assert_eq!(plan.found.len(), 1, "deeply nested file should be found: {plan:?}");
+        assert_eq!(plan.found[0].to, found.to_string_lossy().to_string());
+    }
 }
 
 /// An in-scope photo ([`checked_path`]) as Find Missing Photos sees it: its file, the size and
@@ -382,7 +398,16 @@ pub fn plan_find_missing(candidates: &[FindCandidate], folder: &str) -> std::res
     let in_use: HashSet<&str> = candidates.iter().map(|c| c.path.as_str()).collect();
     // file name (lower case) → candidate paths; size → paths (filled lazily)
     let mut by_name: HashMap<String, Vec<String>> = HashMap::new();
-    let files: Vec<String> = crate::import::expand(&[folder.to_string()], None).into_iter().filter(|f| !in_use.contains(f.as_str())).collect();
+    let files: Vec<String> = crate::import::expand_within(
+        &[folder.to_string()],
+        None,
+        crate::walk::Limits { max_depth: crate::walk::MAX_DEPTH, max_entries: crate::walk::MAX_ENTRIES },
+    )
+    .0
+    .into_iter()
+    .map(|f| Path::new(&f).components().collect::<std::path::PathBuf>().to_string_lossy().into_owned())
+    .filter(|f| !in_use.contains(f.as_str()))
+    .collect();
     for f in &files {
         let name = name_key(f);
         if !name.is_empty() {
