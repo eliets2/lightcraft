@@ -3077,11 +3077,30 @@ mod tests {
         let r = h.request("engine.execute", json!({"command": "local.addRoot", "params": {"path": path}}), t);
         assert_eq!(r["ok"], true, "{r}");
         assert!(h.app.ui.local_roots.iter().any(|root| crate::panels::left::same_folder(root, &path)), "kept: {:?}", h.app.ui.local_roots);
-        // remove it from Local: it must leave the roots, not only be hidden
+        // remove it from Local: it must leave the roots, not only be hidden, and it must be recorded
+        // as hidden so clearing hidden locations cannot bring it back (issue #2114)
+        let r = h.request("engine.execute", json!({"command": "local.hide", "params": {"path": path}}), t);
+        assert_eq!(r["ok"], true, "{r}");
+        assert!(h.app.ui.hidden_locations.iter().any(|x| crate::panels::left::same_folder(x, &path)), "hidden: {:?}", h.app.ui.hidden_locations);
+        assert!(!h.app.ui.local_roots.iter().any(|root| crate::panels::left::same_folder(root, &path)), "still a root: {:?}", h.app.ui.local_roots);
+        // clearing hidden locations must not restore a removed root
+        let r = h.request("engine.execute", json!({"command": "local.restoreHidden", "params": {}}), t);
+        assert_eq!(r["ok"], true, "{r}");
+        assert!(h.app.ui.hidden_locations.is_empty(), "{:?}", h.app.ui.hidden_locations);
+        assert!(!h.app.ui.local_roots.iter().any(|root| crate::panels::left::same_folder(root, &path)), "came back: {:?}", h.app.ui.local_roots);
+        // hiding a folder that was never a root must not crash
+        let other = std::env::temp_dir().join(format!("lc-ui-remove-other-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&other);
+        std::fs::create_dir_all(&other).unwrap();
+        let other_path = other.to_string_lossy().to_string();
+        let r = h.request("engine.execute", json!({"command": "local.hide", "params": {"path": other_path}}), t);
+        assert_eq!(r["ok"], true, "{r}");
+        // hiding an already-hidden folder is idempotent and must not crash
         let r = h.request("engine.execute", json!({"command": "local.hide", "params": {"path": path}}), t);
         assert_eq!(r["ok"], true, "{r}");
         assert!(!h.app.ui.local_roots.iter().any(|root| crate::panels::left::same_folder(root, &path)), "still a root: {:?}", h.app.ui.local_roots);
         let _ = std::fs::remove_dir_all(&dir);
+        let _ = std::fs::remove_dir_all(&other);
     }
 
     /// Local: a kept folder stays a root while its subfolders (and other locations) are
