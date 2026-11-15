@@ -2,7 +2,7 @@
 //! template stores.
 use super::PrintJob;
 use super::compose::{ImageSettings, PageStyle};
-use super::layout::{Guides, Layout};
+use crate::print::layout::{GridSpec, Guides, Layout, Margins, Orientation, Style};
 use serde::{Deserialize, Serialize};
 
 /// Layout, image settings, page, guides and job: the whole Print module state.
@@ -111,6 +111,37 @@ impl PrintTemplate {
     }
 }
 
+/// The templates that ship with LightCraft: our own designs in code (no Adobe names or designs).
+/// Built-ins are listed first, are never saved in the library preferences and never count toward
+/// [`MAX_TEMPLATES`]. Keeping them as code lets `PrintTemplate::new` check every built-in in tests.
+pub fn builtins() -> Vec<PrintTemplate> {
+    let mut full_page = PrintSettings::default();
+    full_page.layout.style = Style::SingleImage;
+    full_page.layout.page.paper = "letter".into();
+    full_page.layout.page.orientation = Orientation::Portrait;
+    full_page.layout.page.margins = Margins::uniform(0.5);
+
+    let mut contact_sheet = PrintSettings::default();
+    contact_sheet.layout.style = Style::ContactSheet;
+    contact_sheet.layout.page.paper = "letter".into();
+    contact_sheet.layout.grid = GridSpec { columns: 3, rows: 4, spacing_x: 0.1, spacing_y: 0.1, keep_square: false };
+    contact_sheet.page.page_numbers = true;
+
+    let mut picture_package = PrintSettings::default();
+    picture_package.layout.style = Style::PicturePackage;
+    picture_package.layout.page.paper = "letter".into();
+    picture_package.layout.page.margins = Margins::uniform(0.2);
+    // Two 4 x 6 in cells fit side by side in the Letter printable area (8 x 10.5 in); the layout's
+    // spacing separates them.
+    let _ = picture_package.layout.add_cell(4.0, 6.0);
+    let _ = picture_package.layout.add_cell(4.0, 6.0);
+
+    [("Full Page", full_page), ("Contact Sheet", contact_sheet), ("Picture Package", picture_package)]
+        .into_iter()
+        .filter_map(|(name, settings)| PrintTemplate::new(name, &settings).ok())
+        .collect()
+}
+
 /// `name` if no template in `taken` has it (in any case), else the first free `name (2)`,
 /// `name (3)`…, with `name` shortened to keep the result within [`MAX_NAME`] characters.
 pub fn unique_name(name: &str, taken: &[PrintTemplate]) -> String {
@@ -156,6 +187,17 @@ mod tests {
         assert!(back.image.zoom_to_fill);
         assert_eq!((back.page.background, back.job.ppi), ([10, 20, 30], 300.0));
         assert_eq!(back.guides, Guides::default(), "the guides are the caller's");
+    }
+
+    #[test]
+    fn built_ins_validate_and_fit_on_one_letter_sheet() {
+        let templates = builtins();
+        assert_eq!(templates.len(), 3);
+        for t in &templates {
+            let settings: PrintSettings = serde_json::from_value(t.settings.clone()).unwrap();
+            assert!(PrintTemplate::new(&t.name, &settings).is_ok(), "{}", t.name);
+            assert_eq!(t.settings["layout"]["page"]["paper"], "letter");
+        }
     }
 
     #[test]

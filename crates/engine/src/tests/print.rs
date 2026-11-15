@@ -208,6 +208,57 @@ fn temp_pdf(name: &str) -> String {
 }
 
 #[test]
+fn the_print_dialog_ships_three_built_in_templates_of_our_own_d() {
+    let files = MemStore::new();
+    let open = |files: &MemStore| {
+        let mut s = Session::with_demo();
+        let stores = LibraryStores { dir: "print".into(), catalog: Box::new(MemStore::new()), files: Box::new(files.clone()), on_disk: false };
+        s.open_library_in(stores, false).unwrap();
+        s
+    };
+    let mut s = open(&files);
+    // A fresh library is not template-less: three of our own designs come with it, built-ins first.
+    let templates = run(&mut s, "print.template.list", json!({}))["templates"].clone();
+    let list = templates.as_array().unwrap();
+    let assert_builtin = |idx: usize, name: &str, style: &str, cell_count: Option<usize>| {
+        let t = &list[idx];
+        assert_eq!(t["name"], name);
+        assert_eq!(t["builtin"], true);
+        assert_eq!(t["style"], style);
+        assert_eq!(t["settings"]["layout"]["page"]["paper"], "letter");
+        if let Some(cells) = cell_count {
+            assert_eq!(t["settings"]["layout"]["cells"].as_array().unwrap().len(), cells);
+        }
+        // Every built-in is a valid template of its own.
+        let settings: crate::print::template::PrintSettings = serde_json::from_value(t["settings"].clone()).unwrap();
+        assert!(crate::print::template::PrintTemplate::new(name, &settings).is_ok());
+    };
+    assert_eq!(list.len(), 3, "three built-in print templates in a new library: {templates}");
+    // Single full-page photo on Letter with margins; contact sheet on Letter with page numbers;
+    // picture package of 4x6 in photos on Letter.
+    assert_builtin(0, "Full Page", "singleImage", None);
+    let page = &list[0]["settings"]["layout"]["page"];
+    assert_eq!(page["paper"], "letter");
+    assert_eq!(page["orientation"], "portrait");
+    assert_eq!(page["margins"], json!({"top": 0.5, "right": 0.5, "bottom": 0.5, "left": 0.5}));
+    assert_builtin(1, "Contact Sheet", "contactSheet", None);
+    assert_eq!(list[1]["settings"]["layout"]["grid"], json!({"columns": 3, "rows": 4, "spacingX": 0.1, "spacingY": 0.1, "keepSquare": false}));
+    assert_eq!(list[1]["settings"]["page"]["pageNumbers"], true);
+    assert_builtin(2, "Picture Package", "picturePackage", Some(2));
+    // Applying one is applying its look; saving or deleting over a built-in is refused.
+    let g = run(&mut s, "print.template.apply", json!({"name": "Full Page"}));
+    assert_eq!(g["settings"]["layout"]["style"], "singleImage");
+    assert!(fails(&mut s, "print.template.delete", json!({"name": "Full Page"})).contains("save under another name"));
+    assert!(fails(&mut s, "print.template.save", json!({"name": "Full Page"})).contains("save under another name"));
+    // Built-ins are not written to prefs.json, and a user save still counts toward the limit,
+    // not the built-ins.
+    run(&mut s, "print.template.save", json!({"name": "Mine"}));
+    let prefs: Value = serde_json::from_slice(&files.get("prefs.json").unwrap()).unwrap();
+    assert!(prefs["printTemplates"].as_array().unwrap().iter().all(|t| t.get("builtin").is_none() || t["builtin"] == false));
+    assert!(prefs["printTemplates"].as_array().unwrap().iter().all(|t| t["name"] != "Full Page"));
+}
+
+#[test]
 fn export_pdf_prints_the_current_settings() {
     let mut s = Session::with_demo();
     let ids: Vec<u64> = s.catalog.photos().take(3).map(|p| p.id.0).collect();

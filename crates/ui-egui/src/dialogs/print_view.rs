@@ -217,14 +217,22 @@ fn templates_section(app: &mut LightcraftApp, ui: &mut Ui, t: &Tokens, pu: &mut 
             }
         }
     });
-    let names: Vec<String> = app.session.print_templates.iter().map(|t| t.name.clone()).collect();
-    for (i, name) in names.iter().enumerate() {
+    let builtin_templates = lightcraft_engine::print::template::builtins();
+    let builtin_count = builtin_templates.len();
+    let mut all = builtin_templates;
+    all.extend(app.session.print_templates.iter().cloned());
+    for (i, tmpl) in all.iter().enumerate() {
+        let name = &tmpl.name;
+        let builtin = i < builtin_count;
         ui.horizontal(|ui| {
-            ui.label(egui::RichText::new(name).color(t.text_label));
+            ui.label(egui::RichText::new(crate::i18n::builtin_label(name, builtin)).color(t.text_label));
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if text_button(ui, &format!("printTemplateDelete-{i}"), "Delete", false).clicked() {
-                    run(app, &ctx, "print.template.delete", json!({"name": name}));
-                }
+                    let _r = text_button(ui, &format!("printTemplateDelete-{i}"), "Delete", false);
+                ui.add_enabled_ui(!builtin, |ui| {
+                    let r = text_button(ui, &format!("printTemplateDelete-{i}"), "Delete", false);
+                        run(app, &ctx, "print.template.delete", json!({"name": name}));
+                    }
+                });
                 if app.services.save_print_template.is_some() && text_button(ui, &format!("printTemplateExport-{i}"), "Export…", false).clicked() {
                     let stem = lightcraft_engine::slide_template::file_stem(name).unwrap_or_else(|| "Print Template".into());
                     let file = format!("{stem}.{}", lightcraft_engine::print::template::FILE_EXT);

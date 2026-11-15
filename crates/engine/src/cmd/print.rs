@@ -13,7 +13,7 @@ use serde_json::{Value, json};
 
 use super::{CommandSpec, always, bad, cmd, f64_req};
 use crate::print::layout::{Layout, MAX_PAGES, Rect, Snap, Stack, paper_names, paper_size};
-use crate::print::template::{FILE_EXT, MAX_FILE, MAX_TEMPLATES, PrintSettings, PrintTemplate, clean_name, unique_name};
+use crate::print::template::{FILE_EXT, MAX_FILE, MAX_TEMPLATES, PrintSettings, PrintTemplate, builtins, clean_name, unique_name};
 use crate::{Result, Session};
 
 fn rect_json(r: &Rect) -> Value {
@@ -270,7 +270,30 @@ fn export_pdf(s: &mut Session, p: &Value) -> Result<Value> {
 // ---- templates ------------------------------------------------------------------------------
 
 fn template_list(s: &Session) -> Value {
-    json!({"templates": s.print_templates.iter().map(|t| json!({"name": t.name, "style": t.settings.pointer("/layout/style"), "settings": t.settings})).collect::<Vec<_>>()})
+    let mut templates = builtins()
+        .iter()
+        .map(|t| json!({"name": t.name, "builtin": true, "style": t.settings.pointer("/layout/style"), "settings": t.settings}))
+        .collect::<Vec<_>>();
+    templates.extend(
+        s.print_templates
+            .iter()
+            .map(|t| json!({"name": t.name, "builtin": false, "style": t.settings.pointer("/layout/style"), "settings": t.settings})),
+    );
+    json!({"templates": templates})
+}
+
+/// A built-in template with this name, if one exists.
+fn builtin(name: &str) -> Option<PrintTemplate> {
+    builtins().into_iter().find(|t| t.name.eq_ignore_ascii_case(name))
+}
+
+fn is_builtin(name: &str) -> bool {
+    builtin(name).is_some()
+}
+
+/// Every template the commands can apply, export or find, built-ins first.
+fn find_template(s: &Session, name: &str) -> Option<PrintTemplate> {
+    builtin(name).or_else(|| s.print_templates.iter().find(|t| t.name.eq_ignore_ascii_case(name)).cloned())
 }
 
 fn template_name(p: &Value, id: &str) -> Result<String> {
@@ -290,6 +313,9 @@ fn save_templates(s: &mut Session, before: Vec<PrintTemplate>) -> Result<()> {
 fn template_save(s: &mut Session, p: &Value) -> Result<Value> {
     const ID: &str = "print.template.save";
     let name = template_name(p, ID)?;
+    if is_builtin(&name) {
+        return Err(bad(ID, format!("built-in template `{name}` can't be replaced; save under another name")));
+    }
     let t = PrintTemplate::new(&name, &s.print).map_err(|e| bad(ID, e))?;
     let before = s.print_templates.clone();
     match s.print_templates.iter_mut().find(|x| x.name.eq_ignore_ascii_case(&name)) {
@@ -308,10 +334,7 @@ fn template_save(s: &mut Session, p: &Value) -> Result<Value> {
 fn template_apply(s: &mut Session, p: &Value) -> Result<Value> {
     const ID: &str = "print.template.apply";
     let name = template_name(p, ID)?;
-    let t = s
-        .print_templates
-        .iter()
-        .find(|x| x.name.eq_ignore_ascii_case(&name))
+    let t = find_template(s, &name)
         .ok_or_else(|| bad(ID, format!("no print template `{name}` (see print.template.list)")))?;
     s.print = t.settings(&s.print.guides).map_err(|e| bad(ID, e))?;
     reply(s)
@@ -320,6 +343,9 @@ fn template_apply(s: &mut Session, p: &Value) -> Result<Value> {
 fn template_delete(s: &mut Session, p: &Value) -> Result<Value> {
     const ID: &str = "print.template.delete";
     let name = template_name(p, ID)?;
+    if is_builtin(&name) {
+        return Err(bad(ID, format!("built-in template `{name}` can't be deleted; save under another name")));
+    }
     let before = s.print_templates.clone();
     s.print_templates.retain(|x| !x.name.eq_ignore_ascii_case(&name));
     if s.print_templates.len() == before.len() {
@@ -340,10 +366,7 @@ fn template_export(s: &mut Session, p: &Value) -> Result<Value> {
     if path.extension().is_none() {
         path.set_extension(FILE_EXT);
     }
-    let t = s
-        .print_templates
-        .iter()
-        .find(|x| x.name.eq_ignore_ascii_case(&name))
+    let t = find_template(s, &name)
         .ok_or_else(|| bad(ID, format!("no print template `{name}` (see print.template.list)")))?;
     let bytes = serde_json::to_vec_pretty(&t.to_file()).map_err(|e| crate::EngineError::Other(e.to_string()))?;
     let name = t.name.clone();
@@ -368,7 +391,9 @@ fn template_import(s: &mut Session, p: &Value) -> Result<Value> {
     if s.print_templates.len() >= MAX_TEMPLATES {
         return Err(bad(ID, format!("at most {MAX_TEMPLATES} templates; delete one first")));
     }
-    let name = unique_name(&t.name, &s.print_templates);
+    let mut taken = s.print_templates.clone();
+    taken.extend(builtins());
+    let name = unique_name(&t.name, &taken);
     let renamed = name != t.name;
     t.name = name.clone();
     let before = s.print_templates.clone();
@@ -405,7 +430,7 @@ pub fn specs() -> Vec<CommandSpec> {
         cmd!(query "print.exportPdf", "Print to PDF", [], None,
             "{path, ids?: photo ids (default selection)} → {path, pages, photos, bytes}; prints the current print.get settings; replaces an existing output, never an original",
             always, export_pdf),
-        cmd!(query "print.template.list", "Print Templates", [], None, "{} → {templates: [{name, style, settings}]}", always, |s, _| Ok(template_list(s))),
+        cmd!(query "print.template.list", "Print Templates", [], None, "{} → {templates: [{name, builtin, style, settings}]}", always, |s, _| Ok(template_list(s))),
         cmd!(query "print.template.save", "Save Print Template", [], None,
             "{name} — saves the layout, image settings, page and job (not the cells' photos or the guides); an existing name (any case) is replaced → print.template.list",
             always, template_save),
