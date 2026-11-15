@@ -2090,3 +2090,20 @@ fn auto_sync_hdr_enabled_preserves_per_photo_tuning() {
         assert!(s.auto_sync, "Auto Sync must remain enabled");
     }
 }
+
+#[test]
+fn auto_with_named_ids_bypasses_selection_check() {
+    let mut s = demo();
+    let ids: Vec<u64> = s.catalog.photos().take(2).map(|p| p.id.0).collect();
+    assert_eq!(ids.len(), 2, "the demo library has enough photos to name");
+    s.selection = Selection::default();
+    assert!(
+        s.execute("develop.auto", &json!({"ids": ids})).is_ok(),
+        "develop.auto with named ids must bypass the selection check"
+    );
+    for id in ids {
+        let d = s.develop_of(lightcraft_catalog::PhotoId(id)).unwrap();
+        assert_eq!(d.light.contrast, 68.0, "photo {id} got Auto's contrast");
+        assert_eq!(d.color.vibrance, 30.0, "photo {id} got Auto's vibrance");
+    }
+}
