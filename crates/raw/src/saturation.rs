@@ -135,6 +135,10 @@ impl RawImage {
     /// coarse bins so gain-spread saturation (e.g. R100) is found too. With enough above-white
     /// data but no clear pile-up, the bit-depth ceiling keeps all that unclipped headroom.
     /// One shared range and its compensating baseline EV preserve lower tones and colour ratios.
+    /// This is the CR3 white-level rule: full decoding extends Canon's stated white level
+    /// to the detected saturation point and compensates with `baseline_exposure`, instead
+    /// of clipping samples above the stated level. It needs the samples, so a header-only
+    /// probe cannot apply it and reports the stated level's baseline exposure.
     pub(crate) fn extend_cr3_white(&mut self) -> bool {
         if self.format != crate::RawFormat::Cr3 || !self.color.baseline_exposure.is_finite() || !(1..=16).contains(&self.bits) {
             return false;
@@ -450,6 +454,21 @@ mod tests {
             }
         }
         assert!(r.extend_cr3_white(), "a coloured highlight need not clip all three channels");
+        assert_eq!(r.white_at(0), 16383.0);
+    }
+
+    /// The same saturation above the stated white is also found by the generic
+    /// saturation search and lifted by `lift_clipped_samples`.
+    #[test]
+    fn saturation_above_stated_white_is_found_and_lifted() {
+        let mut r = raw_with(None, 14558.0);
+        if let RawData::U16(d) = &mut r.data {
+            for v in d.iter_mut().take(2048) {
+                *v = 16383;
+            }
+        }
+        assert_eq!(r.saturation_points(), [Some(16383); 3], "{:?}", r.saturation_points());
+        r.lift_clipped_samples();
         assert_eq!(r.white_at(0), 16383.0);
     }
 }

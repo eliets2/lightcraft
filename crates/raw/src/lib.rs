@@ -665,8 +665,12 @@ pub struct ColorData {
     pub as_shot_neutral: Option<[f64; 3]>,
     pub as_shot_white_xy: Option<Xy>,
     /// EV to add for a "normal" rendering (`BaselineExposure` + `BaselineExposureOffset`).
-    /// A full CR3 decode also includes compensation for sample-derived white headroom;
-    /// a header-only probe cannot determine that adjustment.
+    /// A full CR3 decode also includes compensation for sample-derived white headroom:
+    /// when Canon's stated white level sits below the sensor's detected saturation,
+    /// full decoding extends the white level to that saturation point and adds the
+    /// EV that keeps lower tones unchanged, instead of clipping samples above the
+    /// stated level. A header-only probe cannot determine that adjustment, so
+    /// [`RawImage::info`] reports the header value for CR3 files.
     pub baseline_exposure: f64,
     /// `BaselineSharpness`: sharpening relative to a reference camera (`None`: the DNG default,
     /// 1). Read and written back by DNG export; rendering doesn't use it yet.
@@ -737,7 +741,15 @@ pub struct Normalized {
 
 impl RawImage {
     /// The description without the samples (what [`probe_info`] returns for the same file).
+    /// For CR3 the sample-derived `baseline_exposure` compensation (see
+    /// [`ColorData::baseline_exposure`]) is reported as the header value, so a header
+    /// probe and a full decode describe the same file; the decoded image itself keeps
+    /// the compensation for rendering.
     pub fn info(&self) -> RawInfo {
+        let mut color = self.color.clone();
+        if self.format == RawFormat::Cr3 {
+            color.baseline_exposure = 0.0;
+        }
         RawInfo {
             format: self.format,
             width: self.width,
@@ -748,7 +760,7 @@ impl RawImage {
             active_area: self.active_area,
             crop: self.crop,
             orientation: self.orientation,
-            color: self.color.clone(),
+            color,
             wb_multipliers: self.wb_multipliers,
             opcodes: self.opcodes.clone(),
             metadata: self.metadata.clone(),
@@ -759,6 +771,10 @@ impl RawImage {
 
     /// [`Self::info`], dropping the samples.
     pub fn into_info(self) -> RawInfo {
+        let mut color = self.color.clone();
+        if self.format == RawFormat::Cr3 {
+            color.baseline_exposure = 0.0;
+        }
         RawInfo {
             format: self.format,
             width: self.width,
@@ -769,7 +785,7 @@ impl RawImage {
             active_area: self.active_area,
             crop: self.crop,
             orientation: self.orientation,
-            color: self.color,
+            color,
             wb_multipliers: self.wb_multipliers,
             opcodes: self.opcodes,
             metadata: self.metadata,

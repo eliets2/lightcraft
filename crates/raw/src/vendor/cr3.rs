@@ -259,10 +259,14 @@ pub(crate) fn decode(bytes: &[u8], mode: Mode) -> Result<RawImage> {
         lens_metadata: Default::default(),
     };
     // Canon's stated white level can sit below the sensor's true saturation (EOS RP: 14558
-    // stated, 16383 real). Extend it to a saturation pile-up above it, so highlight data
-    // between the stated level and the real clip point is not treated as clipped. No-op when
-    // no such pile-up exists, and for header-only decodes (no samples).
+    // stated, 16383 real). Full decoding extends it to the detected saturation point
+    // (see `RawImage::extend_cr3_white`) and adds the compensating `baseline_exposure`
+    // EV, so samples above the stated level are kept as real highlight data instead of
+    // being clipped at the stated level. No-op when no such pile-up exists, and for
+    // header-only decodes (no samples): a header probe cannot determine the
+    // sample-derived adjustment, so `RawImage::info` reports the header value.
     image.extend_cr3_white();
+    image.lift_clipped_samples();
     image.validate_for(mode)?;
     Ok(image)
 }

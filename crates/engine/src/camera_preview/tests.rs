@@ -2632,3 +2632,11 @@ fn a_narrow_black_and_white_curve_that_darkens_the_bright_areas_is_refused() {
         assert!(sky > 0.8, "an accepted curve must not darken what the camera renders at 0.93: {sky}");
     }
 }
+
+#[test]
+fn look_version_covers_cr3_white_extension() {
+    // The CR3 white-level extension changes the sensor proxy (white level and baseline exposure),
+    // so the camera-look fit for existing CR3 files changes and smart previews written under the
+    // old version must be rebuilt instead of being kept offline.
+    assert!(LOOK_VERSION >= 14, "LOOK_VERSION {LOOK_VERSION} does not cover the CR3 white-level extension");
+}
