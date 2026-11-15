@@ -246,10 +246,7 @@ fn run(spec: &Download, mirror: &str, staging: &Path, shared: &Shared) {
     }
 }
 
-// Two stacked cfgs (not `all(test, …)`): clippy only recognises a plain `cfg(test)`
-// module as test code, so the `allow-*-in-tests` settings in clippy.toml apply to its helpers.
-#[cfg(test)]
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use lightcraft_faces::hash::sha256_hex;

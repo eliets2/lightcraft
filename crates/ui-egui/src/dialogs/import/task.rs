@@ -1,5 +1,5 @@
 use super::scan::{busy_synchronizing, running};
-use super::{ImportDialog, ImportUprightMode, ImportWarning, ImportWarningCode, LightcraftApp, Ordering, Value, json, recipe_items};
+use super::{ImportDialog, ImportUprightMode, ImportWarning, ImportWarningCode, LightcraftApp, Ordering, Value, json};
 
 /// Files per batch in the browser build (each batch joins the catalog as it is ready, so the
 /// progress window updates); the desktop's worker uses [`lightcraft_engine::import::batch_size`].
@@ -16,7 +16,7 @@ pub struct ImportTask {
     queue: Vec<String>,
     pub total: usize,
     pub done: usize,
-    pub(super) params: Value,
+    params: Value,
     pub imported: usize,
     /// Brought back from Recently Deleted (`onDeleted: restore`).
     pub restored: usize,
@@ -225,9 +225,6 @@ pub fn start(app: &mut LightcraftApp, d: &ImportDialog) -> Result<Value, String>
         (true, true) => "move",
     };
     let mut params = json!({"mode": mode, "keywords": d.keywords()});
-    if !d.recipe.is_empty() {
-        params["recipe"] = recipe_items(&d.recipe);
-    }
     if !d.on_deleted.is_empty() {
         params["onDeleted"] = json!(d.on_deleted);
     }

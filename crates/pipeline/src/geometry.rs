@@ -209,9 +209,15 @@ impl Frame {
     pub fn fit(&self, max_w: usize, max_h: usize) -> (usize, usize) {
         let a = self.aspect();
         let (mw, mh) = (max_w.max(1) as f64, max_h.max(1) as f64);
-        // a box that is already this aspect up to rounding (an export size) is the size: fitting
-        // into it again rounds twice and can lose a pixel of the edge that was asked for.
-        if (mw - 0.5) / a <= mh + 0.5 && (mw + 0.5) / a >= mh - 0.5 {
+        // A box that is already this aspect up to rounding (an export size) is the size: fitting
+        // into it again rounds twice and can lose a pixel of the edge that was asked for. The
+        // whole-pixel slack is only for a reduced source (a thumbnail or preview proxy) whose
+        // rounded aspect is unreliable: the box is at least as large as the source, so fitting
+        // it is upscaling, not a fit-box request. A fit-box request (the box is smaller than
+        // the source) is always aspect-corrected, otherwise the render maps the whole crop onto
+        // a non-matching box and stretches the image.
+        let reduced = mw >= self.ow && mh >= self.oh;
+        if reduced && (mw - 0.5) / a <= mh + 0.5 && (mw + 0.5) / a >= mh - 0.5 {
             return (max_w.max(1), max_h.max(1));
         }
         let (w, h) = if mw / mh > a { (mh * a, mh) } else { (mw, mw / a) };
@@ -336,43 +342,6 @@ impl Frame {
             Some((nw, nh)) => std::borrow::Cow::Owned(resize(o, nw, nh, Filter::Mitchell)),
             None => std::borrow::Cow::Borrowed(o),
         };
-        self.sample_base(base, plan, w, h)
-    }
-
-    /// [`Frame::sample`] of each of `windows` of this frame at its `full_w × full_h` output size: the
-    /// same pixels, with the source oriented and prefiltered once for all of them rather than per window.
-    pub fn sample_windows(&self, src: &Rgb32f, full_w: usize, full_h: usize, windows: &[crate::PixelWindow]) -> Vec<Rgb32f> {
-        let oriented = if self.orient == Orientation::Normal { None } else { Some(src.oriented(self.orient)) };
-        let o = oriented.as_ref().unwrap_or(src);
-        let plans: Vec<(Frame, SamplePlan)> = windows
-            .iter()
-            .map(|t| {
-                let frame = if (t.w, t.h) == (full_w, full_h) { self.clone() } else { self.window(full_w, full_h, *t) };
-                let plan = frame.sample_plan(src.width, src.height, t.w, t.h);
-                (frame, plan)
-            })
-            .collect();
-        let mut bases: Vec<((usize, usize), Rgb32f)> = Vec::new();
-        for dims in plans.iter().filter_map(|p| p.1.prefilter) {
-            if !bases.iter().any(|b| b.0 == dims) {
-                bases.push((dims, resize(o, dims.0, dims.1, Filter::Mitchell)));
-            }
-        }
-        plans
-            .into_iter()
-            .zip(windows)
-            .map(|((frame, plan), t)| {
-                let base = match plan.prefilter.and_then(|dims| bases.iter().find(|b| b.0 == dims)) {
-                    Some(b) => std::borrow::Cow::Borrowed(&b.1),
-                    None => std::borrow::Cow::Borrowed(o),
-                };
-                frame.sample_base(base, plan, t.w, t.h)
-            })
-            .collect()
-    }
-
-    /// The sampling of [`Frame::sample`] from the oriented, prefiltered source `base`.
-    fn sample_base(&self, base: std::borrow::Cow<'_, Rgb32f>, plan: SamplePlan, w: usize, h: usize) -> Rgb32f {
         let affine = |xf: Affine| {
             let mut out = Rgb32f::new(w, h);
             par_rows(&mut out.data, w, |y, row| {
@@ -594,5 +563,18 @@ mod tests {
         // the whole image, mirrored: output top-left is the image's bottom-right
         let p = f.out_to_norm(400, 200).apply(Point::new(0.0, 0.0));
         assert!((p.x - 1.0).abs() < 1e-9 && (p.y - 1.0).abs() < 1e-9, "{p:?}");
+    }
+
+    /// The half-pixel slack in Frame::fit lets a fit-box request pass through without aspect
+    /// correction when it is within half a pixel of the frame's aspect, so the render maps the
+    /// whole crop onto a non-matching box and stretches the image: a 3:2 frame fitted into
+    /// 100x66 is within that slack ((100-0.5)/1.5 <= 66.5 and (100+0.5)/1.5 >= 65.5) but is
+    /// not the frame's aspect, so it is corrected to 99x66 instead of passing through as 100x66.
+    #[test]
+    fn fit_corrects_aspect_without_one_pixel_slack() {
+        let s = DevelopSettings::default();
+        let f = Frame::new(300, 200, &s, true);
+        assert_eq!(f.aspect(), 1.5);
+        assert_eq!(f.fit(100, 66), (99, 66));
     }
 }
