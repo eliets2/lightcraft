@@ -293,8 +293,9 @@ fn resync(line: &[u8], last: u64) -> Option<(usize, (u64, Op))> {
     const START: &[u8] = b"{\"seq\":";
     // The retry record starts with the `{"seq":` marker, but that marker can also occur inside
     // the op body (a smart-album rule value such as `{"seq":1}`); then the last occurrence is
-    // nested, not the record start, and decoding it rejects a valid retry. Scan every marker
-    // once, left to right, then try them from the end. A candidate must match the record header
+    // nested, not the record start, and decoding it rejects a valid retry. Try every marker
+    // from the end, scanning backwards without collecting them, so memory stays O(1) however
+    // many markers the line holds. A candidate must match the record header
     // shape — `{"seq":<digits>,"crc":<digits>,"op":`, what `encode_record` writes — so a marker
     // nested inside the op body (followed by `}` or `,`) or plain junk never reaches
     // `decode_record`; only a real record start does. This imposes no fixed limit on how many
@@ -303,26 +304,38 @@ fn resync(line: &[u8], last: u64) -> Option<(usize, (u64, Op))> {
     // markers, keeping the work near-linear instead of quadratic. The fragment that precedes the
     // record stays to its left (`i > 0`).
     let digits = |b: &[u8]| b.iter().take_while(|x| x.is_ascii_digit()).count();
-    let mut candidates: Vec<usize> = Vec::new();
-    let mut from = 0;
-    while let Some(i) = line[from..].windows(START.len()).position(|w| w == START) {
-        let pos = from + i;
-        let Some(after) = line.get(pos + START.len()..) else { break };
-        let seq_digits = digits(after);
-        let crc_field = after.get(seq_digits..).and_then(|rest| rest.strip_prefix(b",\"crc\":"));
-        let crc_digits = crc_field.map(digits).unwrap_or(0);
-        let op_field = crc_field.and_then(|rest| rest.get(crc_digits..)).and_then(|rest| rest.strip_prefix(b",\"op\":"));
-        if seq_digits > 0 && crc_digits > 0 && op_field.is_some() {
-            candidates.push(pos);
-        }
-        from = pos + START.len();
-    }
     let mut scanned = 0usize;
-    for &i in candidates.iter().rev() {
-        if i == 0 {
+    // Find candidates from the end, one at a time: each search resumes where the previous
+    // candidate started, so the backward scan is O(line length) in total and holds no list
+    // sized by the line (a hostile line of millions of markers allocates nothing extra).
+    let mut end = line.len();
+    while end >= START.len() {
+        let mut candidate = None;
+        let mut i = end - START.len();
+        loop {
+            if &line[i..i + START.len()] == START
+                && let Some(after) = line.get(i + START.len()..)
+            {
+                let seq_digits = digits(after);
+                let crc_field = after.get(seq_digits..).and_then(|rest| rest.strip_prefix(b",\"crc\":"));
+                let crc_digits = crc_field.map(digits).unwrap_or(0);
+                let op_field = crc_field.and_then(|rest| rest.get(crc_digits..)).and_then(|rest| rest.strip_prefix(b",\"op\":"));
+                if seq_digits > 0 && crc_digits > 0 && op_field.is_some() {
+                    candidate = Some(i);
+                    break;
+                }
+            }
+            if i == 0 {
+                break;
+            }
+            i -= 1;
+        }
+        let Some(pos) = candidate else { break };
+        if pos == 0 {
             break; // the record must follow a fragment
         }
-        let Some(suffix) = line.get(i..) else { continue };
+        end = pos;
+        let Some(suffix) = line.get(pos..) else { continue };
         scanned = match scanned.checked_add(suffix.len()) {
             Some(total) if total <= MAX_SCAN => total,
             _ => break, // the budget is spent: stop trying further candidates
@@ -333,7 +346,7 @@ fn resync(line: &[u8], last: u64) -> Option<(usize, (u64, Op))> {
         if let Some((seq, op)) = decode_record(text.trim_end_matches('\u{0D}'))
             && seq <= last.saturating_add(1)
         {
-            return Some((i, (seq, op)));
+            return Some((pos, (seq, op)));
         }
     }
     None
@@ -826,10 +839,10 @@ mod tests_resync {
         assert_eq!(resync(&line, 100).map(|(at, (seq, _))| (at, seq)), Some((fragment, 5)));
     }
 
-    /// A retry record whose op body holds more than eight nested `{"seq":` markers (a
-    /// `SetAlbumRules` with nine rule values of `{"seq":1}`) exhausts `resync`'s fixed
-    /// `MAX_DECODES = 8` decode budget on the nested markers, so the outer record's real
-    /// start is never decoded and the valid operation is truncated as damage.
+    /// A retry record whose op body holds many nested `{"seq":` markers (a `SetAlbumRules`
+    /// with nine rule values of `{"seq":1}`): the nested markers are not header-shaped, so
+    /// they never become candidates and never count against `resync`'s `MAX_SCAN` budget,
+    /// and the outer record's real start is still decoded.
     #[test]
     fn resync_recovers_retry_beyond_eight_nested_markers() {
         let mut c = Catalog::new();
