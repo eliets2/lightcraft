@@ -342,15 +342,17 @@ pub fn base_tone(s: &DevelopSettings, info: &SourceInfo, peak: f32) -> ToneMap {
             None => ToneMap::display_hdr(l.contrast, l.whites, l.blacks, peak),
         },
         // Keep V2 Whites in the camera curve; calibrated Contrast and Blacks follow it.
+        // The camera curve's own contrast is baked in, so negative Contrast flattens it
+        // before the curve (`camera_hdr_flattened`) instead of only compressing it after.
         Process::V4 => match info.camera_tone.as_ref().filter(|_| info.raw) {
-            Some(curve) => ToneMap::camera_hdr(curve, 0.0, l.whites, 0.0, peak),
+            Some(curve) => ToneMap::camera_hdr_flattened(curve, l.contrast, l.whites, 0.0, peak),
             None if info.raw => ToneMap::hdr(l.contrast, l.whites, l.blacks, peak),
             None => ToneMap::display_hdr(l.contrast, l.whites, l.blacks, peak),
         },
         // V4, with a raw's tone curve rolling off into white in stops: a camera curve past its last
         // knot, the generic curve from half a stop below its white point instead of clipping (issue #1632)
         Process::V5 => match info.camera_tone.as_ref().filter(|_| info.raw) {
-            Some(curve) => ToneMap::camera_rolloff_hdr(curve, 0.0, l.whites, 0.0, peak),
+            Some(curve) => ToneMap::camera_rolloff_hdr_flattened(curve, l.contrast, l.whites, 0.0, peak),
             None if info.raw => ToneMap::rolloff_hdr(l.contrast, l.whites, l.blacks, peak),
             None => ToneMap::display_hdr(l.contrast, l.whites, l.blacks, peak),
         },

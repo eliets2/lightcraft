@@ -190,25 +190,50 @@ impl ToneMap {
     /// exactly): the camera's look up to 1.5 EV over grey, so midtones match the SDR render (and a
     /// gain map only lifts highlights), then the highlights gain up to `peak − 1` more as in
     /// [`ToneMap::hdr`].
+    ///
+    /// This is the frozen V1/V2 curve used by `base_tone`: the camera curve at the scene
+    /// luminance itself followed by the display adjustment, with no EV scaling.
     pub fn camera_hdr(curve: &CameraTone, contrast: f64, whites: f64, blacks: f64, peak: f32) -> ToneMap {
-        ToneMap::camera_with(|y| curve.apply(y), curve.chroma, contrast, whites, blacks, peak)
+        ToneMap::camera_with(|y| curve.apply(y), curve.chroma, contrast, whites, blacks, peak, false)
     }
 
     /// [`ToneMap::camera_hdr`] of process V5: past its last knot the camera curve rolls off in stops
     /// ([`CameraTone::apply_rolloff`]) instead of closing on white within a stop of the sensor's.
     pub fn camera_rolloff_hdr(curve: &CameraTone, contrast: f64, whites: f64, blacks: f64, peak: f32) -> ToneMap {
-        ToneMap::camera_with(|y| curve.apply_rolloff(y), curve.chroma, contrast, whites, blacks, peak)
+        ToneMap::camera_with(|y| curve.apply_rolloff(y), curve.chroma, contrast, whites, blacks, peak, false)
     }
 
-    fn camera_with(curve: impl Fn(f32) -> f32, chroma: [f32; CHROMA_N], contrast: f64, whites: f64, blacks: f64, peak: f32) -> ToneMap {
+    /// [`ToneMap::camera_hdr`] with the negative-contrast flattening, for a future process
+    /// variant: the camera curve's contrast is already baked into `y`, so a post-curve S-curve
+    /// can only mildly compress it — at contrast = -100 the render stays too contrasty. Scale
+    /// scene EV about grey *before* the curve instead: negative contrast compresses the input
+    /// EV range and flattens the curve itself, positive contrast is unchanged. Keep a quarter
+    /// of the scene EV range at minimum contrast: a strong flattening that still separates
+    /// shadows, grey and highlights rather than making a solid image.
+    pub fn camera_hdr_flattened(curve: &CameraTone, contrast: f64, whites: f64, blacks: f64, peak: f32) -> ToneMap {
+        ToneMap::camera_with(|y| curve.apply(y), curve.chroma, contrast, whites, blacks, peak, true)
+    }
+
+    /// [`ToneMap::camera_rolloff_hdr`] with the negative-contrast flattening of
+    /// [`ToneMap::camera_hdr_flattened`]: past its last knot the camera curve rolls off in
+    /// stops ([`CameraTone::apply_rolloff`]), and negative contrast compresses the scene EV
+    /// range before the curve instead of only mildly compressing it after.
+    pub fn camera_rolloff_hdr_flattened(curve: &CameraTone, contrast: f64, whites: f64, blacks: f64, peak: f32) -> ToneMap {
+        ToneMap::camera_with(|y| curve.apply_rolloff(y), curve.chroma, contrast, whites, blacks, peak, true)
+    }
+
+    fn camera_with(curve: impl Fn(f32) -> f32, chroma: [f32; CHROMA_N], contrast: f64, whites: f64, blacks: f64, peak: f32, flatten_negative_contrast: bool) -> ToneMap {
+        let contrast = contrast.clamp(-100.0, 100.0);
         let peak = if peak.is_finite() { peak.max(1.0) } else { 1.0 };
+        let c = (contrast / 100.0) as f32;
+        let ev_scale = if flatten_negative_contrast && c < 0.0 { 1.0 + 0.75 * c } else { 1.0 };
         let adjustment = Self::display(contrast, whites, blacks);
         let neutral = contrast == 0.0 && whites == 0.0 && blacks == 0.0;
         let top = (2.9 - 1.6 * (whites as f32 / 100.0) + peak.log2() + 1.0).max(HDR_FROM_EV + 0.5);
         let lut = (0..LUT_N)
             .map(|i| {
                 let ev = LUT_MIN_EV + (LUT_MAX_EV - LUT_MIN_EV) * i as f32 / (LUT_N - 1) as f32;
-                let y = curve(GREY * 2f32.powf(ev));
+                let y = curve(GREY * 2f32.powf(ev * ev_scale));
                 let o = if neutral { y } else { adjustment.apply(y) };
                 if peak > 1.0 { (o + (peak - 1.0) * smooth(HDR_FROM_EV, top, ev)).clamp(0.0, peak) } else { o }
             })
@@ -620,6 +645,53 @@ mod tests {
                 }
                 assert!(t.apply(4.0) > 1.0 && t.apply(4.0) > sdr.apply(4.0) + 0.5, "{peak}: highlights lifted");
             }
+        }
+    }
+
+    #[test]
+    fn camera_hdr_min_contrast_flattens_tone_curve() {
+        let curve = CameraTone::new(knots()).unwrap();
+        let flat = ToneMap::camera_hdr_flattened(&curve, -100.0, 0.0, 0.0, 1.0);
+        // Min contrast must flatten the camera curve's contrast, not just mildly
+        // compress it on top of the curve whose full contrast is already baked in.
+        let shadow = 0.01;
+        let highlight = 2.0;
+        let camera_gap = curve.apply(highlight) - curve.apply(shadow);
+        let flat_gap = flat.apply(highlight) - flat.apply(shadow);
+        assert!(flat.apply(shadow) + 0.01 < flat.apply(0.18));
+        assert!(flat.apply(0.18) + 0.01 < flat.apply(highlight));
+        assert!(flat_gap < camera_gap * 0.5, "min contrast leaves {flat_gap} of the camera curve's {camera_gap} contrast");
+    }
+
+    #[test]
+    fn camera_rolloff_hdr_min_contrast_flattens_tone_curve() {
+        let curve = CameraTone::new(knots()).unwrap();
+        let flat = ToneMap::camera_rolloff_hdr_flattened(&curve, -100.0, 0.0, 0.0, 1.0);
+        let shadow = 0.01;
+        let highlight = 2.0;
+        let camera_gap = curve.apply_rolloff(highlight) - curve.apply_rolloff(shadow);
+        let flat_gap = flat.apply(highlight) - flat.apply(shadow);
+        assert!(flat.apply(shadow) + 0.01 < flat.apply(0.18));
+        assert!(flat.apply(0.18) + 0.01 < flat.apply(highlight));
+        assert!(flat_gap < camera_gap * 0.5, "min contrast leaves {flat_gap} of the camera curve's {camera_gap} contrast");
+        // positive contrast is unchanged from the unflattened rolloff curve
+        let plain = ToneMap::camera_rolloff_hdr(&curve, 100.0, 0.0, 0.0, 1.0);
+        let flattened = ToneMap::camera_rolloff_hdr_flattened(&curve, 100.0, 0.0, 0.0, 1.0);
+        assert_eq!(plain.lut(), flattened.lut());
+    }
+
+    #[test]
+    fn camera_hdr_negative_contrast_preserves_v1_v2_curve() {
+        // V1 and V2 are frozen: at negative contrast `camera_hdr` (used by `base_tone` for
+        // both) must keep the pre-flattening curve, i.e. the camera curve at the scene
+        // luminance itself followed by the display adjustment, with no EV scaling.
+        let curve = CameraTone::new(knots()).unwrap();
+        let map = ToneMap::camera_hdr(&curve, -100.0, 0.0, 0.0, 1.0);
+        let adjustment = ToneMap::display(-100.0, 0.0, 0.0);
+        for y in [0.01, 0.18, 2.0] {
+            let expected = adjustment.apply(curve.apply(y));
+            let actual = map.apply(y);
+            assert!((actual - expected).abs() < 0.005, "at {y}: {actual} != V1/V2 curve {expected}");
         }
     }
 
