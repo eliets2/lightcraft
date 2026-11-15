@@ -233,11 +233,11 @@ mod tests {
     use std::io::{BufRead, BufReader, Write};
     use std::net::TcpListener;
 
-    fn scratch(name: &str) -> PathBuf {
+    fn scratch(name: &str) -> Result<PathBuf, std::io::Error> {
         let d = std::env::temp_dir().join(format!("lc-denoise-dl-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&d);
-        std::fs::create_dir_all(&d).unwrap();
-        d
+        std::fs::create_dir_all(&d)?;
+        Ok(d)
     }
 
     fn spec_for(bytes: &[u8]) -> Download {
@@ -251,39 +251,47 @@ mod tests {
     }
 
     /// A local server that answers every request with `status` and `body` (the whole file, no ranges).
-    fn serve(status: &'static str, body: Vec<u8>) -> String {
-        let l = TcpListener::bind("127.0.0.1:0").unwrap();
-        let base = format!("http://{}/m", l.local_addr().unwrap());
+    fn serve(status: &'static str, body: Vec<u8>) -> Result<String, std::io::Error> {
+        let l = TcpListener::bind("127.0.0.1:0")?;
+        let base = format!("http://{}/m", l.local_addr()?);
         std::thread::spawn(move || {
-            for mut s in l.incoming().flatten() {
-                let mut r = BufReader::new(s.try_clone().unwrap());
+            for s in l.incoming().flatten() {
+                let Ok(s) = s.try_clone() else { continue };
+                let mut r = BufReader::new(s);
                 loop {
                     let mut line = String::new();
                     if r.read_line(&mut line).unwrap_or(0) == 0 || line.trim().is_empty() {
                         break;
                     }
                 }
+                let mut s = r.into_inner();
                 let _ = s.write_all(format!("HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", body.len()).as_bytes());
                 let _ = s.write_all(&body);
             }
         });
-        base
+        Ok(base)
     }
 
     /// A local server that sends `body` a few kilobytes at a time: a download that keeps running for a while.
-    fn serve_slowly(body: Vec<u8>) -> String {
-        let l = TcpListener::bind("127.0.0.1:0").unwrap();
-        let base = format!("http://{}/m", l.local_addr().unwrap());
+    fn serve_slowly(body: Vec<u8>) -> Result<String, std::io::Error> {
+        let l = TcpListener::bind("127.0.0.1:0")?;
+        let base = format!("http://{}/m", l.local_addr()?);
         std::thread::spawn(move || {
-            for mut s in l.incoming().flatten() {
-                let mut r = BufReader::new(s.try_clone().unwrap());
+            for s in l.incoming().flatten() {
+                let Ok(s) = s.try_clone() else { continue };
+                let mut r = BufReader::new(s);
                 loop {
                     let mut line = String::new();
                     if r.read_line(&mut line).unwrap_or(0) == 0 || line.trim().is_empty() {
                         break;
                     }
                 }
-                let _ = s.write_all(format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", body.len()).as_bytes());
+                let mut s = r.into_inner();
+                let _ = s.write_all(format!("HTTP/1.1 200 OK
+\nContent-Length: {}
+\nConnection: close
+\n
+\n", body.len()).as_bytes());
                 for chunk in body.chunks(4096) {
                     if s.write_all(chunk).is_err() {
                         break;
@@ -292,7 +300,7 @@ mod tests {
                 }
             }
         });
-        base
+        Ok(base)
     }
 
     /// Poll until `done` holds (or fail after 10 s).
@@ -305,12 +313,12 @@ mod tests {
     }
 
     #[test]
-    fn a_running_download_shows_in_activity_and_cancels() {
+    fn a_running_download_shows_in_activity_and_cancels() -> Result<(), std::io::Error> {
         use crate::activity::{Activity, Unit};
-        let dir = scratch("activity");
+        let dir = scratch("activity")?;
         let bytes: Vec<u8> = (0..400_000u32).map(|i| (i % 251) as u8).collect();
         let mut spec = spec_for(&bytes);
-        spec.url = format!("{}/{}", serve_slowly(bytes), spec.file_name);
+        spec.url = format!("{}/{}", serve_slowly(bytes)?, spec.file_name);
         let activity = Activity::default();
         let mut d = Downloads::default();
         d.start(spec, &dir, &activity, "Test Model").unwrap();
@@ -324,15 +332,16 @@ mod tests {
         assert_eq!(d.jobs["test-model"].get(), State::Cancelled);
         wait("the row stayed", || activity.list().is_empty());
         let _ = std::fs::remove_dir_all(&dir);
+        Ok(())
     }
 
     #[test]
-    fn fetches_checks_and_stages_a_file() {
-        let dir = scratch("ok");
+    fn fetches_checks_and_stages_a_file() -> Result<(), std::io::Error> {
+        let dir = scratch("ok")?;
         let bytes: Vec<u8> = (0..200_000u32).map(|i| (i % 251) as u8).collect();
         let (staging, spec) = (dir.join(STAGING), spec_for(&bytes));
         std::fs::create_dir_all(&staging).unwrap();
-        let mirror = serve("200 OK", bytes.clone());
+        let mirror = serve("200 OK", bytes.clone())?;
         let shared = Shared::new(spec.size_bytes);
         run(&spec, &mirror, &staging, &shared);
         let State::Done { path, sha256 } = shared.get() else { panic!("{:?}", shared.get()) };
@@ -343,30 +352,36 @@ mod tests {
         run(&spec, "http://127.0.0.1:1/m", &staging, &again);
         assert!(matches!(again.get(), State::Done { .. }), "{:?}", again.get());
         let _ = std::fs::remove_dir_all(&dir);
+        Ok(())
     }
 
     #[test]
-    fn a_file_that_does_not_match_is_thrown_away() {
-        let dir = scratch("bad");
+    fn a_file_that_does_not_match_is_thrown_away() -> Result<(), std::io::Error> {
+        let dir = scratch("bad")?;
         let staging = dir.join(STAGING);
         std::fs::create_dir_all(&staging).unwrap();
         // the right size and the wrong content
         let spec = spec_for(&[7u8; 5000]);
         let shared = Shared::new(spec.size_bytes);
-        run(&spec, &serve("200 OK", vec![8u8; 5000]), &staging, &shared);
+        run(&spec, &serve("200 OK", vec![8u8; 5000])?, &staging, &shared);
         assert!(matches!(shared.get(), State::Failed(_)), "{:?}", shared.get());
         // nothing is left behind: not the file, not a partial one
         assert_eq!(std::fs::read_dir(&staging).unwrap().count(), 0);
         let _ = std::fs::remove_dir_all(&dir);
+        Ok(())
     }
 
     #[test]
-    fn an_unreachable_or_refusing_server_is_a_message() {
-        let dir = scratch("down");
+    fn an_unreachable_or_refusing_server_is_a_message() -> Result<(), std::io::Error> {
+        let dir = scratch("down")?;
         let staging = dir.join(STAGING);
         std::fs::create_dir_all(&staging).unwrap();
         let spec = spec_for(b"abc");
-        for mirror in ["http://127.0.0.1:1/m".to_string(), serve("404 Not Found", b"not found".to_vec())] {
+        let mirrors = [
+            "http://127.0.0.1:1/m".to_string(),
+            serve("404 Not Found", b"not found".to_vec())?,
+        ];
+        for mirror in mirrors {
             let shared = Shared::new(3);
             run(&spec, &mirror, &staging, &shared);
             let State::Failed(why) = shared.get() else { panic!("{:?}", shared.get()) };
@@ -374,20 +389,22 @@ mod tests {
         }
         assert_eq!(std::fs::read_dir(&staging).unwrap().count(), 0);
         let _ = std::fs::remove_dir_all(&dir);
+        Ok(())
     }
 
     #[test]
-    fn a_cancelled_download_leaves_nothing() {
-        let dir = scratch("cancel");
+    fn a_cancelled_download_leaves_nothing() -> Result<(), std::io::Error> {
+        let dir = scratch("cancel")?;
         let staging = dir.join(STAGING);
         std::fs::create_dir_all(&staging).unwrap();
         let spec = spec_for(b"abc");
         let shared = Shared::new(3);
         shared.cancel.store(true, Ordering::Relaxed);
-        run(&spec, &serve("200 OK", b"abc".to_vec()), &staging, &shared);
+        run(&spec, &serve("200 OK", b"abc".to_vec())?, &staging, &shared);
         assert_eq!(shared.get(), State::Cancelled);
         assert_eq!(std::fs::read_dir(&staging).unwrap().count(), 0);
         let _ = std::fs::remove_dir_all(&dir);
+        Ok(())
     }
 
     #[test]
@@ -412,8 +429,8 @@ mod tests {
     }
 
     #[test]
-    fn discarding_a_finished_download_deletes_its_file() {
-        let dir = scratch("discard");
+    fn discarding_a_finished_download_deletes_its_file() -> Result<(), std::io::Error> {
+        let dir = scratch("discard")?;
         let file = dir.join("staged.onnx");
         std::fs::write(&file, b"x").unwrap();
         let mut d = Downloads::default();
@@ -427,5 +444,6 @@ mod tests {
         assert!(d.snapshot().is_empty());
         assert!(!d.discard("m"), "nothing left to discard");
         let _ = std::fs::remove_dir_all(&dir);
+        Ok(())
     }
 }

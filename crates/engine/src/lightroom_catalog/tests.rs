@@ -467,7 +467,7 @@ fn record(values: &[SqlValue]) -> Vec<u8> {
                 body.extend(s.as_bytes());
                 13 + 2 * s.len() as u64
             }
-            _ => unreachable!(),
+            _ => 0,
         };
         header.extend(varint(serial));
     }

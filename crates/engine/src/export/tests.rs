@@ -225,8 +225,9 @@ fn sharpened_pixels_are_pinned() {
         let samples = src.data.iter().flat_map(|p| [p[0], p[1], p[2]].map(|v| u16::from(v) * 257)).collect();
         let mut deep = DeepImage { width: src.width, height: src.height, samples: DeepSamples::U16(samples), space: OutputSpace::Srgb };
         output_sharpen_deep(&mut deep, target, SharpenAmount::Standard);
-        let DeepSamples::U16(v) = &deep.samples else { unreachable!() };
-        got.push(fnv(&v.iter().flat_map(|s| s.to_le_bytes()).collect::<Vec<u8>>()));
+        if let DeepSamples::U16(v) = &deep.samples {
+            got.push(fnv(&v.iter().flat_map(|s| s.to_le_bytes()).collect::<Vec<u8>>()));
+        }
     }
     assert_eq!(got, SHARPENED, "{got:#x?}");
     let mut img = test_image();

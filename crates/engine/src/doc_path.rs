@@ -63,8 +63,8 @@ mod tests {
         assert_eq!(resolve("Photos/2024:05/a.jpg", Some(&doc)), Err(NotFollowed::Refused(Refused::Invalid)));
         #[cfg(not(windows))]
         assert_eq!(resolve(r"C:\Photos\a.jpg", Some(&doc)), Err(NotFollowed::NotHere));
-        let gvfs = Path::new("/run/user/1000/gvfs/smb-share:server=tokyo,share=photos/catalog.lrcat");
+        let _gvfs = Path::new("/run/user/1000/gvfs/smb-share:server=tokyo,share=photos/catalog.lrcat");
         #[cfg(not(windows))]
-        assert_eq!(resolve("a.jpg", Some(gvfs)), Ok(gvfs.with_file_name("a.jpg")));
+        assert_eq!(resolve("a.jpg", Some(_gvfs)), Ok(_gvfs.with_file_name("a.jpg")));
     }
 }
