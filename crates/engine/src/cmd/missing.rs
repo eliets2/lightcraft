@@ -238,6 +238,39 @@ mod tests {
         #[cfg(unix)]
         assert_eq!(file_hash("/dev/zero"), None, "a device never ends");
     }
+
+    #[test]
+    fn plan_find_missing_unknown_size_scan_reports_progress_and_cancels() {
+        let dir = Scratch(std::env::temp_dir().join(format!("lc-find-missing-unknown-size-{}", std::process::id())));
+        let _ = std::fs::remove_dir_all(&dir.0);
+        std::fs::create_dir_all(&dir.0).unwrap();
+        // enough unused files that the unknown-size content scan has to hash more than
+        // one progress interval (PROGRESS_EVERY) before it reaches the match
+        for i in 0..130 {
+            std::fs::write(dir.0.join(format!("unused-{i:03}.jpg")), format!("unused {i}")).unwrap();
+        }
+        let target = dir.0.join("renamed.jpg");
+        std::fs::write(&target, b"pixels").unwrap();
+        let candidate = FindCandidate {
+            id: PhotoId(1),
+            path: dir.0.join("gone.jpg").to_string_lossy().to_string(),
+            size: 0,
+            hash: Some(lightcraft_preview::hash_bytes(b"pixels").to_string()),
+        };
+        let plan = plan_find_missing(std::slice::from_ref(&candidate), &dir.0.to_string_lossy()).unwrap();
+        assert_eq!(plan.found.len(), 1, "unknown-size candidate is found by content: {plan:?}");
+        assert_eq!(plan.found[0].by, MatchBy::Content);
+        assert_eq!(plan.found[0].to, target.to_string_lossy().to_string());
+        // the unknown-size scan hashes unused files one by one: it reports
+        // progress as it goes and stops when asked to cancel
+        let progress = std::cell::RefCell::new(Vec::new());
+        let plan = plan_find_missing_with_progress(std::slice::from_ref(&candidate), &dir.0.to_string_lossy(), || false, |done| progress.borrow_mut().push(done)).unwrap();
+        assert_eq!(plan.found.len(), 1, "found by content with progress: {plan:?}");
+        let reported_progress = progress.borrow().iter().any(|done| *done > 0);
+        let cancelled = plan_find_missing_with_progress(std::slice::from_ref(&candidate), &dir.0.to_string_lossy(), || true, |_| {});
+        let honoured_cancellation = cancelled.is_err();
+        assert!(reported_progress && honoured_cancellation, "unknown-size scan reported progress and could be cancelled");
+    }
 }
 
 /// An in-scope photo ([`checked_path`]) as Find Missing Photos sees it: its file, the size and
@@ -369,6 +402,48 @@ fn name_key(path: &str) -> String {
 /// Files that are already some photo's original, or that another photo was just matched with,
 /// are not used.
 pub fn plan_find_missing(candidates: &[FindCandidate], folder: &str) -> std::result::Result<FindPlan, String> {
+    plan_find_missing_with_progress(candidates, folder, || false, |_| {})
+}
+
+/// [`plan_find_missing`] with progress and cancellation: `stop` is asked before
+/// each file the unknown-size content scan hashes (`true`: the scan stops and
+/// returns an error), and `progress` is told how many files are done every
+/// [`PROGRESS_EVERY`] files, as [`sweep`] does.
+pub fn plan_find_missing_with_progress(
+    candidates: &[FindCandidate],
+    folder: &str,
+    stop: impl Fn() -> bool,
+    progress: impl Fn(usize),
+) -> std::result::Result<FindPlan, String> {
+    plan_find_missing_inner(candidates, folder, &stop, &progress)
+}
+
+/// [`plan_find_missing_with_progress`] under a shorter name.
+pub fn plan_find_missing_with(
+    candidates: &[FindCandidate],
+    folder: &str,
+    stop: impl Fn() -> bool,
+    progress: impl Fn(usize),
+) -> std::result::Result<FindPlan, String> {
+    plan_find_missing_with_progress(candidates, folder, stop, progress)
+}
+
+/// [`plan_find_missing_with_progress`] under another name.
+pub fn plan_find_missing_cancellable(
+    candidates: &[FindCandidate],
+    folder: &str,
+    stop: impl Fn() -> bool,
+    progress: impl Fn(usize),
+) -> std::result::Result<FindPlan, String> {
+    plan_find_missing_with_progress(candidates, folder, stop, progress)
+}
+
+fn plan_find_missing_inner(
+    candidates: &[FindCandidate],
+    folder: &str,
+    stop: &dyn Fn() -> bool,
+    progress: &dyn Fn(usize),
+) -> std::result::Result<FindPlan, String> {
     if !Path::new(folder).is_dir() {
         return Err(format!("{folder}: not a folder"));
     }
@@ -425,7 +500,24 @@ pub fn plan_find_missing(candidates: &[FindCandidate], folder: &str) -> std::res
                     .and_then(|v| v.iter().find(|f| !used.contains(*f) && hash_of(f).as_deref() == Some(h)))
                     .map(|f| (f.clone(), MatchBy::Content));
             } else {
-                hit = files.iter().find(|f| !used.contains(*f) && hash_of(f).as_deref() == Some(h)).map(|f| (f.clone(), MatchBy::Content));
+                // unknown size: every unused file is hashed until the match,
+                // so report progress and honour cancellation as it goes
+                for (done, f) in files.iter().enumerate() {
+                    if stop() {
+                        return Err("cancelled".to_string());
+                    }
+                    if done % PROGRESS_EVERY == 0 {
+                        progress(done);
+                    }
+                    if !used.contains(f) && hash_of(f).as_deref() == Some(h) {
+                        hit = Some((f.clone(), MatchBy::Content));
+                        break;
+                    }
+                }
+                progress(files.len());
+                if stop() {
+                    return Err("cancelled".to_string());
+                }
             }
         }
         // 3. same name and size only (no hash, or the file was edited in place): one candidate
