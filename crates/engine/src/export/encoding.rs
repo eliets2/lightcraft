@@ -6,6 +6,71 @@ use super::{
 };
 use std::borrow::Cow;
 
+/// The custom ICC profile carried by `o` (`colorProfile`, base64), when it parses.
+fn decode_custom_profile(o: &ExportOptions) -> Option<Vec<u8>> {
+    let bytes = base64_decode(o.photos_album.trim())?;
+    (icc::parse(&bytes).is_some()).then_some(bytes)
+}
+
+/// Base64 for [`decode_custom_profile`] (standard alphabet, padding optional).
+fn base64_decode(s: &str) -> Option<Vec<u8>> {
+    let mut values = Vec::with_capacity(s.len());
+    for c in s.chars() {
+        let v = match c {
+            'A'..='Z' => c as u32 - 'A' as u32,
+            'a'..='z' => c as u32 - 'a' as u32 + 26,
+            '0'..='9' => c as u32 - '0' as u32 + 52,
+            '+' => 62,
+            '/' => 63,
+            '=' => break,
+            c if c.is_whitespace() => continue,
+            _ => return None,
+        };
+        values.push(v);
+    }
+    let mut out = Vec::with_capacity(values.len() * 3 / 4);
+    for chunk in values.chunks(4) {
+        if chunk.len() < 2 {
+            return None;
+        }
+        let n = chunk.iter().fold(0u32, |a, v| (a << 6) | v);
+        let shift = match chunk.len() {
+            2 => 12,
+            3 => 6,
+            _ => 0,
+        };
+        out.push((n >> (16 + shift)) as u8);
+        if chunk.len() > 2 {
+            out.push((n >> (8 + shift)) as u8);
+        }
+        if chunk.len() > 3 {
+            out.push(n as u8);
+        }
+    }
+    Some(out)
+}
+
+/// `img` (in `space`) as 8-bit samples in the custom profile's space, when it has one.
+fn convert_to_custom_profile<'a>(img: &'a Cow<'a, Rgba8>, space: OutputSpace, profile: Option<&[u8]>) -> Cow<'a, Rgba8> {
+    let Some(profile) = profile else { return Cow::Borrowed(img) };
+    let Some(info) = icc::parse(profile) else { return Cow::Borrowed(img) };
+    let icc::IccKind::MatrixTrc { to_xyz_d50: custom, trc } = info.kind else { return Cow::Borrowed(img) };
+    let named = named_space(space);
+    let to_custom = custom.inverse().map(|inv| inv.mul(&named.to_xyz_d50())).map(|m| m.to_f32());
+    let Some(to_custom) = to_custom else { return Cow::Borrowed(img) };
+    let from = space.trc();
+    let mut out = (**img).clone();
+    for p in out.data.iter_mut() {
+        let lin = [0, 1, 2].map(|c| from.decode(p[c] as f32 / 255.0));
+        let [r, g, b] = to_custom;
+        let v = [r[0] * lin[0] + r[1] * lin[1] + r[2] * lin[2], g[0] * lin[0] + g[1] * lin[1] + g[2] * lin[2], b[0] * lin[0] + b[1] * lin[1] + b[2] * lin[2]];
+        for c in 0..3 {
+            p[c] = (trc[c].from_linear(v[c]).clamp(0.0, 1.0) * 255.0 + 0.5) as u8;
+        }
+    }
+    Cow::Owned(out)
+}
+
 /// Unsharp mask on an 8-bit image (separable box-blur approximation of a small Gaussian).
 pub fn output_sharpen(img: &mut Rgba8, target: SharpenFor, amount: SharpenAmount) {
     if !sharpens(img.width, img.height, target) {
@@ -106,7 +171,9 @@ pub fn encode_image(img: &Rgba8, o: &ExportOptions) -> Result<Vec<u8>, String> {
 pub fn encode_with_metadata(img: &Rgba8, o: &ExportOptions, meta: Option<&Metadata>) -> Result<Vec<u8>, String> {
     let img = finish_8bit(img, o);
     let space = o.effective_space();
-    let profile = icc::write_named(named_space(space));
+    let custom_profile = decode_custom_profile(o);
+    let profile = custom_profile.clone().unwrap_or_else(|| icc::write_named(named_space(space)));
+    let img = convert_to_custom_profile(&img, space, custom_profile.as_deref());
     let exif = meta.map(lightcraft_meta::write_exif);
     let xmp = meta.map(|m| lightcraft_meta::write_xmp(m, None));
     let meta = EncodeMeta { icc: Some(&profile), exif: exif.as_deref(), xmp: xmp.as_deref(), ppi: Some(o.ppi) };

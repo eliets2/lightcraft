@@ -69,6 +69,7 @@ pub const OPTION_PARAMS: &[&str] = &[
     "removeLocation",
     "watermark",
     "colorSpace",
+    "colorProfile",
     "bitDepth",
     "hdr",
     "jxlLossless",
@@ -297,7 +298,7 @@ impl ExportOptions {
                         return Err(bad(format!("`{k}` can't contain a NUL character")));
                     }
                 }
-                "naming" | "subfolder" | "path" | "dir" | "preset" => {
+                "naming" | "subfolder" | "path" | "dir" | "preset" | "colorProfile" => {
                     string(cmd, k, v)?;
                 }
                 "sharpen" => parses(k, v, |s| SharpenFor::parse(s).is_some(), &["none", "screen", "matte", "glossy"])?,
@@ -448,13 +449,13 @@ impl ExportOptions {
             }
             .filter(|w: &Watermark| !w.text.trim().is_empty() || !w.image.trim().is_empty()),
             color_space: s("colorSpace").and_then(OutputSpace::parse).unwrap_or(d.color_space),
+            photos_album: s("colorProfile").map_or_else(|| s("photosAlbum").map_or(d.photos_album, |a| a.trim().to_string()), str::to_string),
             bit_depth: u("bitDepth").filter(|b| matches!(b, 8 | 10 | 16 | 32)).map(|b| b as u8),
             hdr: p.get("hdr").and_then(Value::as_bool).unwrap_or(d.hdr),
             jxl_lossless: p.get("jxlLossless").and_then(Value::as_bool).unwrap_or(d.jxl_lossless),
             jxl_effort: s("jxlEffort").and_then(JxlEffort::parse).unwrap_or(d.jxl_effort),
             jxl_progressive: p.get("jxlProgressive").and_then(Value::as_bool).unwrap_or(d.jxl_progressive),
             add_to_photos: p.get("addToPhotos").and_then(Value::as_bool).unwrap_or(d.add_to_photos),
-            photos_album: s("photosAlbum").map_or(d.photos_album, |a| a.trim().to_string()),
             hdr_transfer: s("hdrTransfer").and_then(HdrCurve::parse).unwrap_or(d.hdr_transfer),
         }
     }

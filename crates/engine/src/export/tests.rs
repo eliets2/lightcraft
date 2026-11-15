@@ -1513,6 +1513,36 @@ fn side_by_side_batches_report_failures_in_order() {
 }
 
 #[test]
+fn custom_profile_matches_named_space() {
+    use lightcraft_color::DISPLAY_P3;
+    let custom = icc::write_matrix_trc(&DISPLAY_P3, &lightcraft_codecs::Trc::Srgb);
+    let encoded = base64_encode(&custom);
+    let options = ExportOptions::from_json(&json!({"format": "png", "colorSpace": "srgb", "colorProfile": encoded}));
+    let bytes = encode_image(&test_image(), &options).unwrap();
+    let decoded = lightcraft_codecs::decode(&bytes, Default::default()).unwrap();
+    assert_eq!(decoded.to_srgb8().data, test_image().data, "custom profile converts through the named space");
+    assert_eq!(decoded.icc.as_deref(), Some(custom.as_slice()));
+    assert_eq!(decoded.space.named, Some(NamedSpace::DisplayP3));
+    assert_eq!(icc::parse(&custom).and_then(|info| info.named), Some(NamedSpace::DisplayP3));
+}
+
+fn base64_encode(bytes: &[u8]) -> String {
+    const ALPHABET: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::new();
+    for chunk in bytes.chunks(3) {
+        let n = chunk.into_iter().fold(0u32, |acc, &b| (acc << 8) | u32::from(b));
+        for i in 0..4 {
+            if i * 6 < chunk.len() * 8 {
+                out.push(ALPHABET[((n >> (chunk.len() * 8 - 6 - 6 * i)) & 63) as usize] as char);
+            } else {
+                out.push('=');
+            }
+        }
+    }
+    out
+}
+
+#[test]
 fn export_weights_follow_the_source_and_output_sizes() {
     use crate::media::SourceLevel;
     let mb = |b: usize| b >> 20;
