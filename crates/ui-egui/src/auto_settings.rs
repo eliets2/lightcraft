@@ -18,6 +18,9 @@ struct Prepared {
     library: u64,
     commits: u64,
     inputs: Vec<Input>,
+    progress_done: u64,
+    progress_total: u64,
+    partial: bool,
 }
 struct Completed {
     library: u64,
@@ -26,6 +29,7 @@ struct Completed {
     settings: Vec<(PhotoId, Arc<DevelopSettings>, DevelopSettings)>,
     /// Photos left out because they could not be read.
     skipped: usize,
+    failed: Option<String>,
 }
 
 fn prepare(app: &mut LightcraftApp, params: &Value) -> Result<Prepared, String> {
@@ -38,11 +42,14 @@ fn prepare(app: &mut LightcraftApp, params: &Value) -> Result<Prepared, String> 
         let source = app.session.media.source_ref(&photo, SourceLevel::Thumb);
         inputs.push(Input { id, settings, source, info });
     }
-    Ok(Prepared { library: app.session.library_generation(), commits: app.session.commits(), inputs })
+    let total = inputs.len() as u64;
+    Ok(Prepared { library: app.session.library_generation(), commits: app.session.commits(), inputs, progress_done: 0, progress_total: total, partial: false })
 }
 impl Prepared {
     fn run(self, progress: Option<&lightcraft_engine::activity::TaskHandle>) -> Result<Completed, String> {
-        let total = self.inputs.len() as u64;
+        let total = if self.progress_total > 0 { self.progress_total } else { self.inputs.len() as u64 };
+        let done_before = self.progress_done;
+        let partial = self.partial;
         let mut settings = Vec::with_capacity(self.inputs.len());
         let mut failed: Option<String> = None;
         let mut skipped = 0;
@@ -72,16 +79,18 @@ impl Prepared {
             develop.color.saturation = auto.saturation;
             settings.push((input.id, input.settings, develop));
             if let Some(p) = progress {
-                p.progress(i as u64 + 1, total);
+                p.progress(done_before + i as u64 + 1, total);
             }
         }
         if progress.is_some_and(|p| p.is_cancelled()) {
             return Err("Auto Settings cancelled".into());
         }
-        if let (true, Some(error)) = (settings.is_empty(), failed) {
-            return Err(error);
+        if let (true, Some(error)) = (settings.is_empty(), failed.clone()) {
+            if !partial {
+                return Err(error);
+            }
         }
-        Ok(Completed { library: self.library, commits: self.commits, settings, skipped })
+        Ok(Completed { library: self.library, commits: self.commits, settings, skipped, failed })
     }
 }
 fn apply(app: &mut LightcraftApp, completed: Completed) -> Result<usize, String> {
@@ -90,24 +99,104 @@ fn apply(app: &mut LightcraftApp, completed: Completed) -> Result<usize, String>
     if app.session.library_generation() != completed.library || app.session.commits() != completed.commits || moved {
         return Err("Auto Settings was not applied because the library changed; try again".into());
     }
-    let ops: Vec<Op> = completed.settings.into_iter().filter_map(|(id, _, d)| app.session.develop_op(id, d, "Auto")).collect();
-    if !ops.is_empty() {
+    let mut ops: Vec<Op> = Vec::new();
+    let mut silent: Vec<(PhotoId, DevelopSettings)> = Vec::new();
+    for (id, _, d) in completed.settings {
+        if app.session.interaction.as_ref().is_some_and(|i| i.photo == id) {
+            silent.push((id, d));
+        } else if let Some(op) = app.session.develop_op(id, d, "Auto") {
+            ops.push(op);
+        }
+    }
+    if !ops.is_empty() || !silent.is_empty() {
         // through the command wrapper, so sidecars and the durable save follow as for any edit
         app.session
             .execute_fn("develop.auto", |s| {
-                s.commit("Auto", Op::Batch { ops })?;
+                for (id, d) in silent {
+                    s.set_develop(id, d, "Auto")?;
+                }
+                if !ops.is_empty() {
+                    s.commit("Auto", Op::Batch { ops })?;
+                }
                 Ok(Value::Null)
             })
             .map_err(|e| e.to_string())?;
     }
     Ok(completed.skipped)
 }
+#[cfg(target_arch = "wasm32")]
+struct Acc {
+    library: u64,
+    commits: u64,
+    settings: Vec<(PhotoId, Arc<DevelopSettings>, DevelopSettings)>,
+    skipped: usize,
+    failed: Option<String>,
+}
+
+#[cfg(target_arch = "wasm32")]
+fn spawn_chunk(app: &mut LightcraftApp, mut chunks: std::collections::VecDeque<Prepared>, mut acc: Acc, cancel: Arc<AtomicBool>) -> Result<(), String> {
+    let Some(chunk) = chunks.pop_front() else { return Ok(()) };
+    let next_cancel = cancel.clone();
+    crate::tasks::spawn_tracked(
+        app,
+        LABEL,
+        "auto",
+        cancel,
+        move |progress| chunk.run(Some(&progress)),
+        move |app, ctx, result| match result {
+            Ok(done) => {
+                acc.skipped += done.skipped;
+                if acc.failed.is_none() {
+                    acc.failed = done.failed.clone();
+                }
+                acc.settings.extend(done.settings);
+                if chunks.is_empty() {
+                    if acc.settings.is_empty() {
+                        if let Some(error) = acc.failed {
+                            app.toast(ctx, error);
+                        } else {
+                            app.toast(ctx, "Auto Settings cancelled".to_string());
+                        }
+                        return;
+                    }
+                    let completed = Completed { library: acc.library, commits: acc.commits, settings: acc.settings, skipped: acc.skipped, failed: acc.failed };
+                    match apply(app, completed) {
+                        Ok(0) => app.toast(ctx, crate::i18n::tr("Auto Settings").to_owned()),
+                        Ok(skipped) => app.toast(ctx, format!("{}: {skipped} photo(s) could not be read", crate::i18n::tr("Auto Settings"))),
+                        Err(error) => app.toast(ctx, error),
+                    }
+                } else if next_cancel.load(std::sync::atomic::Ordering::Relaxed) {
+                    app.toast(ctx, "Auto Settings cancelled".to_string());
+                } else {
+                    let _ = spawn_chunk(app, chunks, acc, next_cancel);
+                }
+            }
+            Err(error) => app.toast(ctx, error),
+        },
+    )?;
+    Ok(())
+}
+
 pub(crate) fn command(app: &mut LightcraftApp, params: &Value) -> Result<Value, String> {
     if app.tasks.is_running(LABEL) {
         return Err("Auto Settings is already running".into());
     }
     let prepared = prepare(app, params)?;
     let count = prepared.inputs.len();
+    #[cfg(target_arch = "wasm32")]
+    if count > 0 {
+        let total = count as u64;
+        let library = prepared.library;
+        let commits = prepared.commits;
+        let mut chunks = std::collections::VecDeque::new();
+        for (i, input) in prepared.inputs.into_iter().enumerate() {
+            chunks.push_back(Prepared { library, commits, progress_done: i as u64, progress_total: total, partial: true, inputs: vec![input] });
+        }
+        let acc = Acc { library, commits, settings: Vec::new(), skipped: 0, failed: None };
+        let cancel = Arc::new(AtomicBool::new(false));
+        spawn_chunk(app, chunks, acc, cancel)?;
+        return Ok(json!({"pending": true, "photos": count}));
+    }
     let cancel = Arc::new(AtomicBool::new(false));
     crate::tasks::spawn_tracked(
         app,

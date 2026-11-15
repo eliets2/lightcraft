@@ -548,7 +548,12 @@ pub fn specs() -> Vec<CommandSpec> {
                 nd.light.blacks = a.blacks;
                 nd.color.vibrance = a.vibrance;
                 nd.color.saturation = a.saturation;
-                if let Some(op) = s.develop_op(id, nd, "Auto") {
+                if s.interaction.as_ref().is_some_and(|i| i.photo == id) {
+                    // Part of the open interaction: preview it silently, so cancelling the
+                    // interaction reverts it with the rest and ending it commits it as the
+                    // interaction's one undo step, with no separate Auto step or history entry.
+                    s.set_develop(id, nd, "Auto")?;
+                } else if let Some(op) = s.develop_op(id, nd, "Auto") {
                     ops.push(op);
                 }
             }
