@@ -111,7 +111,27 @@ impl ToneMap {
     /// gain map only lifts highlights), then the highlights gain up to `peak − 1` more as in
     /// [`ToneMap::hdr`].
     pub fn camera_hdr(curve: &CameraTone, contrast: f64, whites: f64, blacks: f64, peak: f32) -> ToneMap {
-        let contrast = contrast.clamp(-100.0, 100.0);
+        Self::camera_hdr_scaled(curve, contrast, whites, blacks, peak, 1.0)
+    }
+
+    /// [`ToneMap::camera_hdr`] with the flatter log-exposure scale of the next process
+    /// version: scene EV is scaled by the contrast slope (as in [`ToneMap::hdr`]) before
+    /// the camera curve, so negative contrast flattens the camera curve's shadow-to-
+    /// highlight gap instead of only shifting it through the display adjustment. Sliders
+    /// are clamped to -100..100 with a non-finite value read as 0, matching the finite
+    /// fallback used for `peak`. At neutral settings this is [`ToneMap::camera_hdr`].
+    /// Callers on older processes must keep using [`ToneMap::camera_hdr`], whose output
+    /// is unchanged, so saved edits keep their look.
+    pub fn camera_hdr_v3(curve: &CameraTone, contrast: f64, whites: f64, blacks: f64, peak: f32) -> ToneMap {
+        let contrast = finite_slider(contrast);
+        let whites = finite_slider(whites);
+        let blacks = finite_slider(blacks);
+        let c = (contrast / 100.0) as f32;
+        let ev_scale = if c >= 0.0 { 1.0 + 0.55 * c } else { 1.0 + 0.4 * c };
+        Self::camera_hdr_scaled(curve, contrast, whites, blacks, peak, ev_scale)
+    }
+
+    fn camera_hdr_scaled(curve: &CameraTone, contrast: f64, whites: f64, blacks: f64, peak: f32, ev_scale: f32) -> ToneMap {
         let peak = if peak.is_finite() { peak.max(1.0) } else { 1.0 };
         let adjustment = Self::display(contrast, whites, blacks);
         let neutral = contrast == 0.0 && whites == 0.0 && blacks == 0.0;
@@ -119,7 +139,8 @@ impl ToneMap {
         let lut = (0..LUT_N)
             .map(|i| {
                 let ev = LUT_MIN_EV + (LUT_MAX_EV - LUT_MIN_EV) * i as f32 / (LUT_N - 1) as f32;
-                let y = curve.apply(GREY * 2f32.powf(ev));
+                let scaled = if ev_scale == 1.0 { ev } else { ev * ev_scale };
+                let y = curve.apply(GREY * 2f32.powf(scaled));
                 let o = if neutral { y } else { adjustment.apply(y) };
                 if peak > 1.0 { (o + (peak - 1.0) * smooth(HDR_FROM_EV, top, ev)).clamp(0.0, peak) } else { o }
             })
@@ -258,6 +279,10 @@ impl ToneMap {
         let v = self.lut[i] + (self.lut[i + 1] - self.lut[i]) * t;
         if ev < LUT_MIN_EV { v * (y / (GREY * 2f32.powf(LUT_MIN_EV))) } else { v }
     }
+}
+
+fn finite_slider(v: f64) -> f64 {
+    if v.is_finite() { v.clamp(-100.0, 100.0) } else { 0.0 }
 }
 
 fn smooth(e0: f32, e1: f32, x: f32) -> f32 {
@@ -407,6 +432,40 @@ mod tests {
         let camera_gap = curve.apply(highlight) - curve.apply(shadow);
         let flat_gap = flat.apply(highlight) - flat.apply(shadow);
         assert!(flat_gap > camera_gap * 0.5, "negative contrast collapses the camera curve's {camera_gap} contrast to {flat_gap}");
+    }
+
+    #[test]
+    fn camera_hdr_v3_flattens_at_negative_contrast_and_matches_at_neutral() {
+        let curve = CameraTone::new(knots()).unwrap();
+        // Neutral: the new process path is the old one.
+        assert_eq!(ToneMap::camera_hdr_v3(&curve, 0.0, 0.0, 0.0, 1.0).lut(), ToneMap::camera_hdr(&curve, 0.0, 0.0, 0.0, 1.0).lut());
+        assert_eq!(ToneMap::camera_hdr_v3(&curve, 0.0, 0.0, 0.0, 8.0).lut(), ToneMap::camera_hdr(&curve, 0.0, 0.0, 0.0, 8.0).lut());
+        // Negative contrast: V3 flattens the camera curve's gap, V1/V2 camera_hdr keeps it.
+        let shadow = 0.01;
+        let highlight = 2.0;
+        let camera_gap = curve.apply(highlight) - curve.apply(shadow);
+        let old_gap = ToneMap::camera_hdr(&curve, -100.0, 0.0, 0.0, 1.0).apply(highlight)
+            - ToneMap::camera_hdr(&curve, -100.0, 0.0, 0.0, 1.0).apply(shadow);
+        let v3 = ToneMap::camera_hdr_v3(&curve, -100.0, 0.0, 0.0, 1.0);
+        let v3_gap = v3.apply(highlight) - v3.apply(shadow);
+        assert!(old_gap > camera_gap * 0.5, "old path collapses {camera_gap} to {old_gap}");
+        assert!(v3_gap < old_gap * 0.8, "V3 does not flatten: {v3_gap} vs old {old_gap}");
+        assert!(v3.lut().iter().all(|v| v.is_finite() && (0.0..=1.0).contains(v)));
+    }
+
+    #[test]
+    fn camera_hdr_v3_sanitizes_out_of_range_and_nan_sliders() {
+        let curve = CameraTone::new(knots()).unwrap();
+        assert_eq!(
+            ToneMap::camera_hdr_v3(&curve, f64::NAN, f64::INFINITY, -f64::INFINITY, 1.0).lut(),
+            ToneMap::camera_hdr_v3(&curve, 0.0, 0.0, 0.0, 1.0).lut()
+        );
+        assert_eq!(
+            ToneMap::camera_hdr_v3(&curve, 500.0, -500.0, 500.0, 1.0).lut(),
+            ToneMap::camera_hdr_v3(&curve, 100.0, -100.0, 100.0, 1.0).lut()
+        );
+        let t = ToneMap::camera_hdr_v3(&curve, f64::NAN, f64::NAN, f64::NAN, f32::NAN);
+        assert!(t.lut().iter().all(|v| v.is_finite()));
     }
 
     #[test]
