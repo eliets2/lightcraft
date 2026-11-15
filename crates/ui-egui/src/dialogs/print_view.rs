@@ -707,7 +707,8 @@ fn preview(app: &mut LightcraftApp, ui: &mut Ui, t: &Tokens, pu: &mut PrintUi, s
 
     let package = st.layout.style.is_package();
     if package {
-        package_cells(app, ui, &painter, t, pu, st, ids, &sheet);
+        let shown = package_cells(app, ui, &painter, t, pu, st, ids, &sheet);
+        page_options(&painter, st, &sheet, &shown, pu.page + 1);
     } else {
         let plan = compose::plan_cells(&st.layout, ids).ok();
         let cells: Vec<(layout::Rect, Option<PhotoId>)> = match plan.as_ref().and_then(|p| p.get(pu.page)) {
@@ -763,14 +764,17 @@ fn package_cells(
     st: &PrintSettings,
     ids: &[PhotoId],
     sheet: &Sheet,
-) {
+) -> Vec<Rect> {
     let ctx = ui.ctx().clone();
     let first = ids.first().copied();
     let cells: Vec<layout::Cell> = st.layout.cells_on_page(pu.page as u32).cloned().collect();
+    let mut shown = Vec::new();
     for c in &cells {
         let photo = if st.layout.style == Style::CustomPackage { c.photo.map(PhotoId).or(first) } else { first };
         let rect = sheet.rect(&c.rect);
-        paint_cell(app, painter, t, st, rect, photo, sheet, &c.rect);
+        if let Some(r) = paint_cell(app, painter, t, st, rect, photo, sheet, &c.rect) {
+            shown.push(r);
+        }
         let resp = ui.interact(rect, egui::Id::unique(("print-cell", c.id)), Sense::click_and_drag());
         register(ui, format!("print:cell:{}", c.id), rect);
         if resp.clicked() || resp.drag_started() {
@@ -808,7 +812,7 @@ fn package_cells(
         });
     }
     // the selected cell's outline and resize handle go over everything
-    let Some(sel) = pu.selected.and_then(|s| cells.iter().find(|c| c.id == s)) else { return };
+    let Some(sel) = pu.selected.and_then(|s| cells.iter().find(|c| c.id == s)) else { return shown };
     let rect = sheet.rect(&sel.rect);
     painter.rect_stroke(rect, 0.0, Stroke::new(2.0, t.accent), StrokeKind::Outside);
     let handle = Rect::from_center_size(rect.right_bottom(), Vec2::splat(HANDLE));

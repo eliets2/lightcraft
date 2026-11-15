@@ -454,9 +454,10 @@ fn page_options_checkboxes_set_the_page_and_hide_for_packages() {
     scroll(&mut h, 600.0);
     click(&mut h, "button:printStyle-1");
     assert!(has(&h, "check:printCropMarks"), "a contact sheet has Page Options");
-    // Lightroom's packages have no Page Options
+    // Lightroom's packages have no Page Options, but do have Cut Guides
     click(&mut h, "button:printStyle-2");
-    assert!(!has(&h, "check:printPageNumbers") && !has(&h, "check:printCropMarks"));
+    assert!(!has(&h, "check:printPageNumbers") && !has(&h, "check:printPageInfo"));
+    assert!(has(&h, "check:printCropMarks"));
 }
 
 #[test]
