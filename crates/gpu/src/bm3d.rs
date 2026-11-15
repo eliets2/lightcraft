@@ -589,4 +589,24 @@ mod tests {
         let out = g.filter(&flat, 32, 0.5).unwrap();
         assert!(out.iter().flatten().all(|v| (v - 5.0).abs() < 1e-3));
     }
+
+    /// With the colour-difference planes noisier than the brightness plane, the card's result matches the
+    /// processor's, which scales each plane's threshold and Wiener sigma by its own noise.
+    #[test]
+    fn gpu_filter_matches_cpu_with_unequal_chroma_noise() {
+        let p = Params::default();
+        let t = 48;
+        let Some(g) = gpu(&p, t) else { return };
+        let mut planes = scene(t, 21);
+        for plane in planes.iter_mut().skip(1) {
+            for v in plane.iter_mut() {
+                *v *= 3.0;
+            }
+        }
+        let want = bm3d::filter(&planes, t, &p, 0.01);
+        let got = g.filter(&planes, t, 0.01).unwrap();
+        let (worst, mean) = differ(&got, &want);
+        assert!(got.iter().flatten().all(|v| v.is_finite()));
+        assert!(mean < 1e-3 && worst < 0.1, "unequal chroma noise: the GPU is off by {worst:e} at most and {mean:e} on average");
+    }
 }
