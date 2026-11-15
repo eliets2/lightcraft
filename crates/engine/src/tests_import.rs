@@ -462,14 +462,24 @@ fn damaged_smart_previews_are_rebuilt_and_failed_writes_leave_none() {
     s.execute("library.import", &json!({"paths": [src.join("a.png").to_string_lossy()]})).unwrap();
     let id = s.active().unwrap();
     let dir = s.media.smart_dir.clone().unwrap();
-    let file = dir.join(crate::smart::file_name(s.catalog.photo(id).unwrap()));
+    let file = crate::smart::path(&dir, s.catalog.photo(id).unwrap());
     {
         let _fault = lightcraft_catalog::safe_file::fail_writes_after(64);
         let r = s.execute("library.smartPreviews", &json!({})).unwrap();
         assert_eq!((r["built"].as_u64(), r["failed"].as_array().map(Vec::len)), (Some(0), Some(1)), "{r}");
     }
     assert!(!file.exists(), "no partial proxy");
-    assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 0, "no temp file left");
+    // a failed atomic write leaves no proxy and no temp file: the shard folder it made may stay,
+    // but must be empty — count files, not entries, so the folder itself isn't mistaken for a stray
+    let strays: usize = std::fs::read_dir(&dir)
+        .unwrap()
+        .flatten()
+        .map(|e| {
+            let p = e.path();
+            if p.is_dir() { std::fs::read_dir(&p).map(|rd| rd.flatten().count()).unwrap_or(0) } else { 1 }
+        })
+        .sum();
+    assert_eq!(strays, 0, "no temp file left");
     assert_eq!(s.execute("photo.smartPreview", &json!({})).unwrap()["smartPreview"], false);
 
     let r = s.execute("library.smartPreviews", &json!({})).unwrap();
@@ -1199,8 +1209,8 @@ fn smart_previews_from_an_older_look_fit_are_refreshed() {
     assert!(s.catalog.photo(id).unwrap().relative_wb() && !s.catalog.photo(png).unwrap().relative_wb());
     s.execute("library.select", &json!({"ids": [id.0, png.0], "active": id.0})).unwrap();
     let dir = s.media.smart_dir.clone().unwrap();
-    let file = dir.join(crate::smart::file_name(s.catalog.photo(id).unwrap()));
-    let png_file = dir.join(crate::smart::file_name(s.catalog.photo(png).unwrap()));
+    let file = crate::smart::path(&dir, s.catalog.photo(id).unwrap());
+    let png_file = crate::smart::path(&dir, s.catalog.photo(png).unwrap());
     let (old, new) = (test_tone(1.5), test_tone(3.5));
     let calls = std::sync::Arc::new(AtomicUsize::new(0));
     let plain = s.media.file_loader.clone().unwrap();
@@ -1258,7 +1268,7 @@ fn smart_previews_from_an_older_look_fit_are_refreshed() {
 
     // a folder checked at an older version (or not at all) is scanned once at the next opening
     edit_smart_header(&file, |h| h["look_version"] = json!(0));
-    std::fs::write(dir.join("look-version"), b"0\n").unwrap();
+    std::fs::write(dir.join("look-version"), b"0 0\n").unwrap();
     assert!(!crate::smart::look_checked(&dir));
     s.media.forget(id);
     calls.store(0, Ordering::SeqCst);
@@ -1284,20 +1294,33 @@ fn smart_previews_from_an_older_look_fit_are_refreshed() {
     let _ = std::fs::remove_dir_all(&lib);
 }
 
-/// The look marker: missing, damaged or older than this build's fit version counts as unchecked.
+/// The look marker: a folder counts as checked (so its proxies are not re-scanned) only when its
+/// marker holds both this build's camera-look fit version and its encode version, or newer ones.
+/// Missing, damaged, one field older, or a marker from before the encode version was recorded (a
+/// bare fit version) all count as unchecked, so the folder is re-scanned once after the proxy
+/// encoding changes.
 #[test]
 fn smart_preview_look_marker_is_read_safely() {
     let dir = temp_dir("smartlook-marker");
     assert!(!crate::smart::look_checked(&dir), "no marker");
     let cur = crate::camera_preview::LOOK_VERSION;
+    let enc = crate::smart::ENCODE_VERSION;
     for (text, checked) in [
         (String::new(), false),
         ("banana".into(), false),
         ("-1".into(), false),
-        (format!("{}", cur.saturating_sub(1)), false),
         ("9".repeat(200), false),
-        (format!("{cur}\n"), true),
-        (format!(" {}\n", cur + 1), true),
+        ("0 0".into(), false),
+        (format!("{}", cur.saturating_sub(1)), false),
+        (format!("{cur} {enc}\n"), true),
+        (format!("{} {}\n", cur + 1, enc + 1), true),
+        (format!(" {cur} {enc}\n"), true),
+        (format!("{cur}\n"), false),
+        (format!(" {}\n", cur + 1), false),
+        (format!("{cur} {}\n", enc.saturating_sub(1)), false),
+        (format!("{} {enc}\n", cur.saturating_sub(1)), false),
+        ("abc 2".into(), false),
+        (format!("{cur} abc\n"), false),
     ] {
         std::fs::write(dir.join("look-version"), &text).unwrap();
         assert_eq!(crate::smart::look_checked(&dir), checked, "{text:?}");
