@@ -158,7 +158,23 @@ pub(crate) fn decode(bytes: &[u8], opts: &DecodeOptions) -> Result<Decoded> {
                 planes.push(out);
             }
         }
-        _ => return Err(Error::Unsupported(F, "ZIP-compressed merged image data")),
+        2 => {
+            // ZIP compression is a single zlib stream for the whole merged image data (all
+            // channels, plane after plane), with no row byte-count table (that's PackBits only).
+            // Only the used planes are taken from it; the limit bounds the decompressed size.
+            let rest = &bytes[r.p..];
+            let limit = channels.checked_mul(plane).ok_or_else(too_large)?;
+            let data = inflate_zlib(rest, limit)?;
+            if data.len() < limit {
+                return Err(err("truncated"));
+            }
+            for c in 0..used {
+                let start = c.checked_mul(plane).ok_or_else(too_large)?;
+                let end = start.checked_add(plane).ok_or_else(too_large)?;
+                planes.push(data.get(start..end).ok_or_else(|| err("truncated"))?.to_vec());
+            }
+        }
+        _ => return Err(Error::Unsupported(F, "unsupported compression")),
     }
     let samples = n.checked_mul(used).ok_or_else(too_large)?;
 
@@ -401,13 +417,341 @@ pub(crate) fn header(bytes: &[u8]) -> Result<(u32, u32, u16)> {
             }
             Some(total)
         }
-        _ => return Err(Error::Unsupported(F, "ZIP-compressed merged image data")),
+        2 => {
+            // ZIP compression is a single zlib stream for the whole merged image data (all channels);
+            // the decompressed size is fixed by the header, so any data present is enough here.
+            if rest == 0 {
+                return Err(err("truncated"));
+            }
+            Some(1)
+        }
+        _ => return Err(Error::Unsupported(F, "unsupported compression")),
     };
     if need.is_none_or(|n| n > rest) {
         return Err(err("truncated"));
     }
     let orientation = exif.as_deref().map(crate::exif::summarize).unwrap_or_default().orientation.unwrap_or(1);
     Ok((width as u32, height as u32, orientation))
+}
+
+/// Inflates a zlib stream into a buffer of at most `limit` bytes; only fixed and dynamic
+/// Huffman deflate blocks are decoded, stored blocks as stored blocks, and the stream must
+/// end with a final block. Adler-32 is not checked.
+fn inflate_zlib(src: &[u8], limit: usize) -> Result<Vec<u8>> {
+    let header = src.get(..2).ok_or_else(|| err("truncated"))?;
+    let cmf = header[0] as usize;
+    let flg = header[1] as usize;
+    if cmf & 0x0F != 8 || (cmf << 8 | flg) % 31 != 0 || flg & 0x20 != 0 {
+        return Err(err("truncated"));
+    }
+    let mut bits = BitReader { src: src.get(2..).ok_or_else(|| err("truncated"))?, at: 0, cur: 0, left: 0 };
+    let mut out = Vec::new();
+    out.try_reserve_exact(limit.min(1 << 20)).map_err(|_| Error::TooLarge(0, 0))?;
+    loop {
+        let last = bits.field(1)?;
+        let kind = bits.field(2)?;
+        match kind {
+            0 => {
+                bits.align();
+                let len = usize::from(bits.byte()?) | usize::from(bits.byte()?) << 8;
+                let nlen = usize::from(bits.byte()?) | usize::from(bits.byte()?) << 8;
+                if len ^ nlen != 0xFFFF || out.len().saturating_add(len) > limit {
+                    return Err(err("truncated"));
+                }
+                for _ in 0..len {
+                    out.push(bits.byte()?);
+                }
+            }
+            1 | 2 => {
+                let (lit, dist) = if kind == 1 {
+                    let mut l = vec![0u8; 288];
+                    for (i, s) in l.iter_mut().enumerate() {
+                        *s = if i < 144 {
+                            8
+                        } else if i < 256 {
+                            9
+                        } else if i < 280 {
+                            7
+                        } else {
+                            8
+                        };
+                    }
+                    (l, vec![5u8; 32])
+                } else {
+                    huffman_tables(&mut bits)?
+                };
+                let lt = Huffman::build(&lit)?;
+                let dt = Huffman::build(&dist)?;
+                loop {
+                    let sym = lt.decode(&mut bits)?;
+                    if sym < 256 {
+                        if out.len() >= limit {
+                            return Err(err("truncated"));
+                        }
+                        out.push(sym as u8);
+                    } else if sym == 256 {
+                        break;
+                    } else {
+                        let i = sym - 257;
+                        let (base, extra) = LENGTHS.get(i).copied().ok_or_else(|| err("truncated"))?;
+                        let len = base + if extra > 0 { bits.field(extra)? } else { 0 };
+                        let dsym = dt.decode(&mut bits)?;
+                        let (dbase, dextra) = DISTANCES.get(dsym).copied().ok_or_else(|| err("truncated"))?;
+                        let dist = dbase + if dextra > 0 { bits.field(dextra)? } else { 0 };
+                        if dist == 0 || dist > out.len() || out.len().saturating_add(len) > limit {
+                            return Err(err("truncated"));
+                        }
+                        let mut at = out.len() - dist;
+                        for _ in 0..len {
+                            let b = out.get(at).copied().ok_or_else(|| err("truncated"))?;
+                            out.push(b);
+                            at += 1;
+                        }
+                    }
+                }
+            }
+            _ => return Err(err("truncated")),
+        }
+        if last == 1 {
+            break;
+        }
+    }
+    Ok(out)
+}
+
+const LENGTHS: [(usize, u32); 29] = [
+    (3, 0),
+    (4, 0),
+    (5, 0),
+    (6, 0),
+    (7, 0),
+    (8, 0),
+    (9, 0),
+    (10, 0),
+    (11, 1),
+    (13, 1),
+    (15, 1),
+    (17, 1),
+    (19, 2),
+    (23, 2),
+    (27, 2),
+    (31, 2),
+    (35, 3),
+    (43, 3),
+    (51, 3),
+    (59, 3),
+    (67, 4),
+    (83, 4),
+    (99, 4),
+    (115, 4),
+    (131, 5),
+    (163, 5),
+    (195, 5),
+    (227, 5),
+    (258, 0),
+];
+const DISTANCES: [(usize, u32); 30] = [
+    (1, 0),
+    (2, 0),
+    (3, 0),
+    (4, 0),
+    (5, 1),
+    (7, 1),
+    (9, 2),
+    (13, 2),
+    (17, 3),
+    (25, 3),
+    (33, 4),
+    (49, 4),
+    (65, 5),
+    (97, 5),
+    (129, 6),
+    (193, 6),
+    (257, 7),
+    (385, 7),
+    (513, 8),
+    (769, 8),
+    (1025, 9),
+    (1537, 9),
+    (2049, 10),
+    (3073, 10),
+    (4097, 11),
+    (6145, 11),
+    (8193, 12),
+    (12289, 12),
+    (16385, 13),
+    (24577, 13),
+];
+
+fn huffman_tables(bits: &mut BitReader) -> Result<(Vec<u8>, Vec<u8>)> {
+    let hlit = bits.field(5)? + 257;
+    let hdist = bits.field(5)? + 1;
+    let hclen = bits.field(4)? + 4;
+    const ORDER: [usize; 19] = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
+    let mut lens = [0u8; 19];
+    for (i, &o) in ORDER.iter().enumerate().take(hclen) {
+        if let Some(v) = lens.get_mut(o) {
+            *v = bits.field(3)? as u8;
+        }
+    }
+    let ct = Huffman::build(&lens)?;
+    let mut all = vec![0u8; hlit + hdist];
+    let mut at = 0;
+    while at < all.len() {
+        let sym = ct.decode(bits)?;
+        if sym < 16 {
+            if let Some(v) = all.get_mut(at) {
+                *v = sym as u8;
+            }
+            at += 1;
+        } else if sym == 16 {
+            let n = 3 + bits.field(2)?;
+            let prev = if at > 0 {
+                *all.get(at - 1).ok_or_else(|| err("truncated"))?
+            } else {
+                return Err(err("truncated"));
+            };
+            for _ in 0..n {
+                if let Some(v) = all.get_mut(at) {
+                    *v = prev;
+                }
+                if at >= all.len() {
+                    return Err(err("truncated"));
+                }
+                at += 1;
+            }
+        } else if sym == 17 {
+            at = at.checked_add(3 + bits.field(3)?).ok_or_else(|| err("truncated"))?;
+        } else if sym == 18 {
+            at = at.checked_add(11 + bits.field(7)?).ok_or_else(|| err("truncated"))?;
+        } else {
+            return Err(err("truncated"));
+        }
+        if at > all.len() {
+            return Err(err("truncated"));
+        }
+    }
+    let (lit, dist) = all.split_at(hlit);
+    Ok((lit.to_vec(), dist.to_vec()))
+}
+
+struct Huffman {
+    nodes: Vec<(Option<usize>, Option<usize>)>,
+    syms: Vec<Option<usize>>,
+}
+impl Huffman {
+    fn build(lens: &[u8]) -> Result<Self> {
+        // Canonical Huffman: assign codes 0,1,2,... in (length, symbol) order, MSB first.
+        for &l in lens {
+            if l > 15 {
+                return Err(err("truncated"));
+            }
+        }
+        let mut leaves: Vec<(u8, usize)> = lens.iter().enumerate().filter(|&(_, &l)| l != 0).map(|(s, &l)| (l, s)).collect();
+        if leaves.is_empty() {
+            return Err(err("truncated"));
+        }
+        let leaf_count = leaves.len();
+        leaves.sort_by_key(|&(l, s)| (l, s));
+        let mut nodes: Vec<(Option<usize>, Option<usize>)> = vec![(None, None)];
+        let mut syms: Vec<Option<usize>> = Vec::new();
+        syms.try_reserve_exact(leaves.len()).map_err(|_| Error::TooLarge(0, 0))?;
+        syms.push(None); // root: not a symbol
+        let mut code = 0usize;
+        let mut prev_len = 0u8;
+        for (len, sym) in leaves {
+            code <<= usize::from(len - prev_len);
+            if code >= 1usize << len {
+                return Err(err("truncated"));
+            }
+            // walk/extend the tree along code, MSB first
+            let mut at = 0usize;
+            for i in (0..len).rev() {
+                let bit = (code >> i) & 1;
+                let next = if bit == 0 { nodes.get(at).and_then(|n| n.0) } else { nodes.get(at).and_then(|n| n.1) };
+                if next.is_none() {
+                    // refuse a path that runs through an existing leaf: the code prefix is used
+                    if syms.get(at).is_some_and(|s| s.is_some()) {
+                        return Err(err("truncated"));
+                    }
+                    let new_at = nodes.len();
+                    if nodes.len() >= 2 * leaf_count + 1 {
+                        return Err(err("truncated"));
+                    }
+                    nodes.push((None, None));
+                    syms.push(None);
+                    if let Some(slot) = nodes.get_mut(at) {
+                        if bit == 0 {
+                            slot.0 = Some(new_at);
+                        } else {
+                            slot.1 = Some(new_at);
+                        }
+                    }
+                    at = new_at;
+                } else {
+                    at = next.map(|v| v).unwrap_or(0);
+                }
+            }
+            if syms.get(at).is_some_and(|s| s.is_some()) {
+                return Err(err("truncated"));
+            }
+            if let Some(slot) = syms.get_mut(at) {
+                *slot = Some(sym);
+            } else {
+                return Err(err("truncated"));
+            }
+            code += 1;
+            prev_len = len;
+        }
+        Ok(Self { nodes, syms })
+    }
+    fn decode(&self, bits: &mut BitReader) -> Result<usize> {
+        let mut at = 0usize;
+        for _ in 0..16 {
+            let bit = bits.field(1)?;
+            let node = self.nodes.get(at).ok_or_else(|| err("truncated"))?;
+            at = if bit == 0 { node.0 } else { node.1 }.ok_or_else(|| err("truncated"))?;
+            if let Some(sym) = self.syms.get(at).copied().flatten() {
+                return Ok(sym);
+            }
+        }
+        Err(err("truncated"))
+    }
+}
+
+struct BitReader<'a> {
+    src: &'a [u8],
+    at: usize,
+    cur: u32,
+    left: u32,
+}
+impl<'a> BitReader<'a> {
+    fn take(&mut self, n: u32) -> Result<usize> {
+        // LSB-first: the low `n` bits of `field` must be in the LSB of `cur`, so keep that many.
+        while self.left < n {
+            let b = *self.src.get(self.at).ok_or_else(|| err("truncated"))?;
+            self.at += 1;
+            self.cur |= u32::from(b) << self.left;
+            self.left += 8;
+            if self.left > 31 {
+                return Err(err("truncated"));
+            }
+        }
+        let v = self.cur as usize & (1usize << n) - 1;
+        self.cur >>= n;
+        self.left -= n;
+        Ok(v)
+    }
+    fn field(&mut self, n: u32) -> Result<usize> {
+        self.take(n)
+    }
+    fn align(&mut self) {
+        self.cur = 0;
+        self.left = 0;
+    }
+    fn byte(&mut self) -> Result<u8> {
+        Ok(self.take(8)? as u8)
+    }
 }
 
 /// A zero-filled buffer whose allocation failure is an error, not an abort.
@@ -560,6 +904,21 @@ mod tests {
         let q = d.image.get(0, 0);
         assert!(p[0] > 0.0 && (p[0] - q[0]).abs() < 1e-6, "{p:?}");
     }
+    #[test]
+    fn zip_compressed_psd_decodes() {
+        // 2 × 2 gray 8-bit, compression 2 (ZIP): a zlib stream holding the 4 plane bytes
+        // [10, 20, 30, 40] (stored deflate block).
+        let mut b = header(1, 2, 2, 8, 1, 2);
+        b.extend_from_slice(&[0x78, 0x9C, 0x01, 0x04, 0x00, 0xFB, 0xFF, 10, 20, 30, 40, 0x00, 0xCC, 0x00, 0x65]);
+        let res = decode(&b, &DecodeOptions::default());
+        assert!(res.is_ok(), "ZIP-compressed PSD should decode, got {res:?}");
+        let d = res.unwrap();
+        assert_eq!((d.width, d.height), (2, 2));
+        let p = d.image.get(1, 1);
+        let q = d.image.get(0, 0);
+        assert!(p[0] > q[0], "{p:?} vs {q:?}");
+    }
+
     #[test]
     fn packbits_round_trips() {
         let rows: [&[u8]; 6] = [&[], &[7], &[1, 1], &[1, 2, 3, 3, 3, 4, 5, 5], &[9; 300], &(0..=255u8).cycle().take(700).collect::<Vec<_>>()];
