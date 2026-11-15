@@ -2591,3 +2591,16 @@ fn the_histogram_clipping_buttons_stay_clear_of_the_hovered_scroll_bar() {
     // and the shadow one keeps the same inset from its edge
     assert!(((low.left() - hist.left()) - (hist.right() - high.right())).abs() < 0.5, "{low:?} {high:?} in {hist:?}");
 }
+
+/// The filter bar's metadata pickers sit beside the rating, flag, label, kind and edited
+/// controls: Camera, Lens, Keyword — and Person. Choosing a person calls `library.filter
+/// {person: ...}` and the grid shows only that person's photos. The picker loop in `show`
+/// (filterbar.rs:240-250) only iterates camera, lens and keyword, so it never registers a
+/// `dropdown:filter-person` widget and never filters by person from the bar.
+#[test]
+fn filter_bar_person_picker_filters_the_grid() {
+    let mut h = demo([1400.0, 900.0], json!({"view": "photoGrid"}));
+    h.request("engine.execute", json!({"command": "view.filterBar"}), T);
+    assert!(h.app.ui.filter_bar, "the filter bar is on");
+    assert!(has(&h, "dropdown:filter-person"), "the filter bar registers no person picker beside camera, lens and keyword");
+}

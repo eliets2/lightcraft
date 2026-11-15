@@ -61,7 +61,7 @@ fn picker(app: &mut LightcraftApp, ui: &mut egui::Ui, id: &str, current: &str, a
     let r = crate::widgets::dropdown(
         ui,
         &format!("filter-{id}"),
-        if active && matches!(id, "camera" | "lens" | "keyword") { current } else { crate::i18n::tr(current) },
+        if active && matches!(id, "camera" | "lens" | "keyword" | "person") { current } else { crate::i18n::tr(current) },
         t.font(12.5),
         if active { t.text } else { t.text_label },
     );
@@ -75,7 +75,7 @@ fn picker(app: &mut LightcraftApp, ui: &mut egui::Ui, id: &str, current: &str, a
                 if ui
                     .selectable_label(
                         *sel,
-                        if matches!(id, "camera" | "lens" | "keyword") && patch.get(id).is_some_and(|value| !value.is_null()) {
+                        if matches!(id, "camera" | "lens" | "keyword" | "person") && patch.get(id).is_some_and(|value| !value.is_null()) {
                             label.as_str()
                         } else {
                             crate::i18n::tr(label)
@@ -236,11 +236,13 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui) {
     // metadata pickers
     let ui: &mut egui::Ui = if two_rows { &mut row2 } else { &mut row1 };
     let values = app.caches.filter_values(&app.session.catalog);
+    let persons = app.caches.person_names(&app.session.catalog);
     let (cameras, lenses, keywords) = (values.cameras.clone(), values.lenses.clone(), values.keywords.clone());
     for (id, key, all_label, current, values) in [
         ("camera", "camera", "Camera", f.camera.clone(), cameras),
         ("lens", "lens", "Lens", f.lens.clone(), lenses),
         ("keyword", "keyword", "Keyword", f.keyword.clone(), keywords),
+        ("person", "person", "Person", f.person.clone(), persons.iter().cloned().collect()),
     ] {
         let mut items = vec![(format!("Any {}", all_label.to_lowercase()), json!({key: Value::Null}), current.is_none())];
         items.extend(values.into_iter().map(|v| (v.clone(), json!({key: v.clone()}), current.as_deref() == Some(v.as_str()))));
