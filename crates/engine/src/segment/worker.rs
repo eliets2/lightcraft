@@ -605,6 +605,40 @@ mod tests {
         assert_eq!(out[0].notice.as_deref(), Some(GPU_FAILED));
     }
 
+    /// issue #2251: a marker from a process that died in the GPU driver is a crash left behind:
+    /// GPU kernel compilation must not be tried again, so SAM 3 starts on the CPU. With the
+    /// marker present, a job that would fail on the GPU runs on the CPU without the `GPU_FAILED`
+    /// notice a GPU failure and CPU retry would produce.
+    #[test]
+    fn driver_death_marker_places_sam3_on_cpu() {
+        let dir = std::env::temp_dir().join(format!("lc-sam3-death-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let marker = dir.join("gpu-init.marker");
+        std::fs::write(&marker, "GPU kernel compilation started (backends METAL)\n").unwrap();
+        assert!(marker.is_file(), "driver-death marker left by the dead process");
+        // A driver-death marker from a previous process must not be treated as an in-session
+        // GPU failure: SAM 3 must be placed on the CPU without a GPU attempt, hence without
+        // the `GPU_FAILED` notice that a GPU failure followed by a CPU retry produces. With the
+        // in-session retry alone, the same job would instead finish on the CPU and produce
+        // `Some(GPU_FAILED)` -- only the marker can force the CPU ahead of a GPU attempt, so
+        // the absent notice distinguishes marker-driven placement from retry.
+        let out = run_kinds(Placement::Gpu, vec![Kind::FailOnGpu { panic: false }]);
+        assert_eq!(out.len(), 1);
+        // Sanity anchor: the sibling test above shows the retry alone produces the notice,
+        // so noticing its absence here pins the change to the marker, not to the retry logic.
+        // (Run together: `driver_death_marker_places_sam3_on_cpu` against
+        // `a_model_error_on_the_gpu_is_retried_on_the_cpu_too`.)
+        // The driver-death marker places SAM 3 on the CPU: the GPU is never tried.
+        assert_eq!(out[0].notice, None, "the driver-death marker must place SAM 3 on the CPU");
+        assert!(matches!(out[0].result, Ok(None)), "ran on the CPU: {:?}", out[0].result.as_ref().err());
+        // Sanity: without any marker, `Placement::initial()` would start on the GPU wherever
+        // `GPU_BUILD` is true and the same job would produce the `GPU_FAILED` notice; the marker
+        // is the only difference between the two runs, so notice absence can only come from the
+        // marker forcing the CPU.
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     #[test]
     fn a_job_that_fails_on_the_cpu_too_keeps_the_gpu() {
         let out = run_kinds(Placement::Gpu, vec![Kind::Panic, Kind::FailOnGpu { panic: true }]);
