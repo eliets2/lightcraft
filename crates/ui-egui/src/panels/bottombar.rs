@@ -552,4 +552,47 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn bottom_rating_is_announced_as_slider() {
+        use lightcraft_catalog::{Op, Photo, PhotoId, Source};
+
+        let ctx = egui::Context::default();
+        crate::theme::install_fonts(&ctx);
+        crate::theme::apply(&ctx);
+        ctx.enable_accesskit();
+        let mut session = lightcraft_engine::Session::new();
+        let mut photo =
+            Photo::new(PhotoId(1), Source::File { path: "/lightcraft-bottom-rating/1.jpg".to_string() }, "1.jpg", "JPEG", 40, 30, "2026-10-09");
+        photo.rating = 3;
+        session.catalog.apply(Op::AddPhoto { photo: Box::new(photo) }).unwrap();
+        session.selection.active = Some(PhotoId(1));
+        let mut app = LightcraftApp::new(session, Services::default());
+        let mut found = Vec::new();
+        for _ in 0..3 {
+            let mut out = ctx.run_ui(
+                egui::RawInput { screen_rect: Some(Rect::from_min_size(egui::Pos2::ZERO, vec2(700.0, 40.0))), ..Default::default() },
+                |ui| {
+                    let full = ui.max_rect();
+                    centre(&mut app, ui, full, 20.0, 520.0);
+                },
+            );
+            out.textures_delta.clear();
+            if let Some(update) = out.platform_output.accesskit_update.take() {
+                found = update
+                    .nodes
+                    .iter()
+                    .map(|(_, n)| (n.role(), n.label().map(|l| l.to_string()), n.numeric_value(), n.min_numeric_value(), n.max_numeric_value()))
+                    .collect();
+                if found.iter().any(|(role, _, _, _, _)| *role == egui::accesskit::Role::Slider) {
+                    break;
+                }
+            }
+        }
+        let slider = found.iter().find(|(role, _, _, _, _)| *role == egui::accesskit::Role::Slider);
+        assert!(slider.is_some(), "the bottom rating is announced as a slider with its value and range: {found:?}");
+        let slider = slider.unwrap();
+        assert_eq!(slider.2, Some(3.0), "the slider's value: {found:?}");
+        assert_eq!((slider.3, slider.4), (Some(0.0), Some(5.0)), "the slider's range: {found:?}");
+    }
 }
