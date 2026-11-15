@@ -4448,6 +4448,20 @@ fn view_options_choose_the_info_overlay_lines() {
     assert_eq!(h.app.ui.settings.loupe_info.info2, [F::Camera, F::None, F::FileName], "a refused change changes nothing");
 }
 
+/// View ▸ View Options offers Rating and Copy Name as info overlay lines: `view.viewOptions`
+/// accepts 'rating' and 'copyName' as info overlay lines for the loupe.
+#[test]
+fn info_overlay_lines_show_rating_and_copy_name() {
+    let mut h = demo([1000.0, 700.0]);
+    let t = Duration::from_secs(10);
+    h.request("ui.set", json!({"view": "detail"}), t);
+    h.settle(SETTLE);
+    // View Options accepts rating and copy name as info overlay lines
+    let r = h.request("engine.execute", json!({"command": "view.viewOptions", "params": {"info1": ["rating", "copyName", "none"]}}), t);
+    assert_eq!(r["ok"], true, "view.viewOptions rejects 'rating' and 'copyName': {r}");
+    assert_eq!(r["result"]["loupeInfo"]["info1"], json!(["rating", "copyName", "none"]), "{r}");
+}
+
 /// View Options' Show Briefly When Photo Changes: a tick box under each Info (ticking one
 /// unticks the other) and `view.viewOptions {briefly}`; with the overlay off, the loupe shows
 /// the chosen Info after → changes the photo, and hides it again a few seconds later.

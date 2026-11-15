@@ -193,6 +193,10 @@ pub enum LoupeInfoField {
     Lens,
     /// Camera and lens on one line.
     CameraAndLens,
+    /// The star rating, shown when the photo is rated.
+    Rating,
+    /// The copy name of a virtual copy.
+    CopyName,
 }
 
 impl LoupeInfoField {
@@ -206,6 +210,8 @@ impl LoupeInfoField {
         LoupeInfoField::Camera,
         LoupeInfoField::Lens,
         LoupeInfoField::CameraAndLens,
+        LoupeInfoField::Rating,
+        LoupeInfoField::CopyName,
     ];
 
     pub fn label(self) -> &'static str {
@@ -218,6 +224,8 @@ impl LoupeInfoField {
             LoupeInfoField::Camera => "Camera",
             LoupeInfoField::Lens => "Lens",
             LoupeInfoField::CameraAndLens => "Camera & Lens",
+            LoupeInfoField::Rating => "Rating",
+            LoupeInfoField::CopyName => "Copy Name",
         }
     }
 }

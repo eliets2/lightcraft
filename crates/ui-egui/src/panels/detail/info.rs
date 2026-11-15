@@ -246,6 +246,14 @@ fn info_line(field: crate::state::LoupeInfoField, photo: &lightcraft_catalog::Ph
         F::Camera => m.camera.clone(),
         F::Lens => m.lens.clone(),
         F::CameraAndLens => [m.camera.as_str(), m.lens.as_str()].iter().filter(|s| !s.is_empty()).copied().collect::<Vec<_>>().join(" · "),
+        F::Rating => {
+            if photo.rating > 0 {
+                photo.rating.to_string()
+            } else {
+                return None;
+            }
+        }
+        F::CopyName => photo.copy_name.clone().unwrap_or_default(),
     };
     (!text.is_empty()).then_some(text)
 }
