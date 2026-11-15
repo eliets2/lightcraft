@@ -223,6 +223,12 @@ pub const ALIASES: &[(&str, &str, &str)] = &[
     ("Alt+7", "keyword.toggleFromSet", r#"{"index": 7}"#),
     ("Alt+8", "keyword.toggleFromSet", r#"{"index": 8}"#),
     ("Alt+9", "keyword.toggleFromSet", r#"{"index": 9}"#),
+    // before/after settings: ⌥⇧⌘ + ← / → / ↑ (Lightroom's View ▸ Before/After Settings)
+    ("Cmd+Alt+Shift+Left", "beforeAfter.copyAfterToBefore", "{}"),
+    ("Cmd+Alt+Shift+Right", "beforeAfter.copyBeforeToAfter", "{}"),
+    ("Cmd+Alt+Shift+Up", "beforeAfter.swap", "{}"),
+    // ⌘↩ plays the photos in view as an impromptu slideshow (the declared key is ⌘⌥↩)
+    ("Cmd+Enter", "view.slideshow", "{}"),
 ];
 
 pub fn parse(s: &str) -> Option<(Modifiers, Key)> {
@@ -391,6 +397,20 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context) {
                 fire.push(format!("label:{label}"));
             }
         }
+        // Home / End: the first / last photo of the view, in the two library grids
+        if grid {
+            for (key, last) in [(Key::Home, false), (Key::End, true)] {
+                if matches(i, Modifiers::NONE, key) && !taken.contains(&(Modifiers::NONE, key)) {
+                    fire.push(if last { "library.selectLast" } else { "library.selectFirst" }.to_string());
+                }
+            }
+            // Shift+← / Shift+→: the previous / next photo of the view joins the selection
+            for (key, step) in [(Key::ArrowLeft, -1i64), (Key::ArrowRight, 1)] {
+                if matches(i, Modifiers::SHIFT, key) && !taken.contains(&(Modifiers::SHIFT, key)) {
+                    fire.push(format!("library.extend:{step}"));
+                }
+            }
+        }
     });
     use crate::panels::compare;
     // rating/flag/label keys: in Compare/Survey they act on the active photo only; Shift+key or
@@ -457,6 +477,29 @@ pub fn handle(app: &mut LightcraftApp, ctx: &egui::Context) {
                 "photo.pick" => app.toast(ctx, crate::i18n::tr("Flagged as Pick")),
                 "photo.reject" => app.toast(ctx, crate::i18n::tr("Flagged as Reject")),
                 _ => app.toast(ctx, crate::i18n::tr("Unflagged")),
+            }
+        } else if f == "library.selectFirst" || f == "library.selectLast" {
+            // Home / End in a grid: make the first / last photo of the view the active, selected one
+            let vis = app.session.visible_cloned();
+            let edge = if f == "library.selectFirst" { vis.first() } else { vis.last() };
+            if let Some(id) = edge {
+                let _ = app.run("library.select", json!({"ids": [id.0], "active": id.0}));
+            }
+        } else if let Some(step) = f.strip_prefix("library.extend:") {
+            // Shift+← / Shift+→ in a grid: the neighbour of the active photo joins the selection
+            // (and becomes active). At either end of the view the key does nothing.
+            let step = step.parse::<i64>().unwrap_or(0);
+            let vis = app.session.visible_cloned();
+            let neighbour = app
+                .session
+                .active()
+                .and_then(|active| vis.iter().position(|p| *p == active))
+                .and_then(|pos| i64::try_from(pos).ok())
+                .and_then(|pos| pos.checked_add(step))
+                .and_then(|pos| usize::try_from(pos).ok())
+                .and_then(|pos| vis.get(pos));
+            if let Some(id) = neighbour {
+                let _ = app.run("library.select", json!({"ids": [id.0], "mode": "add"}));
             }
         } else {
             // in the full-screen preview (no panels) I cycles the info overlay instead
@@ -702,6 +745,40 @@ mod tests {
         key(&mut h, "P", true);
         assert!(h.app.ui.presets);
         assert_eq!(h.app.session.active(), Some(lightcraft_catalog::PhotoId(2)));
+    }
+
+    /// Shift+← / Shift+→ in a grid adds the previous / next photo of the view to the selection and
+    /// makes it active, stops at either end, stays out of Detail view and yields to the user's keymap.
+    #[test]
+    fn shift_arrows_extend_the_grid_selection() {
+        use lightcraft_catalog::PhotoId;
+        let mut h = library();
+        h.app.session.execute("library.select", &json!({"ids": [2], "active": 2})).unwrap();
+        key(&mut h, "Right", true);
+        assert_eq!(h.app.session.selection.ids, vec![PhotoId(2), PhotoId(3)], "Shift+→ adds the next photo");
+        assert_eq!(h.app.session.active(), Some(PhotoId(3)), "the added photo becomes active");
+        // Shift+← steps back onto a photo that is already selected: the selection stays, the active moves
+        key(&mut h, "Left", true);
+        assert_eq!(h.app.session.selection.ids, vec![PhotoId(2), PhotoId(3)]);
+        assert_eq!(h.app.session.active(), Some(PhotoId(2)));
+        // the ends of the view do nothing
+        h.app.session.execute("library.select", &json!({"ids": [1], "active": 1})).unwrap();
+        key(&mut h, "Left", true);
+        assert_eq!(h.app.session.selection.ids, vec![PhotoId(1)], "Shift+← on the first photo is a no-op");
+        h.app.session.execute("library.select", &json!({"ids": [4], "active": 4})).unwrap();
+        key(&mut h, "Right", true);
+        assert_eq!(h.app.session.selection.ids, vec![PhotoId(4)], "Shift+→ on the last photo is a no-op");
+        // outside a grid it is not the extension key
+        h.app.ui.view = crate::state::ViewMode::Detail;
+        h.app.session.execute("library.select", &json!({"ids": [1], "active": 1})).unwrap();
+        key(&mut h, "Right", true);
+        assert_eq!(h.app.session.selection.ids, vec![PhotoId(1)], "Detail has no grid extension key");
+        // a key the user gave to a command wins
+        h.app.ui.view = crate::state::ViewMode::PhotoGrid;
+        h.app.run("app.setShortcut", json!({"id": "view.survey", "shortcut": "Shift+Right"})).unwrap();
+        key(&mut h, "Right", true);
+        assert_eq!(h.app.ui.view, crate::state::ViewMode::Survey, "the user's Shift+→ binding fires");
+        assert_eq!(h.app.session.selection.ids, vec![PhotoId(1)], "the grid key stayed out of the way");
     }
 
     #[test]

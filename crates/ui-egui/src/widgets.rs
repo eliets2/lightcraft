@@ -351,6 +351,24 @@ pub fn slider(ui: &mut Ui, spec: &ControlSpec, value: f64, enabled: bool, label_
                 }
             }
         }
+        // + / − nudge the same slider (⇧= on layouts where + is shifted =; the numeric keypad's +)
+        if enabled && out.value.is_none() && typing.is_none() && (ui.rect_contains_pointer(row) || resp.has_focus()) {
+            let (plus, minus) = ui.input_mut(|i| {
+                let plus = i.consume_key(egui::Modifiers::NONE, egui::Key::Equals)
+                    || i.consume_key(egui::Modifiers::SHIFT, egui::Key::Equals)
+                    || i.consume_key(egui::Modifiers::NONE, egui::Key::Plus);
+                (plus, i.consume_key(egui::Modifiers::NONE, egui::Key::Minus))
+            });
+            if plus || minus {
+                let nv = nudged(spec, value, if plus { 1.0 } else { -1.0 });
+                if (nv - value).abs() > 1e-12 {
+                    out.value = Some(nv);
+                    out.drag_started = true;
+                    out.drag_stopped = true;
+                    v = nv;
+                }
+            }
+        }
         // Wheel nudges require an explicitly selected slider, unlike regular panel scrolling.
         // Consume only the vertical component so a trackpad's horizontal scroll still works.
         let wheel_id = id.with("wheel-rem");

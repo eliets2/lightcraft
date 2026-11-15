@@ -151,6 +151,18 @@ fn fixed_keys(app: &LightcraftApp, ui: &mut egui::Ui, t: &Tokens, mac: bool, nee
     for (sc, label) in [("6", "Red label"), ("7", "Yellow label"), ("8", "Green label"), ("9", "Blue label")] {
         fixed.push((sc.to_string(), label));
     }
+    // grid navigation (Photo Grid and Square Grid) and the slider nudge keys: fixed keys that belong
+    // to no single command, so they are listed rather than editable
+    for (sc, label) in [
+        ("Home", "Grid: first photo of the view"),
+        ("End", "Grid: last photo of the view"),
+        ("Shift+Left", "Grid: add the previous photo to the selection"),
+        ("Shift+Right", "Grid: add the next photo to the selection"),
+        ("=", "Nudge the slider under the pointer up"),
+        ("-", "Nudge the slider under the pointer down"),
+    ] {
+        fixed.push((sc.to_string(), label));
+    }
     let fixed: Vec<_> = fixed
         .into_iter()
         .filter(|(sc, label)| {
