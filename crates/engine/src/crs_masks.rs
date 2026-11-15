@@ -56,6 +56,7 @@ const LOCAL: &[(&str, &str, f64)] = &[
     ("LocalLuminanceNoise", "noise", 100.0),
     ("LocalMoire", "moire", 100.0),
     ("LocalDefringe", "defringe", 100.0),
+    ("LocalGrain", "grain", 100.0),
     ("LocalToningSaturation", "color_sat", 100.0),
     ("LocalToningHue", "color_hue", 1.0),
     // older process versions

@@ -310,6 +310,11 @@ pub fn to_partial(props: &Props, target: Target) -> Value {
     if let Some(bw) = boolean(props, "crs:ConvertToGrayscale") {
         put(o, "treatment", json!(if bw { "bw" } else { "color" }));
     }
+    // a preset's `crs:Look` names a profile to apply (resolved against the user's imported
+    // profiles by `preset.import`); carry the reference so `to_partial` maps `crs:Look` itself
+    if let Some(look) = crate::profile_refs::look_ref(props) {
+        put(o, "profile", json!({"look": look}));
+    }
     for (band, crs) in MIXER_BANDS.iter().zip(CRS_BANDS) {
         n(o, &format!("HueAdjustment{crs}"), &format!("mixer.{band}.hue"));
         n(o, &format!("SaturationAdjustment{crs}"), &format!("mixer.{band}.sat"));

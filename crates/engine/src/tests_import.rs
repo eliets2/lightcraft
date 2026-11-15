@@ -2206,6 +2206,52 @@ fn presets_apply_the_imported_profile_they_name() {
     let _ = std::fs::remove_dir_all(&src);
 }
 
+/// An imported preset whose local correction sets `crs:LocalGrain`: the grain belongs on the
+/// mask correction (today it only surfaces as a "Mask: LocalGrain" skip note), and a preset's
+/// `crs:Look` must apply its profile instead of leaving the previously applied profile in place.
+#[test]
+fn imported_preset_keeps_local_grain_and_applies_look() {
+    let src = temp_dir("mask-look");
+    let xmp = r#"<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+ <rdf:Description rdf:about="" xmlns:crs="http://ns.adobe.com/camera-raw-settings/1.0/"
+   crs:PresetType="Normal" crs:Name="Grainy Mono" crs:UUID="grainy-mono" crs:ConvertToGrayscale="True">
+  <crs:Look><rdf:Description crs:Name="Adobe Monochrome" crs:Amount="1" crs:UUID="0A1B2C3D">
+   <crs:Group><rdf:Alt><rdf:li xml:lang="x-default">Basic Profiles</rdf:li></rdf:Alt></crs:Group>
+  </rdf:Description></crs:Look>
+  <crs:MaskGroupBasedCorrections>
+   <rdf:Bag>
+    <rdf:li>
+     <rdf:Description crs:What="Correction" crs:LocalExposure2012="0.2" crs:LocalGrain="0.4" crs:LocalCurveRefineSaturation="100"/>
+    </rdf:li>
+   </rdf:Bag>
+  </crs:MaskGroupBasedCorrections>
+ </rdf:Description></rdf:RDF></x:xmpmeta>"#;
+    std::fs::write(src.join("grainy-mono.xmp"), xmp).unwrap();
+    let mut s = Session::with_demo();
+    let photo = s.catalog.photos().next().unwrap().id;
+    s.execute("library.select", &json!({ "ids": [photo.0] })).unwrap();
+
+    let r = s.execute("preset.import", &json!({ "paths": [src.to_string_lossy()] })).unwrap();
+    let imported = &r["imported"][0];
+    assert_eq!(imported["name"], "Grainy Mono", "{r}");
+    assert_eq!(imported["profile"], json!({ "name": "Adobe Monochrome", "id": "lc.mono" }), "{r}");
+    assert!(
+        !imported["unmapped"].as_array().unwrap().iter().any(|v| v == "Mask: LocalGrain"),
+        "local grain should be applied to the mask, not reported: {r}"
+    );
+
+    let pid = s.presets.iter().find(|p| p.name == "Grainy Mono").unwrap().id.clone();
+    s.execute("preset.apply", &json!({ "id": pid })).unwrap();
+    let d = s.develop_of(photo).unwrap();
+    assert_eq!(d.profile.id, "lc.mono", "{d:?}"); // the look's profile replaces the previous one
+    assert_eq!(d.treatment, lightcraft_develop::Treatment::Bw, "{d:?}"); // ConvertToGrayscale
+    assert_eq!(d.masks.len(), 1, "{d:?}");
+    let applied = serde_json::to_value(&*d).unwrap();
+    assert_eq!(applied["masks"][0]["adjust"]["grain"], json!(40.0), "{d:?}");
+
+    let _ = std::fs::remove_dir_all(&src);
+}
+
 /// A raw container LightCraft shows by its embedded JPEG: a TIFF whose IFD0 points at one.
 fn write_raw(path: &Path) {
     use lightcraft_codecs::{ChromaSubsampling, EncodeImage, EncodeMeta, Samples, encode_jpeg};
