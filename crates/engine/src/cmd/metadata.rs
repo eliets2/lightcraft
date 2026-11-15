@@ -5,7 +5,7 @@ use lightcraft_catalog::{CopyrightStatus, Meta};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
-use super::{CommandSpec, always, bad, cmd, str_param};
+use super::{CommandSpec, always, bad, cmd, photo_ids, str_param};
 use crate::{Result, Session};
 
 /// The fields a metadata preset can hold (photo.setMeta names).
@@ -157,6 +157,44 @@ fn apply(s: &mut Session, p: &Value) -> Result<Value> {
     s.execute("photo.setMeta", &Value::Object(params))
 }
 
+fn csv_field(v: &str) -> String {
+    if v.contains([',', '"', '\n', '
+']) {
+        format!("\"{}\"", v.replace('"', "\"\""))
+    } else {
+        v.to_string()
+    }
+}
+
+fn export_csv(s: &mut Session, p: &Value) -> Result<Value> {
+    const C: &str = "metadata.exportCsv";
+    let ids = photo_ids(p, C)?.unwrap_or_else(|| s.selected());
+    let mut out = String::from("id,fileName,title,caption,copyright,copyrightStatus,usageTerms,copyrightUrl,creator,location,city,state,country,keywords");
+    for id in &ids {
+        let Some(ph) = s.catalog.photo(*id) else { continue };
+        let m = &ph.meta;
+        let fields = [
+            id.0.to_string(),
+            ph.file_name.clone(),
+            m.title.clone(),
+            m.caption.clone(),
+            m.copyright.clone(),
+            m.copyright_status.id().to_string(),
+            m.usage_terms.clone(),
+            m.copyright_url.clone(),
+            m.creator.clone(),
+            m.location.clone(),
+            m.city.clone(),
+            m.state.clone(),
+            m.country.clone(),
+            m.keywords.join("; "),
+        ];
+        out.push('\n');
+        out.push_str(&fields.iter().map(|f| csv_field(f)).collect::<Vec<_>>().join(","));
+    }
+    Ok(json!({ "csv": out }))
+}
+
 pub fn specs() -> Vec<CommandSpec> {
     vec![
         cmd!(query "metadata.presets", "Metadata Presets", [], None, "{} → [{name, fields}]", always, |s, _| Ok(list(s))),
@@ -179,5 +217,44 @@ pub fn specs() -> Vec<CommandSpec> {
             always,
             apply
         ),
+        cmd!(
+            "metadata.exportCsv",
+            "Export Metadata CSV",
+            [],
+            None,
+            "{ids?} — one row per photo (default the selection); {} → {csv}",
+            always,
+            export_csv
+        ),
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use crate::Session;
+
+    #[test]
+    fn export_csv_returns_rows_for_selected_photos() {
+        let mut s = Session::with_demo();
+        let ids = s.visible_cloned();
+        assert!(ids.len() >= 2, "demo library has selected photos");
+        let first = ids.first().map(|p| p.0);
+        let second = ids.get(1).map(|p| p.0);
+        assert!(first.is_some() && second.is_some(), "two demo ids");
+        let ids = [first.unwrap_or_default(), second.unwrap_or_default()];
+        let set = s.execute("photo.setMeta", &json!({"ids": ids, "title": "CSV title", "creator": "CSV creator"}));
+        assert!(set.is_ok(), "setMeta on selected photos: {set:?}");
+        let r = s.execute("metadata.exportCsv", &json!({"ids": ids}));
+        assert!(r.is_ok(), "metadata.exportCsv returns rows for selected photos: {r:?}");
+        let r = r.unwrap_or(serde_json::Value::Null);
+        let csv = r.get("csv").and_then(|v| v.as_str()).unwrap_or("");
+        assert!(!csv.is_empty(), "exportCsv returns plain-text CSV: {r}");
+        let lines: Vec<&str> = csv.lines().collect();
+        assert_eq!(lines.len(), 3, "header plus one row per selected photo: {csv}");
+        assert!(lines.first().is_some_and(|l| l.contains("title") || l.contains("id")), "CSV header: {csv}");
+        assert!(csv.contains("CSV title"), "first row carries the title: {csv}");
+        assert!(csv.contains("CSV creator"), "rows carry creator metadata: {csv}");
+    }
 }
