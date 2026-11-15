@@ -617,7 +617,9 @@ impl Gpu {
         // A failed render runs no further GPU work (`Gpu::submit` skips the submission and the
         // render is redone on the CPU): staging the bytes would still queue a copy for the next
         // submission, so the caller gets the placeholder with the requested length instead.
+        // An empty upload keeps its normal length (1, from `buffer(1)` below) under failure too.
         if failed() {
+            let len = if bytes.is_empty() { 1 } else { len };
             return Buf { buf: Some(Tracked::new(self.placeholder())), len };
         }
         if bytes.is_empty() {
@@ -1226,6 +1228,16 @@ mod tests {
     /// that will never happen.
     #[test]
     fn an_upload_after_a_failure_returns_the_placeholder() {
+        // Clear any failure leaked by an earlier test on this thread, and clear ours on drop
+        // even if an assertion below fails, so later tests on this thread start unfailed.
+        struct ClearOnDrop;
+        impl Drop for ClearOnDrop {
+            fn drop(&mut self) {
+                let _ = super::take_failure();
+            }
+        }
+        let _ = super::take_failure();
+        let _clear = ClearOnDrop;
         let Some(g) = crate::device() else {
             lightcraft_testkit::skip!(Gpu, "no GPU device");
             return;
@@ -1235,7 +1247,10 @@ mod tests {
         let b = g.upload(&[7u32; 1024]);
         assert_eq!(b.buf.as_ref().map(|t| t.0.size()), Some(16), "the placeholder, not a staged 4 KiB buffer");
         assert_eq!(b.len, 1024, "the requested length is preserved");
-        // leave this thread's failure for nobody: later tests on the thread start unfailed
+        let empty: &[u32] = &[];
+        let b = g.upload(empty);
+        assert_eq!(b.buf.as_ref().map(|t| t.0.size()), Some(16), "the placeholder for an empty upload too");
+        assert_eq!(b.len, 1, "an empty upload keeps its normal length under failure");
         assert_eq!(super::take_failure().map(|f| f.kind), Some(super::FailKind::Fatal));
     }
 

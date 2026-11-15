@@ -15,7 +15,8 @@ const DENY_LINTS: &[&str] =
     &["clippy::unwrap_used", "clippy::expect_used", "clippy::panic", "clippy::unimplemented", "clippy::todo", "clippy::unreachable"];
 
 /// Crate roots exempt from `forbid(unsafe_code)` (they still need the deny list).
-const UNSAFE_EXCEPTION: &[&str] = &["lightcraft-sysmem"];
+/// `lightcraft-sysmem` and `lightcraft-wincolor` are the two documented exceptions (AGENTS.md).
+const UNSAFE_EXCEPTION: &[&str] = &["lightcraft-sysmem", "lightcraft-wincolor"];
 
 #[derive(Debug, Clone)]
 pub struct CrateRoot {
@@ -73,11 +74,18 @@ pub fn check(roots: &[CrateRoot]) -> Vec<Violation> {
         let has_deny =
             attrs.iter().any(|a| lint_list(a).is_some_and(|(verb, names)| verb == "deny" && DENY_LINTS.iter().all(|lint| names.contains(lint))));
         // a later crate-root `allow`/`expect`/`warn` naming a required lint applies over the deny
-        // list (rustc takes the later attribute), so the policy silently stops holding
+        // list (rustc takes the later attribute), so the policy silently stops holding. An
+        // `allow` before a later `deny` is not an override: the deny wins.
         let mut overridden: Option<(&str, &str)> = None;
-        for a in &attrs {
+        for (i, a) in attrs.iter().enumerate() {
             let Some((verb, names)) = lint_list(a) else { continue };
             if !matches!(verb, "allow" | "expect" | "warn") {
+                continue;
+            }
+            let has_later_deny = attrs[i + 1..].iter().any(|later| {
+                lint_list(later).is_some_and(|(v, names)| v == "deny" && DENY_LINTS.iter().all(|lint| names.contains(lint)))
+            });
+            if has_later_deny {
                 continue;
             }
             if let Some(lint) = names.iter().find(|n| DENY_LINTS.contains(n)) {
@@ -284,6 +292,20 @@ mod tests {
         assert!(check(&[root("lightcraft-sysmem", &good)]).is_empty());
         let v = check(&[root("lightcraft-sysmem", "#![forbid(unsafe_code)]\nfn f() {}\n")]);
         assert!(matches!(&v[..], [Violation::MissingDeny { .. }]), "{v:?}");
+    }
+
+    #[test]
+    fn wincolor_exempt_from_forbid_but_not_deny() {
+        let good = format!("#![deny({DENY})]\nfn f() {{}}\n");
+        assert!(check(&[root("lightcraft-wincolor", &good)]).is_empty());
+        let v = check(&[root("lightcraft-wincolor", "#![forbid(unsafe_code)]\nfn f() {}\n")]);
+        assert!(matches!(&v[..], [Violation::MissingDeny { .. }]), "{v:?}");
+    }
+
+    #[test]
+    fn an_allow_before_the_deny_is_not_an_override() {
+        let src = format!("#![forbid(unsafe_code)]\n#![allow(clippy::panic)]\n#![deny({DENY})]\nfn f() {{}}\n");
+        assert!(check(&[root("lightcraft-foo", &src)]).is_empty());
     }
 
     #[test]
