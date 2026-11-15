@@ -90,8 +90,8 @@ pub struct ImportDialog {
     /// (imported as a new photo, the old record deleted) or "" (leave them) — the `onDeleted` param.
     pub on_deleted: String,
     /// The scan's folder walk stopped at a depth or entry limit: there may be more photos than the
-    /// review lists ([`ScanOutput::truncated`]).
-    pub truncated: bool,
+    /// review lists ([`ScanOutput::truncated`]; `scanLimited` in the `library.importPreview` reply).
+    pub scan_limited: bool,
     /// Folders the scan couldn't list ([`ScanOutput::unreadable`]).
     pub unreadable: usize,
     /// Files in the scanned folders that are not a supported photo type, XMP sidecars not counted
@@ -635,7 +635,7 @@ pub fn poll_scan(app: &mut LightcraftApp, ctx: &egui::Context) {
     }
     app.renderer.forget_imports();
     let mut d = ImportDialog::new(out.candidates);
-    (d.truncated, d.unreadable, d.unsupported) = (out.truncated, out.unreadable, out.unsupported);
+    (d.scan_limited, d.unreadable, d.unsupported) = (out.truncated, out.unreadable, out.unsupported);
     let trashed = d
         .candidates
         .iter()
@@ -1070,7 +1070,7 @@ fn dup_counts(d: &ImportDialog) -> (usize, usize, usize) {
 pub(crate) fn scan_note(d: &ImportDialog) -> Option<String> {
     let plural = |n: usize| if n == 1 { "" } else { "s" };
     let mut parts: Vec<String> = Vec::new();
-    if d.truncated {
+    if d.scan_limited {
         parts.push(crate::i18n::tr("Stopped at the scan limit: there may be more photos").to_string());
     }
     if d.unreadable > 0 {
