@@ -215,11 +215,9 @@ fn probe(backends: Backends, compose_window: bool) -> Result<WgpuSetupExisting, 
         ..Default::default()
     }))
     .map_err(|e| format!("no adapter: {e}"))?;
-    // (not GL: the adapter's own limits, which the GPU renderer needs when it adopts this device)
-    let base = if adapter.get_info().backend == wgpu::Backend::Gl { wgpu::Limits::downlevel_webgl2_defaults() } else { adapter.limits() };
     let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
         label: Some("egui wgpu device"),
-        required_limits: wgpu::Limits { max_texture_dimension_2d: 8192, ..base },
+        required_limits: probed_limits(adapter.get_info().backend, adapter.limits()),
         ..Default::default()
     }))
     .map_err(|e| format!("{}: no device: {e}", adapter.get_info().name))?;
@@ -228,6 +226,19 @@ fn probe(backends: Backends, compose_window: bool) -> Result<WgpuSetupExisting, 
         drop(eframe::egui_wgpu::Renderer::new(d, wgpu::TextureFormat::Bgra8Unorm, eframe::egui_wgpu::RendererOptions::default()));
     })?;
     Ok(WgpuSetupExisting { instance, adapter, device, queue })
+}
+
+/// The limits the probed device is created with: the adapter's own limits (which the GPU
+/// renderer needs when it adopts this device), except on GL, which takes the conservative
+/// defaults for everything else (whose 2048 is too small for a window). In particular
+/// `max_texture_dimension_2d` is the adapter's own value, not a fixed 8192 cap, so a window
+/// ballooned past 8192 px can still configure its surface on an adapter that allows it.
+fn probed_limits(backend: wgpu::Backend, adapter_limits: wgpu::Limits) -> wgpu::Limits {
+    if backend == wgpu::Backend::Gl {
+        wgpu::Limits { max_texture_dimension_2d: adapter_limits.max_texture_dimension_2d, ..wgpu::Limits::downlevel_webgl2_defaults() }
+    } else {
+        adapter_limits
+    }
 }
 
 /// wgpu's default handler for errors outside an error scope panics ("Handling wgpu errors as
@@ -395,6 +406,39 @@ mod tests {
         .unwrap();
         // outside a scope: logged by our handler, not a panic
         let _ = device.create_shader_module(wgpu::ShaderModuleDescriptor { label: None, source: wgpu::ShaderSource::Wgsl("not wgsl".into()) });
+    }
+
+    /// The probed limits keep the adapter's own `max_texture_dimension_2d` above 8192: with a
+    /// fixed 8192 cap this fails (the cap is the value asserted against), with the adapter's
+    /// own limits it passes. This is the red/green check for the 8192-cap fix and needs no
+    /// adapter above 8192, which most machines do not have.
+    #[test]
+    fn probed_limits_keep_adapter_max_texture_size_above_8192() {
+        let adapter_limits = wgpu::Limits { max_texture_dimension_2d: 16384, ..wgpu::Limits::default() };
+        for backend in [wgpu::Backend::Dx12, wgpu::Backend::Vulkan, wgpu::Backend::Metal, wgpu::Backend::Gl] {
+            assert_eq!(probed_limits(backend, adapter_limits).max_texture_dimension_2d, 16384, "{backend:?}");
+        }
+        // and below 8192 the adapter's own (smaller) value is kept too, not raised to 8192
+        let small = wgpu::Limits { max_texture_dimension_2d: 4096, ..wgpu::Limits::default() };
+        assert_eq!(probed_limits(wgpu::Backend::Vulkan, small).max_texture_dimension_2d, 4096);
+    }
+
+    /// The probed device keeps the adapter's own `max_texture_dimension_2d`, so a window
+    /// ballooned past 8192 px can still configure its surface. Needs an adapter; skipped
+    /// where there is none (CI without a GPU). On an adapter at or below 8192 this passes
+    /// with either the adapter's own limits or a fixed 8192 cap, so it does not by itself
+    /// prove the fix; `probed_limits_keep_adapter_max_texture_size_above_8192` does.
+    #[test]
+    fn probed_device_uses_adapter_max_texture_size() {
+        let Ok(setup) = probe(backend::window_backends(), false) else {
+            lightcraft_testkit::skip!(Gpu, "no GPU adapter");
+            return;
+        };
+        assert_eq!(
+            setup.device.limits().max_texture_dimension_2d,
+            setup.adapter.limits().max_texture_dimension_2d,
+            "the probed device must use the adapter's own max_texture_dimension_2d, not a fixed 8192 cap",
+        );
     }
 
     /// The workaround is opt-in and changes presentation only for Windows DX12.

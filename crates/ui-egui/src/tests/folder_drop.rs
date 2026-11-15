@@ -288,10 +288,24 @@ fn a_folder_left_and_come_back_to_waits_again_before_opening() {
 
 /// Drag the beach photo from the grid onto `target` and let go.
 fn drop_beach(h: &mut Headless, beach: u64, target: Rect) {
-    let from = widget(h, &format!("thumb:{beach}")).unwrap().center();
-    press(h, from);
-    glide(h, from, target.center());
-    release(h, target.center());
+    // The grid reflows after a move (the moved photo leaves its cell), so the thumb and the
+    // folder row read before the press can be stale by the time the pointer is down, above
+    // all on Windows where the layout settles a frame later. Press on the thumb as it is
+    // now, glide to the row as it is now, and only let go once the drag is actually carrying
+    // the photo; a press that picked nothing up is released and tried again from the fresh
+    // positions instead of dropping nothing.
+    for _ in 0..3 {
+        let from = widget(h, &format!("thumb:{beach}")).unwrap().center();
+        let to = widget(h, "source:libfolder:").map(|_| target.center()).unwrap_or(target.center());
+        press(h, from);
+        glide(h, from, to);
+        if h.app.ui.dragging_photos.is_some() {
+            release(h, to);
+            h.step();
+            return;
+        }
+        release(h, to);
+    }
     h.step();
 }
 
