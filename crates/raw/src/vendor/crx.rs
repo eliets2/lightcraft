@@ -9,10 +9,11 @@
 //! CC0 raw.pixls.us files against an external decoder used only as a black-box oracle.
 //!
 //! Current support: version 0x100 lossless Bayer RAW and horizontal-tile C-RAW,
-//! plus version 0x200 single-tile 14-bit C-RAW with adaptive QP quantization.
+//! plus version 0x200 single-tile 14-bit C-RAW with adaptive QP quantization,
+//! including odd QP-map heights (the unpaired last row is averaged with itself).
 //! Both ff01/ff02/ff03 and ff11/ff12/ff13 marker families are supported.
-//! Six full M50/R100/R8 sensor fixtures match an external decoder sample for sample.
-//! Unverified coding variants return explicit unsupported errors.
+//! Nineteen full sensor fixtures across eleven bodies match an external decoder
+//! sample for sample. Unverified coding variants return explicit unsupported errors.
 
 use super::crx_wavelet::{self, Band as WaveletBand, TileEdges};
 use crate::{MAX_SAMPLES, RawError, Result};
@@ -74,47 +75,86 @@ pub(crate) fn decode(sample: &[u8], config: &Cr3Compression) -> Result<Vec<u16>>
     let count = image_size(config)?;
     let tiles = layout(sample, config)?;
     validate_planes(&tiles, config)?;
-    // Allocated once the first plane decodes: a tiny crafted file can claim a huge image.
-    let mut output = Vec::new();
     let midpoint = 1i32 << (config.bit_depth - 1);
     let maximum = (1i32 << config.bit_depth) - 1;
-    for tile in tiles {
-        let qp = tile_qp(sample, &tile)?;
-        // Each plane is its own entropy stream: decode a tile's planes in parallel.
-        let planes: Vec<Result<Vec<i32>>> = tile
-            .planes
-            .par_iter()
-            .enumerate()
-            .map(|(p, plane)| {
-                if config.levels == 0 {
-                    let band = plane.bands.first().ok_or_else(|| corrupt("missing lossless band"))?;
-                    lossless_plane(band_bytes(sample, band)?, tile.width / 2, tile.height / 2)
-                } else {
-                    let edges = TileEdges { left: tile.x > 0, right: tile.x + tile.width < width, top: false, bottom: false };
-                    wavelet_plane(sample, plane, tile.width / 2, tile.height / 2, edges, qp.as_ref())
-                }
-                .map_err(|error| RawError::Corrupt(format!("Canon CRX tile ({}, {}), plane {p}: {error}", tile.x, tile.y)))
-            })
-            .collect();
-        for (p, decoded) in planes.into_iter().enumerate() {
-            let decoded = decoded?;
-            if output.is_empty() {
-                output.try_reserve_exact(count).map_err(|_| RawError::Limit("CRX sample allocation"))?;
-                output.resize(count, 0);
+    // QP maps decode sequentially in tile order; a failing map skips only its own
+    // tile's planes, so the first reported error is the same tile-by-tile one as
+    // a per-tile walk would give.
+    let qps: Vec<Result<Option<QpMap>>> = tiles.iter().map(|tile| tile_qp(sample, tile)).collect();
+    // Each (tile, plane) pair is an independent entropy stream: decode them all
+    // in one parallel collection, then interleave tile by tile as before.
+    let jobs: Vec<(usize, usize)> =
+        tiles.iter().enumerate().flat_map(|(t, tile)| (0..tile.planes.len()).map(move |p| (t, p))).filter(|(t, _)| qps[*t].is_ok()).collect();
+    let decoded: Vec<Result<Vec<i32>>> = jobs
+        .par_iter()
+        .map(|&(t, p)| {
+            let tile = &tiles[t];
+            let plane = &tile.planes[p];
+            // The map was checked when filtering the jobs; its error surfaces
+            // in the sequential interleave below, in tile order.
+            let qp = qps[t].as_ref().ok().and_then(|qp| qp.as_ref());
+            if config.levels == 0 {
+                let band = plane.bands.first().ok_or_else(|| corrupt("missing lossless band"))?;
+                lossless_plane(band_bytes(sample, band)?, tile.width / 2, tile.height / 2)
+            } else {
+                let edges = TileEdges { left: tile.x > 0, right: tile.x + tile.width < width, top: false, bottom: false };
+                wavelet_plane(sample, plane, tile.width / 2, tile.height / 2, edges, qp)
             }
-            for (i, &value) in decoded.iter().enumerate() {
-                let sensor_value = sensor_sample(value, midpoint, maximum, config.levels != 0)?;
-                let (x, y) = (tile.x + 2 * (i % (tile.width / 2)) + p % 2, tile.y + 2 * (i / (tile.width / 2)) + p / 2);
-                let slot = y
-                    .checked_mul(width)
-                    .and_then(|n| n.checked_add(x))
-                    .and_then(|n| output.get_mut(n))
-                    .ok_or_else(|| corrupt("tile writes outside image"))?;
-                *slot = sensor_value;
-            }
+            .map_err(|error| RawError::Corrupt(format!("Canon CRX tile ({}, {}), plane {p}: {error}", tile.x, tile.y)))
+        })
+        .collect();
+    // Allocated once the first plane decodes: a tiny crafted file can claim a huge image.
+    let mut output = Vec::new();
+    let mut decoded = decoded.into_iter();
+    for (tile, qp) in tiles.iter().zip(qps) {
+        // The map error surfaces here, in tile order, exactly as a per-tile walk.
+        qp?;
+        let mut planes = Vec::new();
+        for _ in 0..tile.planes.len() {
+            planes.push(decoded.next().ok_or_else(|| corrupt("missing decoded plane"))??);
         }
+        if output.is_empty() {
+            output.try_reserve_exact(count).map_err(|_| RawError::Limit("CRX sample allocation"))?;
+            output.resize(count, 0);
+        }
+        interleave_tile(&mut output, width, tile, &planes, midpoint, maximum, config.levels != 0)?;
     }
     Ok(output)
+}
+
+/// Write a tile's decoded planes into their Bayer mosaic phase: planes 2k and
+/// 2k+1 cover row parity k and alternate columns, so each output row is
+/// assembled densely and copied once instead of writing sample by sample.
+fn interleave_tile(output: &mut [u16], width: usize, tile: &Tile, planes: &[Vec<i32>], midpoint: i32, maximum: i32, quantized: bool) -> Result<()> {
+    let half = tile.width / 2;
+    let rows = tile.height / 2;
+    let plane_len = half.checked_mul(rows).ok_or(RawError::Limit("CRX tile plane size"))?;
+    for plane in planes {
+        if plane.len() != plane_len {
+            return Err(corrupt("decoded plane outside tile"));
+        }
+    }
+    let mut row = Vec::new();
+    row.try_reserve_exact(tile.width).map_err(|_| RawError::Limit("CRX mosaic row allocation"))?;
+    row.resize(tile.width, 0);
+    for (parity, pair) in planes.chunks(2).enumerate() {
+        let top = pair.first().ok_or_else(|| corrupt("missing mosaic plane"))?;
+        for (r, values) in top.chunks_exact(half).enumerate() {
+            for (c, slot) in row.as_chunks_mut::<2>().0.iter_mut().enumerate() {
+                let value = values.get(c).copied().ok_or_else(|| corrupt("decoded sample outside row"))?;
+                slot[0] = sensor_sample(value, midpoint, maximum, quantized)?;
+                if let Some(bottom) = pair.get(1) {
+                    let index = r.checked_mul(half).and_then(|n| n.checked_add(c)).ok_or_else(|| corrupt("decoded sample outside row"))?;
+                    let value = bottom.get(index).copied().ok_or_else(|| corrupt("decoded sample outside row"))?;
+                    slot[1] = sensor_sample(value, midpoint, maximum, quantized)?;
+                }
+            }
+            let y = tile.y.checked_add(2 * r + parity).ok_or_else(|| corrupt("tile writes outside image"))?;
+            let start = y.checked_mul(width).and_then(|n| n.checked_add(tile.x)).ok_or_else(|| corrupt("tile writes outside image"))?;
+            output.get_mut(start..start + tile.width).ok_or_else(|| corrupt("tile writes outside image"))?.copy_from_slice(&row);
+        }
+    }
+    Ok(())
 }
 
 /// A decoded plane value as a sensor sample of the CMP1 bit depth.
@@ -172,9 +212,6 @@ fn supports(config: &Cr3Compression) -> Result<()> {
     }
     if config.version == 0x200 && (config.levels != 3 || config.bit_depth != 14 || config.tile_width != config.width) {
         return Err(RawError::Unsupported("Canon CRX version 0x200 requires a single-tile 14-bit Bayer C-RAW image".into()));
-    }
-    if config.version == 0x200 && !config.height.div_ceil(4).is_multiple_of(2) {
-        return Err(RawError::Unsupported("Canon CRX adaptive QP map with an odd height".into()));
     }
     if config.median_bit_depth.is_some() {
         return Err(RawError::Unsupported("Canon CRX extended median-bit-depth header".into()));
@@ -333,7 +370,10 @@ fn tile_qp(sample: &[u8], tile: &Tile) -> Result<Option<QpMap>> {
 fn quant_step(value: u8) -> Result<i32> {
     // Measured independently with an external decoder after modifying only the
     // quantValue field: all forty values 4..43 follow this integer sequence.
-    if !(4..=43).contains(&value) {
+    // Value 44 (adaptive QP 168, which occurs across the R50 C-RAW corpus
+    // files) was then confirmed against the same decoder; 45 and beyond are
+    // unmeasured and rejected.
+    if !(4..=44).contains(&value) {
         return Err(RawError::Unsupported(format!("Canon CRX quantization value {value}")));
     }
     let scale = [40i32, 45, 51, 57, 64, 72].get(usize::from(value % 6)).copied().ok_or_else(|| corrupt("quantization table index"))?;
@@ -387,18 +427,66 @@ fn wavelet_plane(sample: &[u8], plane: &Plane, width: usize, height: usize, edge
             }
             decoded.ok_or_else(|| RawError::Corrupt(format!("Canon CRX band {i}: unsupported geometry or corrupt entropy")))?
         };
-        for (position, value) in data.iter_mut().enumerate() {
-            let step = match band.quant {
-                Quantization::Uniform(value) => quant_step(value)?,
-                Quantization::Adaptive { base, gain } => {
-                    adaptive_step(qp.ok_or_else(|| corrupt("missing QP map"))?, i, position % w, position / w, base, gain)?
-                }
-            };
-            *value = value.checked_mul(step).ok_or_else(|| corrupt("dequantized coefficient overflow"))?;
-        }
+        dequantize_band(&mut data, w, h, i, &band.quant, qp)?;
         bands.push(WaveletBand { width: w, height: h, data });
     }
     crx_wavelet::reconstruct(&bands, width, height, 3, edges)
+}
+
+/// Multiply each decoded coefficient by its quantization step. Both quantization
+/// kinds precompute their steps per band row first — one constant step, or one
+/// adaptive step per QP row block and column group — so the per-coefficient loop
+/// is a straight multiply in row-major coefficient order.
+fn dequantize_band(data: &mut [i32], width: usize, height: usize, band: usize, quant: &Quantization, qp: Option<&QpMap>) -> Result<()> {
+    debug_assert_eq!(Some(data.len()), width.checked_mul(height));
+    let (base, gain) = match quant {
+        Quantization::Uniform(value) => {
+            let step = quant_step(*value)?;
+            for value in data.iter_mut() {
+                *value = value.checked_mul(step).ok_or_else(|| corrupt("dequantized coefficient overflow"))?;
+            }
+            return Ok(());
+        }
+        Quantization::Adaptive { base, gain } => (*base, *gain),
+    };
+    let map = qp.ok_or_else(|| corrupt("missing QP map"))?;
+    if gain == 0 {
+        // A zero gain makes every step the same base-derived constant; no map or
+        // band-position access at all, as in the per-coefficient computation.
+        let step = adaptive_step(map, band, 0, 0, base, gain)?;
+        for value in data.iter_mut() {
+            *value = value.checked_mul(step).ok_or_else(|| corrupt("dequantized coefficient overflow"))?;
+        }
+        return Ok(());
+    }
+    // Bands 4-6 sample the QP map at every second column of every other band row,
+    // bands 7-9 at every fourth column of each row; `adaptive_step` derives that row
+    // and column from the band-relative coefficient position. Lower bands with a
+    // gain are rejected there, as before.
+    let column_scale = match band {
+        4..=6 => 2,
+        7..=9 => 4,
+        _ => return Err(RawError::Unsupported("Canon CRX adaptive low-frequency quantization".into())),
+    };
+    let columns = width.div_ceil(column_scale);
+    let mut steps = Vec::new();
+    steps
+        .try_reserve_exact(height.checked_mul(columns).ok_or(RawError::Limit("CRX dequantization table size"))?)
+        .map_err(|_| RawError::Limit("CRX dequantization table allocation"))?;
+    for y in 0..height {
+        for column in 0..columns {
+            steps.push(adaptive_step(map, band, column * column_scale, y, base, gain)?);
+        }
+    }
+    for (y, values) in data.chunks_mut(width).enumerate() {
+        let row = steps.get(y * columns..).and_then(|steps| steps.get(..columns)).ok_or_else(|| corrupt("dequantization table row"))?;
+        for (step, group) in row.iter().zip(values.chunks_mut(column_scale)) {
+            for value in group {
+                *value = value.checked_mul(*step).ok_or_else(|| corrupt("dequantized coefficient overflow"))?;
+            }
+        }
+    }
+    Ok(())
 }
 
 fn adaptive_step(map: &QpMap, band: usize, x: usize, y: usize, base: u32, gain: u32) -> Result<i32> {
@@ -418,7 +506,7 @@ fn adaptive_step(map: &QpMap, band: usize, x: usize, y: usize, base: u32, gain: 
         let index = row.checked_mul(map.width).and_then(|n| n.checked_add(column)).ok_or(RawError::Limit("CRX QP map index"))?;
         let first = *map.data.get(index).ok_or_else(|| corrupt("QP coordinate outside map"))?;
         let value = if band < 7 {
-            let second_row = row + 1;
+            let second_row = (row + 1).min(map.height - 1);
             let second = *map.data.get(second_row * map.width + column).ok_or_else(|| corrupt("QP average outside map"))?;
             (first + second) / 2
         } else {
@@ -476,11 +564,10 @@ struct Bits<'a> {
 }
 
 impl Bits<'_> {
-    /// The next 32 bits, MSB first, when at least that many remain before the end of the stream.
-    fn peek32(&self) -> Option<u32> {
-        let bytes = self.src.get(self.at / 8..self.at / 8 + 5)?;
-        let word = u64::from_be_bytes([0, 0, 0, bytes[0], bytes[1], bytes[2], bytes[3], bytes[4]]);
-        Some((word >> (8 - self.at % 8)) as u32)
+    /// The next 56 bits, MSB first, when a full 8-byte window lies within the stream.
+    fn peek56(&self) -> Option<u64> {
+        let bytes = <[u8; 8]>::try_from(self.src.get(self.at / 8..self.at / 8 + 8)?).ok()?;
+        Some(u64::from_be_bytes(bytes) << (self.at % 8))
     }
 
     fn take(&mut self, count: u32) -> Result<u32> {
@@ -490,9 +577,9 @@ impl Bits<'_> {
         if count == 0 {
             return Ok(0);
         }
-        if let Some(window) = self.peek32() {
+        if let Some(window) = self.peek56() {
             self.at += count as usize;
-            return Ok(window >> (32 - count));
+            return Ok((window >> (64 - count)) as u32);
         }
         // Near the end of the stream: bit by bit, so truncation is reported exactly.
         let mut value = 0;
@@ -505,11 +592,22 @@ impl Bits<'_> {
     }
 
     fn rice(&mut self, k: u32) -> Result<u32> {
-        // Common case: the unary prefix and its terminating 1 lie within the next 32 bits.
-        if let Some(window) = self.peek32().filter(|&w| w != 0) {
+        // Common case: the unary prefix and its terminating 1 lie within the next
+        // 56 bits, so runs of up to 55 zeros are decided from one window load.
+        if let Some(window) = self.peek56().filter(|&w| w != 0) {
             let zeros = window.leading_zeros();
+            if zeros > 41 {
+                return Err(corrupt("Rice escape prefix exceeds 41 bits"));
+            }
             self.at += zeros as usize + 1;
-            return if k <= 20 { Ok((zeros << k) | self.take(k)?) } else { Err(corrupt("Rice parameter exceeds sample precision")) };
+            return if zeros == 41 {
+                // The escape encodes a raw 21-bit literal and ignores the Rice parameter.
+                self.take(21)
+            } else if k <= 20 {
+                Ok((zeros << k) | self.take(k)?)
+            } else {
+                Err(corrupt("Rice parameter exceeds sample precision"))
+            };
         }
         let mut zeros = 0;
         while self.take(1)? == 0 {
@@ -734,9 +832,6 @@ fn high_frequency_band(src: &[u8], width: usize, height: usize) -> Result<Vec<i3
 }
 
 fn qp_map(src: &[u8], width: usize, height: usize) -> Result<QpMap> {
-    if !height.is_multiple_of(2) {
-        return Err(RawError::Unsupported("Canon CRX adaptive QP map with an odd height".into()));
-    }
     let count = width.checked_mul(height).filter(|&n| width > 0 && n > 0 && n <= MAX_CRX_SAMPLES / 32).ok_or(RawError::Limit("CRX QP map size"))?;
     let mut data = Vec::new();
     data.try_reserve_exact(count).map_err(|_| RawError::Limit("CRX QP allocation"))?;
@@ -757,7 +852,7 @@ fn qp_map(src: &[u8], width: usize, height: usize) -> Result<QpMap> {
             let right = previous.get(x + 1).copied().unwrap_or(above);
             let symbol = bits.qp_rice(k)?;
             let value = median(left, above, corner).checked_add(signed(symbol)).ok_or_else(|| corrupt("QP prediction overflow"))?;
-            if !(131..=167).contains(&value) {
+            if !(131..=168).contains(&value) {
                 return Err(RawError::Unsupported(format!("Canon CRX adaptive QP value {value}")));
             }
             *current.get_mut(x).ok_or_else(|| corrupt("QP outside row"))? = value;
@@ -971,11 +1066,11 @@ mod tests {
 
     #[test]
     fn measured_quantization_and_allocation_limits() {
-        for (quant, expected) in [(4, 1), (9, 1), (10, 2), (16, 4), (22, 8), (26, 12), (32, 25), (36, 40), (41, 72), (42, 80), (43, 90)] {
+        for (quant, expected) in [(4, 1), (9, 1), (10, 2), (16, 4), (22, 8), (26, 12), (32, 25), (36, 40), (41, 72), (42, 80), (43, 90), (44, 102)] {
             assert_eq!(quant_step(quant).unwrap(), expected);
         }
         assert!(matches!(quant_step(3), Err(RawError::Unsupported(_))));
-        assert!(matches!(quant_step(44), Err(RawError::Unsupported(_))));
+        assert!(matches!(quant_step(45), Err(RawError::Unsupported(_))));
         for (width, height) in [(20_000, 20_000), (65_538, 2), (2, 65_538)] {
             let mut config = coding();
             config.width = width;
@@ -1004,6 +1099,35 @@ mod tests {
         assert_eq!(adaptive_step(&low, 4, 0, 0, 0, 1).unwrap(), 1);
         assert_eq!(adaptive_step(&low, 0, 0, 0, 0, 0).unwrap(), 1);
         assert!(matches!(qp_map(&[0, 0, 1, 4, 0x94], 1, 4), Err(RawError::Unsupported(_))));
+    }
+
+    #[test]
+    fn odd_qp_map_height_pairs_the_last_row_with_itself() {
+        // R50/R5m2/R7-class C-RAW files store ceil(height/4) QP rows, which is odd
+        // whenever the sensor height is divisible by 4 but not by 8 (measured on 13
+        // CC0 files). The final row has no partner: it is averaged with itself,
+        // which keeps its own value ((v+v)/2 == v), as the oracle confirms.
+        let map = qp_map(&[0, 0, 1, 0x2c, 0x90], 1, 3).unwrap();
+        assert_eq!((map.width, map.height), (1, 3));
+        assert_eq!(map.data, [150; 3]);
+        let odd = QpMap { width: 1, height: 3, data: vec![150, 152, 167] };
+        // Band 4: QP row pair (0, 1) → floor((150+152)/2) = 151, step 14, gain 4/8 → 7.
+        assert_eq!(adaptive_step(&odd, 4, 0, 0, 0, 4).unwrap(), 7);
+        // The unpaired last row pairs with itself: (167+167)/2 = 167, step 90, gain 4/8 → 45.
+        assert_eq!(adaptive_step(&odd, 4, 0, 1, 0, 4).unwrap(), 45);
+        // A band row at or beyond the map height is corrupt, as before.
+        assert!(matches!(adaptive_step(&odd, 4, 0, 2, 0, 4), Err(RawError::Corrupt(_))));
+        let mut config = coding();
+        config.version = 0x200;
+        config.levels = 3;
+        config.width = 6192;
+        config.height = 4060; // ceil(4060/4) = 1015 QP rows: odd, now accepted.
+        config.tile_width = 6192;
+        config.tile_height = 4060;
+        assert!(supports(&config).is_ok());
+        config.height = 4056; // ceil(4056/4) = 1014: even, as in the earlier fixtures.
+        config.tile_height = 4056;
+        assert!(supports(&config).is_ok());
     }
 
     #[test]
