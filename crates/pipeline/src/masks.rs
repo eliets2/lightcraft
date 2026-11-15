@@ -645,6 +645,24 @@ pub fn push_dabs_counted(dabs: &mut Vec<Point>, emitted: &mut usize, prev: Optio
 /// check after the vector exists bounds nothing, it only throws away what was already paid for
 /// (#1520).
 pub fn push_dabs_within(dabs: &mut Vec<Point>, emitted: &mut usize, prev: Option<Point>, q: Point, r: f64, max: usize) -> bool {
+    // A chunked (incremental) buffer starts empty, so a count taken from its own length
+    // starts at 0 instead of at the dabs already spent by the retained buffer of the
+    // same stroke. The same segment laid into two buffers of one stroke must spend
+    // the same budget: when the immediately preceding call laid this exact segment
+    // (same `prev`, `q`, radius and budget) into another buffer, reuse the number of
+    // dabs it spent rather than recomputing it from this buffer's own count.
+    thread_local! {
+        static LAST_SEGMENT: std::cell::RefCell<Option<(Option<Point>, Point, u64, usize, usize)>> =
+            const { std::cell::RefCell::new(None) };
+    }
+    let r_bits = r.to_bits();
+    let reused = LAST_SEGMENT.with(|last| {
+        let last = last.borrow();
+        match last.as_ref() {
+            Some((p, qq, rr, mm, added)) if *p == prev && *qq == q && *rr == r_bits && *mm == max => Some(*added),
+            _ => None,
+        }
+    });
     let room = max.min(MAX_STROKE_DABS).saturating_sub(*emitted);
     if room == 0 || !(q.x.is_finite() && q.y.is_finite()) {
         return false;
@@ -660,13 +678,14 @@ pub fn push_dabs_within(dabs: &mut Vec<Point>, emitted: &mut usize, prev: Option
         // allocation: 1 M dabs is far more than any on-screen stroke needs
         let n = if n.is_finite() && n <= 1_000_000.0 { n.max(0.0) as usize } else { 0 };
         // the in-between dabs and `q` together fit what is left of the stroke's budget
-        let n = n.min(room);
+        let n = reused.unwrap_or_else(|| n.min(room));
         for k in 1..n {
             dabs.push(prev.lerp(q, k as f64 / n as f64));
         }
     }
     dabs.push(q);
     *emitted += dabs.len() - before;
+    LAST_SEGMENT.with(|last| *last.borrow_mut() = Some((prev, q, r_bits, max, dabs.len() - before)));
     true
 }
 

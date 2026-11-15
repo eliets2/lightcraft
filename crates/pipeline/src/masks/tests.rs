@@ -629,3 +629,27 @@ fn people_and_subject_use_person_mattes() {
     let lips = MaskShape::People { person: 0, parts: vec!["Lips".into()] };
     assert_eq!(eval(&lips), shape_alpha(&lips, &f, w, h, &img, &l, 0.0, None));
 }
+
+/// Regression: a streamed (chunked) buffer must spend the stroke budget identically to a
+/// retained buffer, segment by segment, even when the budget runs out mid-stroke. Both
+/// buffers see the same `prev` and the same running count, so they must accept or reject
+/// each segment in lockstep and finish with the same dabs, count and `prev`.
+#[test]
+fn incremental_dab_buffers_share_the_stroke_budget_review_regression_1() {
+    let max = 10usize;
+    // The retained buffer already holds 8 dabs of this stroke; a chunked buffer for the
+    // same stroke starts empty, so a count taken from the chunk's own length (as
+    // `push_dabs` does) starts at 0 instead of at the 8 dabs already spent.
+    let mut retained = vec![Point::new(0.0, 0.0); 8];
+    let mut streamed = Vec::new();
+    let mut retained_count = retained.len();
+    let mut streamed_count = streamed.len();
+    let prev = Some(Point::new(20.0, 20.0));
+    let q = Point::new(80.0, 20.0);
+    let accepted_retained = push_dabs_within(&mut retained, &mut retained_count, prev, q, 10.0, max);
+    let accepted_streamed = push_dabs_within(&mut streamed, &mut streamed_count, prev, q, 10.0, max);
+    assert_eq!(accepted_retained, accepted_streamed);
+    assert_eq!(retained.len() - 8, streamed.len(), "a chunked buffer must spend the same budget as the retained buffer");
+    assert!(retained.len() <= max, "retained buffer past the budget: {}", retained.len());
+    assert!(streamed.len() <= max - 8, "chunked buffer spent budget already spent by the retained buffer: {}", streamed.len());
+}
