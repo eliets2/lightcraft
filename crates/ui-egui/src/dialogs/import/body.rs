@@ -377,8 +377,15 @@ pub fn body(app: &mut LightcraftApp, ui: &mut egui::Ui, d: &mut ImportDialog) {
         });
     }
     field(ui, "Keywords", |ui| {
-        let r = ui.add(egui::TextEdit::singleline(&mut d.keywords).hint_text(crate::i18n::tr("comma, separated")).desired_width(f32::INFINITY));
-        register(ui, "field:importKeywords", r.rect);
+        let field = crate::text_field::TextField::singleline("field:importKeywords", &mut d.keywords)
+            .hint(crate::i18n::tr("comma, separated"))
+            .width(f32::INFINITY)
+            .show(ui);
+        // Esc gives back the text from before the edit: claim it so the dialog itself does
+        // not close on Escape while the field has the keyboard (`dialogs::show`).
+        if field.cancelled() {
+            crate::widgets::take_escape(ui.ctx());
+        }
     });
 }
 

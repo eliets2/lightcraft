@@ -504,4 +504,16 @@ mod import_review {
             }
         }
     }
+
+    /// The Keywords box gives back its text on Escape: typing then Esc restores what was there
+    /// before the edit. With egui's live mutation in the raw text box the typed text survives.
+    #[test]
+    fn import_keywords_box_gives_back_its_text_on_escape() {
+        let Review { mut h, .. } = review();
+        click(&mut h, "field:importKeywords");
+        text(&mut h, "sunset, beach");
+        assert_eq!(destination(&h).keywords, "sunset, beach", "the field is mutated live while editing");
+        key(&mut h, "Escape");
+        assert_eq!(destination(&h).keywords, "", "Escape gives back the text from before the edit");
+    }
 }
