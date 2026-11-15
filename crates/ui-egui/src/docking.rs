@@ -345,10 +345,11 @@ fn command_impl(app: &mut crate::LightcraftApp, reset: bool, params: &Value, ren
 /// docking actions it produced are not applied.
 pub fn show(app: &mut crate::LightcraftApp, ui: &mut egui::Ui) {
     let t = crate::theme::Tokens::get(ui.ctx());
-    // T toggles the bottom bar (Lightroom's toolbar key): each press flips its visibility so it
-    // can be hidden and shown again without touching the panel arrangement.
-    // `key_pressed` ignores presses while a widget (e.g. a text field) has focus.
-    if ui.input(|i| i.key_pressed(egui::Key::T)) {
+    // T toggles the bottom toolbar (Lightroom's toolbar key): each press flips its visibility so
+    // it can be hidden and shown again without touching the panel arrangement.
+    // Ignore presses while a modifier is held or a widget (e.g. a text field or search box) has
+    // focus, so typing "t" never toggles the bar.
+    if ui.input(|i| i.key_pressed(egui::Key::T) && !i.modifiers.any()) && ui.ctx().memory(|m| m.focused().is_none()) {
         app.ui.bottom_bar = !app.ui.bottom_bar;
     }
     let mut workspace = app.ui.docking.clone().unwrap_or_else(|| from_ui(app));

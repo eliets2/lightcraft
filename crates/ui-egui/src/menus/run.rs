@@ -559,7 +559,7 @@ fn ui_commands_4(app: &mut LightcraftApp, _ctx: &egui::Context, id: &str, p: &Va
         }
         "view.bottomBar" => {
             app.ui.bottom_bar = !app.ui.bottom_bar;
-            Ok(Value::Null)
+            Ok(json!({"show": app.ui.bottom_bar}))
         }
         "view.frameRate" => {
             // {show?: bool} (toggles when omitted)

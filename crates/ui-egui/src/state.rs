@@ -59,6 +59,7 @@ pub struct UiState {
     /// Presets column: show a live thumbnail of the photo with each preset.
     pub preset_thumbs: bool,
     pub filmstrip: bool,
+    /// Bottom toolbar (filmstrip, rating, flags, etc.) visibility, toggled by View > Toolbar (T).
     pub bottom_bar: bool,
     pub zoom: Zoom,
     /// Pan offset of the loupe when zoomed (image-normalized centre).
