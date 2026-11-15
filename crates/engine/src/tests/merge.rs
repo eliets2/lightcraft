@@ -640,6 +640,78 @@ fn merge_selection_ready_is_per_group_not_total() {
     assert!(!s.merge_selection_ready(&hdr_kind, &[ids[0], loose]), "valid stack plus loose photo is more than one group");
 }
 
+/// Regression test for the review issue: when two collapsed stacks are selected,
+/// the dialog preview path must call `plan_merges` (not `plan_merge`), and menu
+/// enablement must use `merge_selection_ready` for per-group readiness checking.
+/// This test verifies the engine API that the UI should use.
+#[test]
+fn two_collapsed_stacks_and_loose_photos_plan_separate_jobs_review_regression_1() {
+    let dir = temp_dir("multi-stack-regression");
+    let mut paths = Vec::new();
+    for (set, evs) in [
+        ("A", &[-2.0, 0.0, 2.0][..]),
+        ("B", &[-1.5, 0.5, 2.5][..]),
+        ("C", &[-1.0, 1.0][..]),
+    ] {
+        for (i, b) in lightcraft_merge::synth::bracket_dngs(96, 64, evs).unwrap().into_iter().enumerate() {
+            let p = dir.join(format!("{set}_{i}.dng"));
+            std::fs::write(&p, b).unwrap();
+            paths.push(p.to_string_lossy().to_string());
+        }
+    }
+    let mut s = Session::new().with_fs();
+    let ids = import(&mut s, paths);
+    assert_eq!(ids.len(), 8);
+    s.execute("stack.group", &json!({"ids": ids[..3]})).unwrap();
+    s.execute("stack.group", &json!({"ids": ids[3..6]})).unwrap();
+
+    let (hdr_kind, hdr_finish) = crate::merge::parse("merge.hdr", &json!({})).unwrap();
+    let (pano_kind, pano_finish) = crate::merge::parse("merge.panorama", &json!({})).unwrap();
+    let (hdr_pano_kind, hdr_pano_finish) = crate::merge::parse("merge.hdrPanorama", &json!({})).unwrap();
+
+    // Select one member from each collapsed stack (two groups total).
+    let two_stacks = vec![lightcraft_catalog::PhotoId(ids[0]), lightcraft_catalog::PhotoId(ids[3])];
+
+    // `merge_selection_ready` is per-group: each stack alone has enough for HDR (3 >= 2),
+    // but two stacks together are two groups, so not ready for the single-group merge path.
+    assert!(s.merge_selection_ready(&hdr_kind, &[lightcraft_catalog::PhotoId(ids[0])]), "one stack enables HDR");
+    assert!(!s.merge_selection_ready(&hdr_kind, &two_stacks), "two stacks do not enable single-group merge");
+
+    // For panorama (min 3), one stack of 3 is ready; two stacks are two groups -> not ready.
+    assert!(s.merge_selection_ready(&pano_kind, &[lightcraft_catalog::PhotoId(ids[0])]), "one stack of 3 enables panorama");
+    assert!(!s.merge_selection_ready(&pano_kind, &two_stacks), "two stacks do not enable single-group panorama merge");
+
+    // For HDR panorama (min 4), one stack of 3 is not enough; two stacks total 6 but are two groups -> not ready.
+    assert!(!s.merge_selection_ready(&hdr_pano_kind, &[lightcraft_catalog::PhotoId(ids[0])]), "one stack of 3 does not enable HDR panorama");
+    assert!(!s.merge_selection_ready(&hdr_pano_kind, &two_stacks), "two stacks do not enable single-group HDR panorama merge");
+
+    // `plan_merge` refuses multi-group selections (correct single-group behavior).
+    let err = s.plan_merge(hdr_kind.clone(), hdr_finish.clone(), &two_stacks, false).err().unwrap().to_string();
+    assert!(err.contains("more than one merge group"), "plan_merge refuses two stacks: {err}");
+
+    // `plan_merges` plans one job per group (the correct path for preview and multi-group merges).
+    let jobs = s.plan_merges(hdr_kind, hdr_finish, &two_stacks, false).unwrap();
+    assert_eq!(jobs.len(), 2, "plan_merges returns one job per stack");
+    let members = |job: &crate::merge::MergeJob| job.sources.iter().map(|(p, _)| p.0).collect::<Vec<_>>();
+    assert_eq!(members(&jobs[0]), ids[..3].to_vec(), "first stack expands to its members");
+    assert_eq!(members(&jobs[1]), ids[3..6].to_vec(), "second stack expands to its members");
+
+    // Preview path (preview=true) must also use plan_merges internally; plan_merge with preview=true fails.
+    let err = s.plan_merge(pano_kind.clone(), pano_finish.clone(), &two_stacks, true).err().unwrap().to_string();
+    assert!(err.contains("more than one merge group"), "plan_merge preview refuses two stacks: {err}");
+    let jobs = s.plan_merges(pano_kind, pano_finish, &two_stacks, true).unwrap();
+    assert_eq!(jobs.len(), 2, "plan_merges preview returns one job per stack");
+
+    // Loose photos plus a stack: the loose group is undersized and skipped, the stack is planned.
+    // Use HDR (min 2 photos) since the stack has 3 photos; HDR Panorama needs 4.
+    let loose_plus_stack = vec![lightcraft_catalog::PhotoId(ids[6]), lightcraft_catalog::PhotoId(ids[0])];
+    let jobs = s.plan_merges(hdr_kind.clone(), hdr_finish.clone(), &loose_plus_stack, false).unwrap();
+    assert_eq!(jobs.len(), 1, "undersized loose group is skipped, valid stack is kept");
+    assert_eq!(members(&jobs[0]), ids[..3].to_vec(), "only the valid stack is planned");
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// `merge.hdrBatch` preserves the bracket set retained by `bracket_sets` when the stack
 /// contains an earlier merge result: the result itself is not merged again, only its sources.
 #[test]
