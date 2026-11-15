@@ -205,7 +205,7 @@ fn probe(backends: Backends, compose_window: bool) -> Result<WgpuSetupExisting, 
     let base = if adapter.get_info().backend == wgpu::Backend::Gl { wgpu::Limits::downlevel_webgl2_defaults() } else { adapter.limits() };
     let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
         label: Some("egui wgpu device"),
-        required_limits: base,
+        required_limits: wgpu::Limits { max_texture_dimension_2d: adapter.limits().max_texture_dimension_2d, ..base },
         ..Default::default()
     }))
     .map_err(|e| format!("{}: no device: {e}", adapter.get_info().name))?;
@@ -396,6 +396,34 @@ mod tests {
             setup.device.limits().max_texture_dimension_2d,
             setup.adapter.limits().max_texture_dimension_2d,
             "the probed device must use the adapter's own max_texture_dimension_2d, not a fixed 8192 cap",
+        );
+    }
+
+    /// The GL probe must not request `downlevel_webgl2_defaults()` verbatim: its
+    /// `max_texture_dimension_2d` is 2048 even when the GL adapter supports more, so a
+    /// larger window renders into a smaller surface presented in a corner, misaligning
+    /// content and pointer. Needs a GL adapter supporting more than that; skipped where
+    /// there is none (CI without a GPU).
+    #[test]
+    fn probed_device_uses_adapter_max_texture_size_review_regression_1() {
+        let Ok(setup) = probe(Backends::GL, false) else {
+            lightcraft_testkit::skip!(Gpu, "no GL adapter");
+            return;
+        };
+        if setup.adapter.get_info().backend != wgpu::Backend::Gl {
+            lightcraft_testkit::skip!(Gpu, "probed adapter is not GL");
+            return;
+        }
+        if setup.adapter.limits().max_texture_dimension_2d
+            <= wgpu::Limits::downlevel_webgl2_defaults().max_texture_dimension_2d
+        {
+            lightcraft_testkit::skip!(Gpu, "GL adapter does not support more than the downlevel default");
+            return;
+        }
+        assert_eq!(
+            setup.device.limits().max_texture_dimension_2d,
+            setup.adapter.limits().max_texture_dimension_2d,
+            "the probed GL device must use the adapter's own max_texture_dimension_2d, not the downlevel_webgl2_defaults 2048 cap",
         );
     }
 
