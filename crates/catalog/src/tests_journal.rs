@@ -229,6 +229,13 @@ fn mid_log_damage_is_preserved_and_recovered() {
     let (_, c2, r2) = open(&m);
     assert_eq!(c2.to_snapshot(), c.to_snapshot());
     assert!(r2.damaged.is_none());
+    // damaged again at the same op: a second copy, the first one kept (issue #2140)
+    let again = [&bad[..], b"{\"seq\":1,\"broken\n"].concat();
+    m.set(LOG, again.clone());
+    let (_, _, r3) = open(&m);
+    let second = r3.damaged.expect("damage reported");
+    assert_ne!(second, name);
+    assert_eq!((m.get(&name).unwrap(), m.get(&second).unwrap()), (bad, again));
 }
 
 #[test]
@@ -375,4 +382,75 @@ fn a_damaged_process_value_loads_as_v1_with_the_edits() {
     let (_, loaded, _) = open(&m);
     let d = &loaded.photo(id).unwrap().develop;
     assert_eq!((d.process, d.light.exposure), (ProcessVersion::V1, 0.8));
+}
+
+/// Two stores writing the same file at once (two programs on a share that can't lock) each stage in
+/// a file of their own: whatever lands is one whole write, never a mix (issue #2140).
+#[test]
+fn concurrent_writers_never_publish_a_mix() {
+    let dir = std::env::temp_dir().join(format!("lc-journal-two-writers-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let writer = |byte: u8| {
+        let dir = dir.clone();
+        std::thread::spawn(move || {
+            let mut s = FsStore::open(&dir).unwrap();
+            let data = vec![byte; 256 * 1024];
+            for _ in 0..40 {
+                // a rename over a file the other is replacing may fail on Windows; a failed save keeps the old file
+                let _ = s.write_atomic(SNAPSHOT, &data);
+            }
+        })
+    };
+    std::fs::create_dir_all(&dir).unwrap();
+    let (a, b) = (writer(b'a'), writer(b'b'));
+    for _ in 0..200 {
+        if let Ok(now) = std::fs::read(dir.join(SNAPSHOT)) {
+            assert!(now.iter().all(|&c| c == now[0]) && now.len() == 256 * 1024, "a mixed or short snapshot");
+        }
+    }
+    a.join().unwrap();
+    b.join().unwrap();
+    let left: Vec<_> = std::fs::read_dir(&dir).unwrap().flatten().map(|e| e.file_name().to_string_lossy().to_string()).collect();
+    assert_eq!(left, vec![SNAPSHOT.to_string()], "no staging file is left behind");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// Opening a store removes staging files a crashed save left long ago, and leaves a fresh one (another
+/// program's save in progress) and everything else alone.
+#[test]
+fn stale_staging_files_are_removed_on_open() {
+    let dir = std::env::temp_dir().join(format!("lc-journal-stale-staging-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    let old = dir.join(".catalog.snap.4242-7.tmp");
+    let fresh = dir.join(".catalog.snap.4243-0.tmp");
+    let other = dir.join(".hidden.tmp");
+    for f in [&old, &fresh, &other] {
+        std::fs::write(f, b"x").unwrap();
+    }
+    let two_hours_ago = std::time::SystemTime::now() - std::time::Duration::from_secs(7200);
+    for f in [&old, &other] {
+        std::fs::File::options().write(true).open(f).unwrap().set_modified(two_hours_ago).unwrap();
+    }
+    FsStore::open(&dir).unwrap();
+    assert_eq!((old.exists(), fresh.exists(), other.exists()), (false, true, true));
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// An op holding a NaN (written as `null`, so it would pass its CRC and fail to parse) is refused by
+/// `append` instead of being logged: the library still opens, with everything before it (issue #2140).
+#[test]
+fn an_op_that_wont_read_back_is_never_logged() {
+    let (m, _, c) = sample_catalog_with_log();
+    let log = m.get(LOG).unwrap();
+    let (mut j, _, _) = open(&m);
+    let mut nan = DevelopSettings::default();
+    nan.light.exposure = f64::NAN;
+    let id = c.photos().next().unwrap().id;
+    let op = Op::SetDevelop { id, settings: Arc::new(nan), label: "Exposure".into(), edited: None };
+    let e = j.append(&[op]).unwrap_err();
+    assert!(e.to_string().contains("can't be saved"), "{e}");
+    assert_eq!(m.get(LOG).unwrap(), log, "nothing was appended");
+    let (_, c2, r) = open(&m);
+    assert_eq!((c2.to_snapshot(), r.damaged), (c.to_snapshot(), None));
 }
