@@ -1,0 +1,336 @@
+
+ How to back up catalogs in Lightroom Classic 
+ Adobe Photoshop Lightroom Classic 
+ What's New 
+ FAQ 
+ Learn & Support 
+ Free Trial 
+ Buy now
+ User Guide 
+ Cancel 
+ Back up a catalog 
+ Search 
+ Last updated on 
+ Aug 30, 2024 
+ Lightroom Classic 
+ Open on web 
+ Lightroom Classic User Guide 
+ Introduction to Lightroom Classic
+ What's new in Lightroom Classic 
+ Lightroom Classic system requirements 
+ Lightroom Classic | Common Questions 
+ Lightroom Classic Key Concepts 
+ Lightroom Classic tutorials 
+ Set Preferences for working in Lightroom Classic 
+ Reset Preferences for working in Lightroom Classic 
+ Workspace
+ Workspace basics 
+ Display the Library on a second monitor 
+ Personalize identity plates and module buttons 
+ Watermark your photos in Lightroom Classic 
+ Color management 
+ Import photos
+ Specify import options 
+ Set import preferences 
+ Import photos from a camera or card reader 
+ Import photos from a folder on a hard drive 
+ Import photos automatically 
+ Import photos from Photoshop Elements 
+ Import photos from a tethered camera 
+ The Filename Template Editor and Text Template Editor 
+ Organize photos in Lightroom Classic
+ Face recognition 
+ Work with photo collections 
+ Group photos into stacks 
+ Flag, label, and rate photos 
+ Use keywords 
+ Metadata basics and actions 
+ Find photos in the catalog 
+ Work with video in Lightroom Classic 
+ Advanced metadata actions 
+ Use the Quick Develop panel 
+ Process and develop photos
+ Develop module basics 
+ Create panoramas and HDR panoramas 
+ Flat-Field Correction 
+ Correct distorted perspective in photos using Upright 
+ Improve image quality using Enhance 
+ Work with image tone and color 
+ Masking 
+ Apply local adjustments 
+ HDR photo merge 
+ Develop module options 
+ Retouch photos 
+ Cure red eye and pet eye effects 
+ Use the Radial Filter tool 
+ Adjustments with Lens Blur 
+ Edit and Export in HDR 
+ Remove Tool 
+ Viewing photos
+ View photos 
+ Browse and compare photos 
+ Set Library view options 
+ Share photos for comments and feedback 
+ Smart Previews 
+ Export photos
+ Export files to disk or CD 
+ Export photos from Lightroom Classic 
+ Publish photos online 
+ Export to hard drive using publish services 
+ Presets for export, and other settings 
+ Work with external editors
+ External Editing preferences 
+ Open and edit Lightroom Classic photos in Photoshop 
+ Manage catalogs and files
+ How Lightroom Classic catalogs work 
+ Create and manage catalogs 
+ Back up a catalog 
+ Locate missing photos 
+ Create and manage folders 
+ Manage photos within folders 
+ Maps
+ Work with the Map module 
+ Photo books
+ Create photo books 
+ Slideshows
+ Create slideshows 
+ Slideshow module panels and tools 
+ Specify the slide layout 
+ Add overlays to slides 
+ Play and export slideshows 
+ Print photos
+ Print module basics 
+ Print module layouts and templates 
+ Work with print job options and settings 
+ Web galleries
+ Create web galleries 
+ Use the Web module panels and tools 
+ Work with web gallery layouts 
+ Work with web gallery templates and settings 
+ Preview, export, and upload web photo galleries 
+ Keyboard shortcuts
+ Keyboard shortcuts 
+ Content Authenticity 
+ Content Authenticity in Lightroom Classic 
+ Lightroom and Adobe services
+ Creative Cloud Libraries 
+ Using Adobe Stock in Creative Cloud apps 
+ Troubleshooting 
+ Fixed Issues 
+ Known Issues 
+ Technical Support
+ Performance Guidelines
+ Basic troubleshooting steps to fix issues in Lightroom Classic 
+ Optimize performance 
+ Keep Lightroom up to date 
+ Preference file and other file locations | Lightroom Classic 
+ Allow Permissions to Lightroom Classic on macOS 
+  Technical issues
+ GPU Issues
+ Troubleshoot graphics processor (GPU) and graphics driver issues | Lightroom Classic 
+ Lightroom Classic GPU FAQ 
+ Startup Issues
+ Windows | Lightroom doesn't start 
+ Error: Lightroom catalog cannot be opened 
+ Error: 'Unexpected error opening catalog' occurs in Lightroom after Windows 10 upgrade 
+ "Assertion failed" update error | Windows 
+ Error MSVCR110.dll opening apps in Windows 10 
+ Rendering Issues
+ Troubleshoot issues with Develop module 
+ Stability Issues
+ Troubleshoot crash or freeze in Lightroom Classic 
+ Miscellaneous Issues
+ FAQ | Color in Lightroom Classic 
+ Lightroom desktop and mobile apps unavailable to Education memberships | Kivuto 
+ Workflow Issues
+ Catalog Issues
+ Error : Lightroom catalog cannot be opened 
+ Troubleshoot corrupt catalog 
+ Locate missing photos 
+ Recover catalog and images after resetting preferences 
+ Lightroom Classic catalog FAQ 
+ Sync Issues
+ Lightroom Classic sync FAQ 
+ Plan your backup strategy
+ Lightroom Classic allows you to schedule regular catalog backups when you exit the software. Backups executed from Lightroom Classic include only the catalog file. You must independently back up your edited photos and anything exported from Lightroom Classic. 
+ Performing frequent, regular catalog backups is only part of what should be a comprehensive backup strategy. When formulating a backup strategy: 
+ Remember that the more frequently you back up your catalog and photos, the less data you stand to lose when a crash or corruption occurs. 
+ If possible, store the backup copies of your photos and catalog on a separate hard disk from your working files. 
+ Consider using dedicated backup software to automate the process and synchronize changes between your working and backup files. 
+ If you’re worried that your backup files might be accidentally erased, create redundant backups on additional disks, or on read-only media such as DVDs. 
+ For greater security, store your backup disk in a separate location from your working disk, preferably offsite or in a fire-proof safe. 
+ Consider making copies of your photos when you import them. Remember that this gives you only a copy of your original photos, not your edited photos. See Back up photos during import . 
+By default, Lightroom Classic saves backed up catalogs to the following locations:
+ Windows: \Users\[ user name ]\Pictures\Lightroom\[ catalog name ]\Backups\ 
+ Mac OS:  /Users/[ user name ]/Pictures/Lightroom/[ catalog name ]/Backups\ 
+Inside the Backups folder, Lightroom Classic creates a folder with the date and time of the backup: YYYY-MM-DD HRMN. (The time is represented by a 24-hour clock without a colon between hours and minutes.) The backed up catalog is saved inside the date-stamped folder, with the same name as the working catalog. 
+Lightroom Classic writes a new catalog every time it creates a backup. To save space on your hard disk, delete or compress old backup files. In addition, make sure that you have write permissions for the location where you decide to save your backup.
+ Note: 
+ Running Mac OS X Time Machine™ backup or restore operations while Lightroom Classic is in use is not recommended. 
+ Schedule catalog backups
+ Choose Edit  > Catalog Settings (Windows) or Lightroom Classic  > Catalog Settings (Mac OS). 
+ In the Backup area of the General panel, choose an option
+from the Back Up Catalog pop-up menu:
+ When Lightroom Next Exits
+ Backs up the catalog the next time you exit Lightroom Classic, and then the Back Up Catalog option switches to Never. 
+ Every Time Lightroom Exits
+ Backs up the catalog every time you exit Lightroom Classic, so changes from every working session are always backed up. 
+ Once A Day, When Exiting Lightroom
+ Backs up the catalog the first time you exit Lightroom Classic each day. If you exit Lightroom Classic more than once a day, additional changes are not backed up until the next day. 
+ Once A Week, When Exiting Lightroom
+ Backs up the catalog once a week. If you exit Lightroom Classic more frequently, additional changes are not backed up until the next week. 
+ Once A Month, When Exiting Lightroom
+ Backs up the catalog once a month. If you exit Lightroom Classic more frequently, additional changes are not backed up until the next month. 
+ Never
+ No backups are performed by Lightroom Classic. (Not recommended.) 
+ Back up a catalog automatically 
+ Exit Lightroom Classic when a catalog backup is scheduled in your Catalog Settings. 
+ In the Back Up Catalog dialog box, click Back Up to back up the catalog at the default location and quit Lightroom Classic. 
+ Optionally, select any of the following before you click Back Up: 
+ Backup Folder
+ Shows you the default location where Lightroom Classic saves backups. Click Choose to back up to a different location. 
+ Test Integrity Before Backing Up
+ Checks for catalog corruption before Lightroom Classic completes the backup. Testing integrity increases the time it takes to back up the catalog but reduces the risk of data loss. 
+ Note: 
+ You can also test catalog integrity when you open a catalog. In the General panel of the Preferences dialog box, select When Starting Up Use This Catalog > Prompt Me When Starting Lightroom . Then, start Lightroom Classic. In the Select Catalog dialog box, select Test Integrity Of This Catalog and then click Open . 
+ Optimize Catalog After Backing Up
+ Cleans up and reorganizes your database file to make it run faster and more efficiently. 
+ Skip Until Tomorrow
+ If you've opted to back up your catalog once a day, click to postpone the operation for a day. 
+ Skip Until Next Week
+ If you've opted to back up your catalog once a week, click to postpone the operation for a week. 
+ Skip Until Next Month
+ If you've opted to back up your catalog once a month, click to postpone the operation for one month. 
+ Skip This Time
+ Click to postpone the backup until the next time you quit Lightroom Classic. 
+ The Lightroom Classic CC Back Up Catalog dialog box 
+ The Lightroom Classic CC Back Up Catalog dialog box 
+ Back up a catalog manually
+ Choose Edit > Catalog Settings (Windows) or Lightroom Classic > Catalog Settings (Mac OS). 
+ Choose Back Up Catalog > When Lightroom Next Exits . 
+ When Lightroom Next Exits">
+ When Lightroom Next Exits" data-overlay-type="tooltip">
+ When Lightroom Next Exits"/>
+ When Lightroom Next Exits" data-overlay-type="tooltip">
+ When Lightroom Next Exits"/>
+ Close the window and then quit Lightroom Classic. 
+ Restore a backup catalog 
+ Locate and unzip the backup file.  
+ Choose File  > Open Catalog . 
+ Navigate to the location of your backed up catalog file.
+ Select the backed up .lrcat and .lrcat-data files and click Open . 
+ (Optional) Copy the backed up catalog to the location
+of the original catalog to replace it.
+ More like this 
+ Extracting Lightroom catalog backups larger than 4 GB on macOS 
+ Lightroom Classic catalog FAQ 
+ How Lightroom Classic catalogs work 
+ Create and Manage Catalogs 
+ Get help faster and easier 
+ Sign in 
+ New user? 
+ Create an account 
+ Manage account 
+ Quick links 
+ View all your plans 
+ Manage your plans 
+ View quick links
+ Hide quick links
+ Legal Notices    |    Online Privacy Policy 
+ Share this page
+ Copied 
+ Adobe Photoshop Lightroom 
+ < Visit Adobe Help Center 
+ Learn & Support 
+ Get Started 
+ Tutorials 
+ Ask the Community 
+ Post questions and get answers from experts. 
+ Ask now 
+ Contact Us 
+ Real help from real people. 
+ Start now 
+ ^ Back to top 
+ Language Navigation 
+ Language Navigation 
+ Choose a region 
+ Selecting a region changes the language and/or content on Adobe.com. 
+ Americas 
+ Brasil
+ Canada - English
+ Canada - Français
+ Latinoamérica
+ México
+ Argentina
+ Colombia
+ Perú
+ Chile
+ United States
+ Asia Pacific 
+ Australia
+ Hong Kong S.A.R. of China
+ India - English
+ Indonesia - English
+ Malaysia - English
+ New Zealand
+ Philippines - English
+ Vietnam - English
+ 中国
+ 中國香港特別行政區
+ 台灣地區
+ 日本
+ Indonesia
+ Malaysia
+ Pilipinas
+ Việt Nam
+ भारत
+ 한국
+ Singapore
+ Thailand - English
+ ประเทศไทย
+ Europe, Middle East and Africa 
+ Africa - English
+ België - Nederlands
+ Belgique - Français
+ Belgium - English
+ Česká republika
+ Danmark
+ Deutschland
+ Eesti
+ España
+ France
+ Greece - English
+ Ireland
+ Israel - English
+ Italia
+ Latvija
+ Lietuva
+ Luxembourg - Deutsch
+ Luxembourg - English
+ Luxembourg - Français
+ Magyarország
+ Middle East and North Africa - English
+ Nederland
+ Norge
+ Österreich
+ Polska
+ Portugal
+ România
+ Schweiz
+ Slovenija
+ Slovensko
+ Suisse
+ Suomi
+ Svizzera
+ Türkiye
+ United Kingdom
+ България
+ Россия
+ Україна
+ الشرق الأوسط وشمال أفريقيا - اللغة العربية
+ ישראל - עברית
+ Sverige
+ Saudi Arabia - English
+ United Arab Emirates - English
+ الإمارات العربية المتحدة
+ المملكة العربية السعودية

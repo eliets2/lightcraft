@@ -1,0 +1,232 @@
+Work with print job options and settings in Lightroom Classic 
+ Work with print job options and settings
+ Search 
+ Last updated on 
+ 2021-04-27 
+ Lightroom Classic User Guide 
+ Introduction to Lightroom Classic 
+ What's new in Lightroom Classic 
+ Lightroom Classic system requirements 
+ Lightroom Classic | Common Questions 
+ Lightroom Classic Key Concepts 
+ Lightroom Classic tutorials 
+ Feature summary | Lightroom CC 2015.x/Lightroom 6.x releases 
+ Lightroom and Adobe services 
+ Creative Cloud Libraries 
+ Using Adobe Stock in Creative Cloud apps 
+ Lightroom for mobile, TV, and the web 
+ Adobe Photoshop Lightroom for mobile and Apple TV | FAQ 
+ Sync Lightroom Classic with Lightroom ecosystem 
+ Photoshop family of mobile apps 
+ Import photos 
+ Import photos from a camera or card reader 
+ Import photos from a folder on a hard drive 
+ Import photos automatically 
+ Import photos from Photoshop Elements 
+ Import photos from a tethered camera 
+ Specify import options 
+ Set import preferences 
+ The Filename Template Editor and Text Template Editor 
+ Workflows 
+ Export and save your photos as JPEGs 
+ Export and watermark your photos 
+ Import your photos 
+ Adjustment Brush: the basics 
+ Adjustments with the Tone Curve 
+ Advanced video slideshows 
+ Control white balance 
+ Create a contact sheet 
+ Enhance your workflow with Lightroom Classic 
+ Workspace 
+ Workspace basics 
+ Set preferences for working in Lightroom Classic 
+ Display the Library on a second monitor 
+ Personalize identity plates and module buttons 
+ Watermark your photos in Lightroom Classic 
+ Color management 
+ Viewing photos 
+ View photos 
+ Browse and compare photos 
+ Set Library view options 
+ Share photos for comments and feedback 
+ Smart Previews 
+ Manage catalogs and files 
+ Lightroom Classic catalog FAQ 
+ How Lightroom Classic catalogs work 
+ Create and manage catalogs 
+ Back up a catalog 
+ Locate missing photos 
+ Create and manage folders 
+ Manage photos within folders 
+ Maps 
+ Work with the Map module 
+ Organize photos in Lightroom Classic 
+ Face recognition 
+ Work with photo collections 
+ Group photos into stacks 
+ Flag, label, and rate photos 
+ Use keywords 
+ Metadata basics and actions 
+ Find photos in the catalog 
+ Work with video in Lightroom Classic 
+ Advanced metadata actions 
+ Use the Quick Develop panel 
+ Process and develop photos 
+ Develop module basics 
+ Create panoramas and HDR panoramas 
+ Flat-Field Correction 
+ Correct distorted perspective in photos using Upright 
+ Improve image quality using Enhance 
+ Work with image tone and color 
+ Apply local adjustments 
+ HDR photo merge 
+ Develop module options 
+ Retouch photos 
+ Cure red eye and pet eye effects 
+ Use the Radial Filter tool 
+ Use the enhanced Spot Removal tool 
+ Export photos 
+ Export files to disk or CD 
+ Export photos from Lightroom Classic 
+ Publish photos online 
+ Export to hard drive using publish services 
+ Presets for export, and other settings 
+ Work with external editors 
+ External Editing preferences 
+ Open and edit Lightroom Classic photos in Photoshop or Photoshop Elements 
+ Slideshows 
+ Create slideshows 
+ Slideshow module panels and tools 
+ Specify the slide layout 
+ Add overlays to slides 
+ Play and export slideshows 
+ Print photos 
+ Print module basics 
+ Print module layouts and templates 
+ Work with print job options and settings 
+ Photo books 
+ Create photo books 
+ Web galleries 
+ Create web galleries 
+ Use the Web module panels and tools 
+ Work with web gallery layouts 
+ Work with web gallery templates and settings 
+ Preview, export, and upload web photo galleries 
+ Keyboard shortcuts 
+ Keyboard shortcuts 
+ Specify options in the Print Job
+panel
+ Print in draft mode
+ You can use Draft Mode Printing to print contact sheets and quick drafts of a photo. In this mode, Lightroom Classic uses cached photo previews when printing. If you select photos that haven’t been fully cached and print them using Draft Mode Printing, Lightroom Classic sends their thumbnail data to the printer, and the print quality of those photos might not be what you expect. Sharpening and color management controls aren’t available using Draft Mode Printing.
+ In the Print Job panel of the Print module, select
+Draft Mode Printing.
+ Print to JPEG
+ You can save photos as JPEG files in the Print module for sharing with a print service provider. When you print to JPEG, Lightroom Classic lets you choose a resolution, apply print sharpening, and set the compression quality. You can also specify dimensions of the file and apply an RGB ICC profile and a rendering intent.
+ Printing multiple images to a single JPEG image
+ In Lightroom Classic, learn how to quickly print multiple images to a single JPEG file to post online. 
+ Julieanne Kost. Principal Evangelist, Photoshop and Lightroom Classic 
+ In the Print Job panel of the Print module, choose Print To > JPEG File .
+ Specify a resolution between 72 ppi and 600 ppi in the
+File Resolution box.
+ Specify the amount of Print Sharpening desired: Low,
+Medium, or High.
+ Specify the amount of compression using the JPEG Quality
+slider. JPEG uses lossy compression, discarding data to make a file
+smaller. Drag the slider or enter a value from 0 through 100.
+ Specify custom file dimensions by selecting Custom File
+Dimensions and entering values in the width and height fields.
+ Specify color management options.
+ Set print resolution
+ In the Print module, the Print Resolution setting specifies the pixels per inch (ppi) of the photo for the printer. Lightroom Classic resamples the image data if needed, depending on the print resolution and the print dimensions. The default value of 240 ppi is satisfactory for most print jobs, including high-end inkjet prints. Refer to your printer’s documentation to determine its optimal resolution.
+ In the Print Job panel of the Print module, do
+either of the following:
+ To control the print resolution, select Print Resolution and specify a different value, if necessary.
+ To use the native resolution of the photo (as long as it isn’t lower than 72 ppi or higher than 720 ppi), deselect Print Resolution .
+ Sharpen a photo for print
+ Print Sharpening lets you sharpen the image
+before it’s sent to the printer. Print sharpening is performed in
+addition to any sharpening that you apply in the Develop module.
+The amount of print sharpening that is automatically applied is based
+on the file’s output resolution and the output media. When Draft
+Mode Printing is enabled, Print Sharpening is disabled. In most
+cases, you can leave Print Sharpening set to its default option,
+Low.
+ In the Print Job panel of the Print module, do
+one of the following:
+ (Optional) Select Print Sharpening and specify Low, Standard, or High sharpening using the pop-up menu on the right. Then, specify whether you are printing to Matte or Glossy media. Matte includes watercolor, canvas, and other nonshiny types of paper. Glossy includes luster, semigloss, photo gloss, and other shiny types of paper.
+ Note: 
+ The paper type specified in the Print Job panel is used to calculate print sharpening. Some printer drivers may also include a paper type option in the Print dialog box that must be specified separately.
+ Deselect Print Sharpening if you don’t want any sharpening applied in the Print module. This option is useful when the sharpening you have applied in the Develop module produces the desired results.
+ Print 16-bit color
+ In the Print Job panel, select 16 Bit Output if you are printing to a 16-bit printer under Mac OS 10.5 (Leopard) or higher.
+ Note: 
+ If you select 16 Bit Output and print to a printer
+that does not support it, print performance is slowed, but quality
+is not affected.
+ Set print color management
+ You can specify whether Lightroom Classic or the printer driver handles color management during printing. If you want to use a custom printer color profile created for a specific printer and paper combination, Lightroom Classic handles the color management. Otherwise, the printer manages it. If Draft Mode Printing is enabled, the printer automatically handles color management.
+ Note: 
+ Custom printer color profiles are usually created using special devices and software that generate the profile files. If printer color profiles are not installed on your computer or if Lightroom Classic cannot locate them, Managed By Printer and Other are the only options available in the Profile area of the Print Job panel.
+ In the Color Management area of the Print Job
+panel, choose one of the following from the Profile pop-up menu:
+ To use a printer color profile to convert the image before sending it to the printer, choose a specific RGB profile listed in the menu.
+ Note: 
+ If you choose a custom printer color profile in Lightroom Classic, make sure color management is turned off in the printer driver software. Otherwise, your photos will be color-converted twice, and the colors might not print as you expect. See your printer’s documentation for instructions on turning off color management in the driver software. Lightroom Classic does not recognize CMYK printer profiles.
+ To send the image data to the printer driver without first converting the image according to a profile, choose Managed By Printer .
+ To select printer profiles to appear in the Profile pop-up menu, choose Other and then select the color profiles in the Choose Profiles dialog box.
+ Note: 
+ Generally, you’ll choose this option if no profiles are listed in the Profile pop-up menu, or if the profile you want isn’t listed. Lightroom Classic tries to find custom print profiles on your computer. If it’s unable to locate any profiles, choose Managed By Printer and let the printer driver handle the print color managing.
+ If you specify a profile, choose a rendering intent to
+specify how colors are converted from the image’s color space to
+the printer’s color space:
+ Perceptual
+ Perceptual rendering tries to preserve the visual relationship between
+colors. Colors that are in-gamut may change as out-of-gamut colors
+are shifted to reproducible colors. Perceptual rendering is a good
+choice when your image has many out-of gamut colors.
+ Relative
+ Relative rendering preserves all in-gamut colors and
+shifts out-of gamut colors to the closest reproducible color. The
+Relative option preserves more of the original color and is a good
+choice when you have few out-of-gamut colors.
+ Note: 
+ The printer’s color space will generally be smaller
+then the image’s color space, often resulting in colors that can’t
+be reproduced. The rendering intent you choose attempts to compensate
+for these out-of-gamut colors.
+ (Optional) To achieve colors in print that more closely resemble the bright and saturated look of onscreen colors in Lightroom Classic, select Print Adjustment . Then, drag the Brightness and Contrast sliders.
+ Note: 
+ Dragging the Brightness and Contrast sliders produces
+tone curve adjustments. These adjustments do not preview onscreen.
+It may take some experimentation to determine what settings work
+best for your individual photos and your specific printer.
+ Save print settings as a print
+collection
+ When you save print settings as a print collection,
+you can add new photos to the collection and they automatically
+include the print settings. This is different from custom templates,
+which include the output options but no photos. A print collection
+applies the print settings to the photos in the collection.
+ In the Library module, select the photos you want
+to print.
+ In the Print module, select a template and specify the
+settings you want in the panels on the right side of the module.
+ In the Filmstrip, select the photos to include them in
+output creation.
+ Click the Plus icon (+) in the Collections panel and choose Create Print .
+ Type a name for your print collection in the Create Print dialog box. Choose a collection set from the Set pop-up menu to add the collection to an existing set, or choose None .
+ Under Print Options, select Include Selected Photos (contact sheet) or Include Referenced Photos (packages). Select Make New Virtual Copies if you want the output creation to include virtual copies instead of the original photos.
+ Click Create .
+ Lightroom Classic adds the print collection to the Collections panel and gives it a page layout icon  .
+ More like this
+ Types of collections 
+ Create virtual copies 
+ Sign in to your account 
+ Sign in
+ Manage account 
+ Quick links
+ View all your plans 
+ Manage your plans 
+ Legal Notices    |    Online Privacy Policy 
+ Language Navigation
+ Language Navigation

@@ -1,0 +1,405 @@
+
+ How to create and manage catalogs in Photoshop Lightroom Classic 
+ Adobe Photoshop Lightroom Classic 
+ What's New 
+ FAQ 
+ Learn & Support 
+ Free Trial 
+ Buy now
+ User Guide 
+ Cancel 
+ Create and manage catalogs 
+ Search 
+ Last updated on 
+ Dec 12, 2024 
+ Lightroom Classic 
+ Open on web 
+ Lightroom Classic User Guide 
+ Introduction to Lightroom Classic
+ What's new in Lightroom Classic 
+ Lightroom Classic system requirements 
+ Lightroom Classic | Common Questions 
+ Lightroom Classic Key Concepts 
+ Lightroom Classic tutorials 
+ Set Preferences for working in Lightroom Classic 
+ Reset Preferences for working in Lightroom Classic 
+ Workspace
+ Workspace basics 
+ Display the Library on a second monitor 
+ Personalize identity plates and module buttons 
+ Watermark your photos in Lightroom Classic 
+ Color management 
+ Import photos
+ Specify import options 
+ Set import preferences 
+ Import photos from a camera or card reader 
+ Import photos from a folder on a hard drive 
+ Import photos automatically 
+ Import photos from Photoshop Elements 
+ Import photos from a tethered camera 
+ The Filename Template Editor and Text Template Editor 
+ Organize photos in Lightroom Classic
+ Face recognition 
+ Work with photo collections 
+ Group photos into stacks 
+ Flag, label, and rate photos 
+ Use keywords 
+ Metadata basics and actions 
+ Find photos in the catalog 
+ Work with video in Lightroom Classic 
+ Advanced metadata actions 
+ Use the Quick Develop panel 
+ Process and develop photos
+ Develop module basics 
+ Create panoramas and HDR panoramas 
+ Flat-Field Correction 
+ Correct distorted perspective in photos using Upright 
+ Improve image quality using Enhance 
+ Work with image tone and color 
+ Masking 
+ Apply local adjustments 
+ HDR photo merge 
+ Develop module options 
+ Retouch photos 
+ Cure red eye and pet eye effects 
+ Use the Radial Filter tool 
+ Adjustments with Lens Blur 
+ Edit and Export in HDR 
+ Remove Tool 
+ Viewing photos
+ View photos 
+ Browse and compare photos 
+ Set Library view options 
+ Share photos for comments and feedback 
+ Smart Previews 
+ Export photos
+ Export files to disk or CD 
+ Export photos from Lightroom Classic 
+ Publish photos online 
+ Export to hard drive using publish services 
+ Presets for export, and other settings 
+ Work with external editors
+ External Editing preferences 
+ Open and edit Lightroom Classic photos in Photoshop 
+ Manage catalogs and files
+ How Lightroom Classic catalogs work 
+ Create and manage catalogs 
+ Back up a catalog 
+ Locate missing photos 
+ Create and manage folders 
+ Manage photos within folders 
+ Maps
+ Work with the Map module 
+ Photo books
+ Create photo books 
+ Slideshows
+ Create slideshows 
+ Slideshow module panels and tools 
+ Specify the slide layout 
+ Add overlays to slides 
+ Play and export slideshows 
+ Print photos
+ Print module basics 
+ Print module layouts and templates 
+ Work with print job options and settings 
+ Web galleries
+ Create web galleries 
+ Use the Web module panels and tools 
+ Work with web gallery layouts 
+ Work with web gallery templates and settings 
+ Preview, export, and upload web photo galleries 
+ Keyboard shortcuts
+ Keyboard shortcuts 
+ Content Authenticity 
+ Content Authenticity in Lightroom Classic 
+ Lightroom and Adobe services
+ Creative Cloud Libraries 
+ Using Adobe Stock in Creative Cloud apps 
+ Troubleshooting 
+ Fixed Issues 
+ Known Issues 
+ Technical Support
+ Performance Guidelines
+ Basic troubleshooting steps to fix issues in Lightroom Classic 
+ Optimize performance 
+ Keep Lightroom up to date 
+ Preference file and other file locations | Lightroom Classic 
+ Allow Permissions to Lightroom Classic on macOS 
+  Technical issues
+ GPU Issues
+ Troubleshoot graphics processor (GPU) and graphics driver issues | Lightroom Classic 
+ Lightroom Classic GPU FAQ 
+ Startup Issues
+ Windows | Lightroom doesn't start 
+ Error: Lightroom catalog cannot be opened 
+ Error: 'Unexpected error opening catalog' occurs in Lightroom after Windows 10 upgrade 
+ "Assertion failed" update error | Windows 
+ Error MSVCR110.dll opening apps in Windows 10 
+ Rendering Issues
+ Troubleshoot issues with Develop module 
+ Stability Issues
+ Troubleshoot crash or freeze in Lightroom Classic 
+ Miscellaneous Issues
+ FAQ | Color in Lightroom Classic 
+ Lightroom desktop and mobile apps unavailable to Education memberships | Kivuto 
+ Workflow Issues
+ Catalog Issues
+ Error : Lightroom catalog cannot be opened 
+ Troubleshoot corrupt catalog 
+ Locate missing photos 
+ Recover catalog and images after resetting preferences 
+ Lightroom Classic catalog FAQ 
+ Sync Issues
+ Lightroom Classic sync FAQ 
+ Create a catalog 
+ When you create a catalog, you create a folder for it, too. The name of the folder is the same as the name of the catalog, without the catalog suffix. For example, if you name the folder "Wedding Photos," the catalog file will be "Wedding Photos.lrcat". When you add photos to the catalog, Lightroom Classic creates a preview cache file (such as "Wedding Photos Previews.lrdata") and puts it in the folder with the catalog. 
+ Choose File  > New Catalog . 
+ Specify the name and location of the new catalog folder, and then click Save (Windows) or Create (macOS). 
+ Lightroom Classic resets and displays an empty Library module, ready for you to import photos. 
+ Open a catalog 
+ When you open a different catalog, Lightroom Classic closes the current catalog and relaunches. 
+ Choose File  > Open Catalog . 
+ In the Open Catalog dialog box, specify the catalog file and then click Open . 
+ You can also choose a catalog from the File  > Open Recent menu. 
+ If prompted, click Relaunch to close the current catalog and relaunch Lightroom Classic. 
+ You can also change general preferences to specify which catalog opens when Lightroom Classic starts. See Change the default catalog . 
+ Upgrade a catalog from an earlier version of Lightroom Classic 
+ You can open a catalog from an earlier version of Lightroom Classic, including a beta version in a more recent version of Lightroom Classic. When you do, Lightroom Classic  upgrades it. The new, upgraded catalog contains all of the metadata associated with the previous catalog and photos. 
+ Do one of the following:
+ Start Lightroom Classic for the first time. 
+ If you've opened Lightroom Classic previously, choose File  > Open Catalog . 
+ Navigate to the old catalog .lrcat file, and then click Open . 
+ Note: 
+ If you can't remember where the old catalog is located, search for "lrcat" in the Explorer (Windows) or Finder (macOS). 
+ If prompted, click Relaunch to close the current catalog and restart Lightroom Classic. 
+ Select Relaunch 
+ Select Relaunch 
+ Click Upgrade . 
+ Select Upgrade to open and use the catalog. 
+ Select Upgrade to open and use the catalog. 
+ Note: 
+ The catalogs in Lightroom Classic are not backward compatible. The catalog from the new Lightroom Classic version cannot be opened in the older versions. For more information, see Are catalogs in Lightroom Classic backward compatible . 
+However, when you upgrade a catalog, Lightroom Classic will take a backup of the old catalog, compress it, and save it in the "Old Lightroom catalogs" folder.  So, after the upgrade, you'll end up with the following files: 
+ old-catalog.lrcat (upgraded catalog) 
+ old-catalog Previews.lrdata (upgraded old-catalog Previews.lrdata) 
+ old-catalog Sync.lrdata (upgraded old-catalog Sync.lrdata) 
+ If you want backward compatibility, keep the old files (files not containing -  in their names) .  You can delete the old files when you don't need the backward compatibility. 
+ After upgrading to Lightroom Classic 14, if you downgrade to a lower version and again upgrade to 11, Lightroom Classic may not automatically recognize the already upgraded catalog. In this scenario, manually select the already upgraded catalog or upgrade again if necessary. 
+ Rename a catalog 
+ You can rename the catalog by selecting   File  >  Rename Catalog  and type the new name of the currently open catalog. Lightroom Classic will rename the catalog once the application is relaunched. 
+ Import from previous version lightroom catalog 
+ You can import from another catalog from an earlier version of Lightroom Classic, including a beta version, in a more recent version of Lightroom Classic. When you do, Lightroom Classic  upgrades it. The new, upgraded catalog contains all of the metadata associated with the previous catalog and photos. 
+ Do one of the following:
+ Start Lightroom Classic for the first time. 
+ If you've opened Lightroom Classic previously, choose File  > Import from Another Catalog . 
+ Navigate to the old catalog .lrcat file, and then click Open . 
+ Note: 
+ If you can't remember where the old catalog is located, search for "lrcat" in the Explorer (Windows) or Finder (macOS). 
+ Lightroom Classic will show a dialog to upgrade the catalog. 
+ Select Start Background Upgrade 
+ Select Start Background Upgrade 
+ Once you upgrade the catalog, a copy of the older catalog will be saved in the Old Lightroom catalogs folder. 
+ Note: 
+ If you select Discard option, the upgraded catalog will be discarded after import. The old version catalog will remain intact. 
+ Copy or move a catalog 
+ Note: 
+ Before copying or
+moving a catalog and preview files, back them up. 
+ Locate the folder that contains the catalog and preview files. In Lightroom Classic, choose Edit  > Catalog Settings (Windows) or Lightroom Classic > Catalog Settings (macOS). 
+ In the Information area of the General panel, click Show to go to the catalog in the Explorer (Windows) or Finder (macOS). 
+ Quit Lightroom Classic. 
+ In the Explorer (Windows) or Finder (macOS), copy or move the catalog.lrcat, catalog.lrcat-data, Previews.lrdata, and (if present) Smart Previews.lrdata files to the new location. 
+ Double-click the .lrcat file in the new location to open it in Lightroom Classic. 
+ (Optional) If Lightroom Classic can't find folders or photos in the copied or moved catalog, a Question Mark icon appears by folder names in the Folders panel and an Exclamation Point icon appears in photo thumbnails in the Grid view. To restore folder links, right-click (Windows) or Control-click (macOS) a folder with a Question Mark icon and choose Find Missing Folder . To relink individual photos, see Locate missing photos . 
+ Export a catalog
+ You can create a catalog that contains a subset of a larger catalog by selecting the photos and exporting them as a new catalog. This is useful when, for example, you import photos into a catalog on a laptop and then later add them to a master catalog on a desktop computer. 
+ Select the photos you want to add to the new catalog.
+ Choose File  > Export As Catalog . 
+ Specify the name and location of the catalog.
+ Indicate whether you want to export the negative files and previews, and then click Save (Windows) or Export Catalog (macOS). 
+ "Negative files" refers to the original files that were imported into Lightroom Classic. 
+ The new catalog contains links to the selected photos and their information. You must open the new catalog to view it. 
+ (Optional) To combine catalogs, import the new catalog into another. See Import photos from a different Lightroom Classic catalog . 
+ Delete a catalog
+ Deleting a catalog erases all the work you've done in Lightroom Classic that isn't saved in the photo files. While the previews are deleted, the original photos being linked to are not deleted. 
+ Using the Explorer (Windows) or Finder (macOS), locate the folder that contains your catalog and drag it to the Recycling Bin (Windows) or Trash (macOS). 
+ Important: Make sure that the folder you delete contains only the catalog files you intend to erase, and not additional files.  
+ To enhance performance, Lightroom Classic builds a Previews folder next to the .lrcat file in the Explorer (Windows) or Finder (macOS). It is safe to delete this folder as long as its name matches the .lrcat file name. If you delete a Previews folder that's still needed by a catalog, Lightroom Classic will regenerate it when you work in that catalog, but it will run more slowly until the previews are rebuilt. 
+ Change the default catalog 
+ By default, Lightroom Classic opens the most current catalog at startup. This behavior can be changed to opening a different catalog or to always prompting you to choose a catalog. 
+ Choose Edit > Preferences (Windows) or Lightroom Classic > Preferences (macOS). 
+ In the General tab, choose one of the following from the When Starting Up Use This Catalog menu: 
+ Load Most Recent Catalog
+ Opens the most recent catalog you've been working with. 
+ Prompt Me When Starting Lightroom
+ Opens the Select Catalog dialog box at startup so you can choose. 
+ A catalog in the default location
+ Lightroom Classic lists all of the catalogs in \Pictures\Lightroom (Windows) or /Pictures/Lightroom (macOS) for you to choose. 
+ Other
+ Allows you to navigate to a specific catalog file (.lrcat) and select it as the default catalog to open at startup. 
+ Customize catalog settings 
+ You can specify many preferred behaviors for Lightroom Classic catalogs in the Catalog Settings dialog box. 
+ Choose Edit > Catalog Settings (Windows) or Lightroom Classic > Catalog Settings (macOS). 
+ In the General tab, specify any of the following: 
+ Information
+ Provides information such as the location, filename, and creation date of the catalog. Click Show to view the catalog file in Explorer (Windows) or Finder (macOS). 
+ Backup
+ Lets you specify the frequency with which the current catalog is backed up. See Back up a catalog . 
+ In the Previews , specify any of the following: 
+ Preview Cache
+ Determines how Lightroom Classic renders three types of image previews. All previews are stored in the preview cache file in the folder where your catalog is located. 
+ Standard Preview Size
+ Specifies the maximum length, in pixels, of the long side of full-size rendered previews. Choose a size that is equal to or larger than your screen resolution. For example, if your screen resolution is 1920 x 1200 pixels, choose Standard Preview Size > 2048 Pixels. If your screen resolution exceeds 2048 pixels, Lightroom Classic generates a 1:1 preview instead. 
+ Preview Quality
+ Specifies the appearance of the thumbnail previews. Low, Medium, and High are similar to the quality scale for JPEG images. 
+ Automatically Discard 1:1 Previews
+ This setting specifies when 1:1 previews are discarded based on the most recent access to the preview. 1:1 previews have the same pixel dimensions as the original photos, and show sharpening and noise reduction. They are rendered as needed and can make the catalog preview file large, so it's good to discard them periodically. 
+ Preview cache management
+ Limit preview cache management allows users to allocate a specific size for the preview cache. Once the allocated limit is reached, Lightroom Classic will automatically start purging older previews in the background to maintain the set limit, ensuring efficient disk space management and optimal application performance. Previews that are 30 days or newer are never deleted. Once the user sets the preview cache size, Lightroom will continue to delete older previews (with a warning/info first and an option to increase the size) to satisfy the desired limit. The reasonable size for the preview cache should be based on how much space you want to allocate for previews, which can vary from user to user. If you have enough space and don’t mind Lightroom consuming it, you can set a higher limit. Additionally, Lightroom will purge previews when the app is idle, and there is no fixed time frame for when this can occur. 
+ Note: 
+ A notification will be displayed when the cache usage reaches 90% of the allocated limit, alerting the user about the impending purge. A similar notification is also displayed before the purging of standard previews 
+ Smart Previews
+ Indicates how much disk space is being used by Smart Previews. For information on using Smart Previews, see Smart Previews . 
+ Import Sequence Numbers
+ Specifies starting sequence numbers for photos as you import into the catalog. Import Number is the first number in a series that identifies how many import operations are performed. Photos Imported is the first number in a series that identifies how many photos have been imported into the catalog. See The Filename Template Editor and Text Template Editor . 
+ In the Metadata tab, select any of the following: 
+ Offer Suggestions From
+Recently Entered Values
+ When you start typing a metadata entry that resembles
+a previous entry, one or more suggestions appear as you type. Deselect
+this option to turn it off. Click Clear All Suggestion Lists to clear
+previous entries. 
+ Include Develop Settings In Metadata Inside JPEG,
+TIFF, PNG, And PSD Files
+ Deselect this option to prevent Lightroom Classic from including Develop module settings in the XMP metadata of JPEG, TIFF, PNG, and PSD files. 
+ Automatically Write Changes Into XMP
+ Select this option to save metadata changes directly to the XMP sidecar files, making the changes visible in other applications. Deselect this option to save metadata settings only in the catalog. For information on saving XMP changes manually, see About metadata and XMP . 
+ Enable Reverse Geocoding of GPS Coordinates To Provide Address Suggestions
+ Allows Lightroom Classic to send your photo's GPS coordinates, if available, to Google so that Lightroom Classic can determine the city, state, and country of the photo and add that information into the IPTC Location metadata. 
+ Export Reverse Geocoding Suggestions Whenever Address Fields Are Empty
+ If selected, Lightroom Classic includes Google-suggested IPTC Location metadata in photos when you export them. 
+ Write Date Or Time Changes Into Proprietary Raw
+Files
+ This option controls whether Lightroom Classic writes a new date and time to proprietary raw files when you use the Metadata > Edit Capture Time command to change a photo's capture time metadata. By default, this option is not selected. 
+ Optimize the catalog 
+ After you have imported, edited, and perhaps removed a number of files, Lightroom Classic may run slower. When that happens, optimize your catalog to improve performance. 
+ Choose File  > Optimize Catalog . 
+ More like this 
+ Video tutorial - Export a catalog 
+ Back up a catalog 
+ Lightroom Classic catalog FAQ 
+ Benefits of using a single catalog 
+ How Lightroom Classic catalogs work 
+ Find photos in the catalog 
+ Locate missing photos 
+ Have a question or an idea? 
+ If you have a question to ask or an idea to share, come and participate in the  Adobe Lightroom Classic community . We'd love to hear from you! 
+ Get help faster and easier 
+ Sign in 
+ New user? 
+ Create an account 
+ Manage account 
+ Quick links 
+ View all your plans 
+ Manage your plans 
+ View quick links
+ Hide quick links
+ Legal Notices    |    Online Privacy Policy 
+ Share this page
+ Copied 
+ Adobe Photoshop Lightroom Classic 
+ < Visit Adobe Help Center 
+ Learn & Support 
+ Get Started 
+ User Guide 
+ Tutorials 
+ Ask the Community 
+ Post questions and get answers from experts. 
+ Ask now 
+ Contact Us 
+ Real help from real people. 
+ Start now 
+ ^ Back to top 
+ Language Navigation 
+ Language Navigation 
+ Choose a region 
+ Selecting a region changes the language and/or content on Adobe.com. 
+ Americas 
+ Brasil
+ Canada - English
+ Canada - Français
+ Latinoamérica
+ México
+ Argentina
+ Colombia
+ Perú
+ Chile
+ United States
+ Asia Pacific 
+ Australia
+ Hong Kong S.A.R. of China
+ India - English
+ Indonesia - English
+ Malaysia - English
+ New Zealand
+ Philippines - English
+ Vietnam - English
+ 中国
+ 中國香港特別行政區
+ 台灣地區
+ 日本
+ Indonesia
+ Malaysia
+ Pilipinas
+ Việt Nam
+ भारत
+ 한국
+ Singapore
+ Thailand - English
+ ประเทศไทย
+ Europe, Middle East and Africa 
+ Africa - English
+ België - Nederlands
+ Belgique - Français
+ Belgium - English
+ Česká republika
+ Danmark
+ Deutschland
+ Eesti
+ España
+ France
+ Greece - English
+ Ireland
+ Israel - English
+ Italia
+ Latvija
+ Lietuva
+ Luxembourg - Deutsch
+ Luxembourg - English
+ Luxembourg - Français
+ Magyarország
+ Middle East and North Africa - English
+ Nederland
+ Norge
+ Österreich
+ Polska
+ Portugal
+ România
+ Schweiz
+ Slovenija
+ Slovensko
+ Suisse
+ Suomi
+ Svizzera
+ Türkiye
+ United Kingdom
+ България
+ Россия
+ Україна
+ الشرق الأوسط وشمال أفريقيا - اللغة العربية
+ ישראל - עברית
+ Sverige
+ Saudi Arabia - English
+ United Arab Emirates - English
+ الإمارات العربية المتحدة
+ المملكة العربية السعودية

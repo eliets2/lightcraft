@@ -1,0 +1,131 @@
+Creating web galleries in Lightroom Classic 
+ Create web galleries
+ Search 
+ Adobe Photoshop Lightroom Classic User Guide
+ Select an article: 
+ Select an article: 
+ Applies to: 
+ Adobe Photoshop Lightroom Classic 
+ Note: 
+ Beginning with Lightroom CC 2015/Lightroom 6, the support for Flash galleries has been removed.
+ The Web module in Lightroom Classic lets you create web photo galleries, which are websites that feature your photography. In a web gallery, thumbnail versions of images link to larger versions of the photos, on the same page or on another page.
+ The panels on the left side of the Web module in Lightroom Classic contain a list of templates and previews of their page layouts. The center pane is the image display area, which automatically updates as you make changes and lets you navigate between the pages in your gallery. Panels on the right have controls for specifying how the photos appear in the template layout, modifying the template, adding text to the web page, previewing the web gallery in a browser, and specifying settings for uploading the gallery to a web server. For more details on the Web module, see  Web module panels and tools .
+ The Web module
+ A. Type of web gallery  B. Template
+Browser  C. Preview button  D. Navigation
+buttons  E. Panels
+for customizing layout and specifying output options 
+ Lightroom Classic can create HTML web gallery:
+ HTML Gallery 
+ Produces a web page of thumbnail images that link to pages with larger versions of the photos. Airtight galleries are HTML.
+ To create a web gallery in Lightroom Classic, follow these basic steps:
+ 1. Select the photos you want to include in your gallery. 
+ In the Library module, select images in the Grid view or Filmstrip. See Browse and compare photos .
+ In the Library module, you can also use the Folders or Collections panel to select a folder or a collection of photos to use in the web gallery.
+ 2. Arrange the photo order. 
+ Switch to the Web module. The photos you selected appear in both the Filmstrip and in the work area in the center of the Web module.
+ If your source photos are in a collection or a folder that doesn't contain any subfolders, drag photos in the Filmstrip to rearrange them in the order that you want them to appear in the gallery. See Rearrange web gallery photo order .
+ Note: 
+ You can filter the photos in the Web module Filmstrip by clicking the Use pop-up menu in the toolbar and choosing All Photos, Selected Photos, or Flagged Photos.
+ 3. Choose a template for the gallery. 
+ On the left side of the Web module, move the pointer over a name in the Template Browser; a preview of the template appears in the Preview panel above the Template Browser. Click a template name to select it for your gallery. See Choose a web gallery template .
+ 4. Enter website information. 
+ In the Site Info panel on the right side of the module, type a title for your website (Site Title), a title for your gallery (Collection Title), and a description (Collection Description). You can also enter your e-mail address so that visitors to your gallery can click your name to send you an email. See Add titles, description, and contact information to web photo galleries .
+ Provide titles and a description for your gallery in the Site Info panel.
+ 5. (Optional) Customize the gallery's look and layout. 
+ In the Color Palette panel on the right side of the module, click the color box next to an element to choose a new color for it. See Choose colors for gallery elements .
+ In the Appearance panel, modify the gallery layout by setting the Grid Pages and Image Pages options (for HTML galleries). See Specify the appearance of Lightroom Classic HTML galleries .
+ Use the Appearance and other panels on the right side of the Web module to customize the look and feel your web gallery.
+ 6. Add titles and captions to images. 
+ In the Image Info panel, choose the metadata you want to display as the title and caption for each photo. Leave the Title and Caption boxes deselected if you don’t want text to appear under the photos. See Display photo titles and captions in web photo galleries .
+ 7. (Optional) Add a copyright watermark. 
+ Display a copyright watermark on web gallery photos by selecting a watermark in the Output Settings panel. See Display a copyright watermark in web photo galleries .
+ You can opt to include a watermark on your photos in your gallery in the Web module's Output Settings panel.
+ 8. Specify output settings. 
+ In the Output Settings panel, specify the quality of the enlarged view of your photos and whether to apply output sharpening.
+ 9. Preview your web gallery in a browser. 
+ At the lower-left corner of the Web module, click Preview In Browser. Lightroom Classic opens a preview of your web gallery in your default browser. See Preview a web photo gallery .
+ 10. Export or upload your web photo gallery. 
+ After you finish your gallery, you can either export the files to a specific location or upload the gallery to a web server. In the Upload Settings panel, choose Web Server from the FTP Server menu, or choose Edit Settings to specify settings in the Configure FTP File Transfer dialog box. If necessary, consult your ISP for help with FTP settings. See Preview, export, and upload web photo galleries .
+ 11. (Optional) Save the layout as a custom template or as a web collection. 
+ If you plan to reuse your web gallery settings, including layout and upload options, save the settings as a custom web template. Or save the settings as a web collection to preserve a set of specific Web module options with a collection of photos. See Create custom web gallery templates and Save web settings as a web collection .
+ Video tutorial: Posting a web photo gallery to your website
+ Video tutorial: Posting a web photo gallery to your website
+ Adobe TV
+  Twitter™ and Facebook posts are not covered under the terms of Creative Commons.
+ Legal Notices 
+   |  
+ Online Privacy Policy 
+ Language Navigation
+ Language Navigation
+ Choose your region 
+ Selecting a region changes the language and/or content on Adobe.com.
+ Americas 
+ Brasil 
+ Canada - English 
+ Canada - Français 
+ Latinoamérica 
+ México 
+ United States 
+ Europe, Middle East and Africa 
+ Africa - English 
+ Belgique - Français 
+ Belgium - English 
+ België - Nederlands 
+ Česká republika 
+ Cyprus - English 
+ Danmark 
+ Deutschland 
+ Eesti 
+ España 
+ France 
+ Greece - English 
+ Ireland 
+ Israel - English 
+ Italia 
+ Latvija 
+ Lietuva 
+ Luxembourg - Deutsch 
+ Luxembourg - English 
+ Luxembourg - Français 
+ Magyarország 
+ Malta - English 
+ Middle East and North Africa - English 
+ Nederland 
+ Norge 
+ Österreich 
+ Polska 
+ Portugal 
+ România 
+ Schweiz 
+ Slovenija 
+ Slovensko 
+ Suisse 
+ Suomi 
+ Sverige 
+ Svizzera 
+ Türkiye 
+ United Kingdom 
+ България 
+ Россия 
+ Україна 
+ الشرق الأوسط
+ وشمال أفريقيا -
+ اللغة العربية 
+ ישראל - עברית 
+ Asia - Pacific 
+ Australia 
+ Hong Kong S.A.R. of China 
+ India - English 
+ New Zealand 
+ Southeast Asia (Includes Indonesia, Malaysia, Philippines, Singapore, Thailand,
+ and
+ Vietnam) - English 
+ 中国 
+ 中國香港特別行政區 
+ 台灣地區 
+ 日本 
+ 한국 
+ Commonwealth of Independent States 
+ Includes Armenia, Azerbaijan, Belarus, Georgia, Kazakhstan, Kyrgyzstan, Moldova, Tajikistan,
+ Turkmenistan, Ukraine, Uzbekistan

@@ -1,0 +1,280 @@
+
+ Lightroom on the web user guide
+ Lightroom 
+ Open on web 
+ Lightroom on the web user guide 
+ Get set up 
+ Learn the basics 
+ Lightroom on the web technical requirements 
+ Tour the workspace 
+ Access the app 
+ Access Lightroom on the web 
+ Preferences and settings 
+ Keyboard shortcuts 
+ Create albums and organize photos 
+ Add albums and folders 
+ Create albums 
+ Access shared albums 
+ Create folders 
+ Add and organize photos 
+ Add photos and videos 
+ Search and filter photos 
+ Delete photos 
+ Edit photos 
+ Apply actions 
+ Edit photos with Quick Actions 
+ Use presets 
+ Apply presets 
+ Create new presets 
+ Delete presets 
+ Apply effects 
+ Use profiles 
+ Adjust lighting 
+ Adjust color 
+ Adjust effects 
+ Apply Lens Blur 
+ Adjust details 
+ Apply optics 
+ Crop and rotate 
+ Crop and resize images 
+ Rotate and flip images 
+ Adjust image geometry 
+ Remove objects 
+ Remove objects manually 
+ Remove objects with Gen AI 
+ Heal images 
+ Clone images 
+ Apply masks 
+ Add mask with AI 
+ Create mask with brush 
+ Create mask with linear gradient 
+ Create mask with radial gradient 
+ Create mask with color range 
+ Create mask with luminance range 
+ Add masks 
+ Subtract masks 
+ Rename masks 
+ Invert masks 
+ Apply local adjustments 
+ Share your work 
+ Share and invite 
+ Share photos and albums for review 
+ Share edits to community 
+ Connect to other apps 
+ Share photos or albums in other apps 
+ Add content credentials 
+ Review and download 
+ Create versions 
+ View versions 
+ Photo metadata 
+ View photo metadata 
+ Add and edit metadata titles and captions 
+ Like or add comments in shared albums 
+ Flag images 
+ Rate images 
+ Download photos 
+    Adobe 
+ Get help faster and easier 
+ Sign in 
+ New user? 
+ Create an account 
+ Manage account 
+ Quick links 
+ View all your plans 
+ Manage your plans 
+ View quick links
+ Hide quick links
+ Lightroom 
+ Open on web 
+ Lightroom on the web user guide 
+ Get set up 
+ Learn the basics 
+ Lightroom on the web technical requirements 
+ Tour the workspace 
+ Access the app 
+ Access Lightroom on the web 
+ Preferences and settings 
+ Keyboard shortcuts 
+ Create albums and organize photos 
+ Add albums and folders 
+ Create albums 
+ Access shared albums 
+ Create folders 
+ Add and organize photos 
+ Add photos and videos 
+ Search and filter photos 
+ Delete photos 
+ Edit photos 
+ Apply actions 
+ Edit photos with Quick Actions 
+ Use presets 
+ Apply presets 
+ Create new presets 
+ Delete presets 
+ Apply effects 
+ Use profiles 
+ Adjust lighting 
+ Adjust color 
+ Adjust effects 
+ Apply Lens Blur 
+ Adjust details 
+ Apply optics 
+ Crop and rotate 
+ Crop and resize images 
+ Rotate and flip images 
+ Adjust image geometry 
+ Remove objects 
+ Remove objects manually 
+ Remove objects with Gen AI 
+ Heal images 
+ Clone images 
+ Apply masks 
+ Add mask with AI 
+ Create mask with brush 
+ Create mask with linear gradient 
+ Create mask with radial gradient 
+ Create mask with color range 
+ Create mask with luminance range 
+ Add masks 
+ Subtract masks 
+ Rename masks 
+ Invert masks 
+ Apply local adjustments 
+ Share your work 
+ Share and invite 
+ Share photos and albums for review 
+ Share edits to community 
+ Connect to other apps 
+ Share photos or albums in other apps 
+ Add content credentials 
+ Review and download 
+ Create versions 
+ View versions 
+ Photo metadata 
+ View photo metadata 
+ Add and edit metadata titles and captions 
+ Like or add comments in shared albums 
+ Flag images 
+ Rate images 
+ Download photos 
+ Show Menu 
+ Hide Menu 
+ Adobe Help Center" daa-im="true">Adobe Help Center 
+ Lightroom Learn & Support" daa-im="true">Lightroom Learn & Support 
+ Lightroom on the web user guide 
+ Last updated on 
+ Sep 16, 2024 
+ Copied 
+ Use this guide to learn about Lightroom on the web and its features. 
+ Popular topics 
+ Tour the workspace 
+ Learn More 
+ Learn More 
+ Create albums 
+ Learn More 
+ Learn More 
+ Adjust Color 
+ Learn More 
+ Learn More 
+    Adobe 
+ Get help faster and easier 
+ Sign in 
+ New user? 
+ Create an account 
+ Manage account 
+ Quick links 
+ View all your plans 
+ Manage your plans 
+ View quick links
+ Hide quick links
+ Next 
+ Get set up 
+ Learn 
+ Learn with step-by-step video tutorials and hands-on guidance right in the app. 
+ Community 
+ Post queries and get answers from experts in the community. 
+ Discover 
+ Stay on top of creative trends with how-tos and giveaways. 
+ Language Navigation 
+ Language Navigation 
+ Choose a region 
+ Selecting a region changes the language and/or content on Adobe.com. 
+ Americas 
+ Brasil
+ Canada - English
+ Canada - Français
+ Latinoamérica
+ México
+ Argentina
+ Colombia
+ Perú
+ Chile
+ United States
+ Asia Pacific 
+ Australia
+ Hong Kong S.A.R. of China
+ India - English
+ Indonesia - English
+ Malaysia - English
+ New Zealand
+ Philippines - English
+ Vietnam - English
+ 中国
+ 中國香港特別行政區
+ 台灣地區
+ 日本
+ Indonesia
+ Malaysia
+ Pilipinas
+ Việt Nam
+ भारत
+ 한국
+ Singapore
+ Thailand - English
+ ประเทศไทย
+ Europe, Middle East and Africa 
+ Africa - English
+ België - Nederlands
+ Belgique - Français
+ Belgium - English
+ Česká republika
+ Danmark
+ Deutschland
+ Eesti
+ España
+ France
+ Greece - English
+ Ireland
+ Israel - English
+ Italia
+ Latvija
+ Lietuva
+ Luxembourg - Deutsch
+ Luxembourg - English
+ Luxembourg - Français
+ Magyarország
+ Middle East and North Africa - English
+ Nederland
+ Norge
+ Österreich
+ Polska
+ Portugal
+ România
+ Schweiz
+ Slovenija
+ Slovensko
+ Suisse
+ Suomi
+ Svizzera
+ Türkiye
+ United Kingdom
+ България
+ Россия
+ Україна
+ الشرق الأوسط وشمال أفريقيا - اللغة العربية
+ ישראל - עברית
+ Sverige
+ Saudi Arabia - English
+ United Arab Emirates - English
+ الإمارات العربية المتحدة
+ المملكة العربية السعودية

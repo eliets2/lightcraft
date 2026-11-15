@@ -1,0 +1,178 @@
+
+ How to sync Lightroom Classic photos with Lightroom 
+ Adobe Photoshop Lightroom Classic 
+ What's New 
+ FAQ 
+ Learn & Support 
+ Free Trial 
+ Buy now
+ Sync Lightroom Classic with Lightroom ecosystem 
+ Search 
+ Last updated on 
+ May 21, 2024 
+ Lightroom Classic 
+ Open on web 
+ Learn how to set up Lightroom Classic desktop to sync photos with Lightroom ecosystem of apps. 
+ Set up Lightroom Classic for sync 
+ Caution: 
+ Managing third-party Online Storage and Syncing services with Lightroom Classic  
+ In Lightroom Classic, when syncing with services like Microsoft OneDrive or Apple iCloud Drive, be mindful of unintentionally using up online storage. Exclude the Location for Lightroom Ecosystem's Images in your syncing client's settings or specify a different folder location in Lightroom Classic's sync preferences to avoid uploading to your syncing service's online storage. 
+ Launch Lightroom Classic. Enter your Adobe ID and password on the sign in screen, if prompted, and then click Sign In . 
+ Note: 
+ On the Sign in screen, you might get an option to choose between a personal or an enterprise account. For more information, see Sign in with an Enterprise ID . 
+ Ensure that you are running the latest version of Lightroom Classic. To update to the latest version, click  Help   >  Updates . For more information, see Keep Lightroom up to date . 
+ To start syncing Lightroom Classic photos with Lightroom ecosystem, click the Sync icon  in the upper-right corner and click Start Syncing . 
+ Start syncing with Lightroom ecosystem 
+ Start syncing with Lightroom ecosystem 
+ Set up Collections
+ To sync Lightroom Classic photos with Adobe Photoshop Lightroom apps, the photographs must be in synced collections or in All Synced Photographs collection . Photos within a synced Collection are automatically available in Lightroom on your desktop, mobile, and web. For more information on collections, see Work with photo collections . 
+ While creating Collections in Lightroom Classic, in the Create Collection dialog, select the Sync With Lightroom  check box. 
+ Setting up a new Collection for Sync with Lightroom 
+ Setting up a new Collection for Sync with Lightroom 
+ If you have existing Collections, you can set them up to sync with Lightroom, too. 
+ Click the Sync icon to ensure that the pictures in the Collections are synced with your device 
+ A. Non-synced Collection  B. Synced Collection (bi-directional arrow icon) 
+ Click the Sync icon to ensure that the pictures in the Collections are synced with your device 
+ Note: 
+ You can also right click an existing Collection, and click Sync With Lightroom  from the context menu. 
+ To stop a Collection from syncing with your device, do one of the following in the Collections panel: 
+ Click the sync icon next to the name of the Collection. 
+ Right-click a Collection and deselect  Sync With Lightroom  from the context menu. 
+ Set Lightroom sync preferences 
+ In the Lightroom Sync tab of the Preferences dialog box, you can specify the settings for syncing photos between Lightroom Classic and Lightroom ecosystem of apps. To access the sync preferences in Lightroom Classic, choose  Edit (Win)/ Lightroom Classic  (Mac) menu > Preferences > Lightroom Sync tab. 
+ Lightroom Sync Preferences 
+ Lightroom Sync Preferences 
+ Account 
+ In the Account area, you can view information about your account: Adobe ID, Name, Status, Subscribed, End Date, Uploads . You can click More Account Info Online  to access your Adobe ID account online, and sign in with your Adobe ID (your email address) and password. 
+ Delete All Synced Data removes all the image data and synced information from Creative Cloud, including previews, metadata, and develop settings. Original photos stored on your computer aren't affected. All the collections are also preserved, but their sync settings are reset. 
+ Options 
+ You can select Prevent System Sleep During Sync option to stop your computer from sleeping while Lightroom Classic desktop is syncing images with Lightroom ecosystem of apps. 
+ Location 
+ By default, Lightroom Classic desktop syncs your Lightroom ecosystem images at: 
+ (Win)  C:\Users\[user name]\Pictures   
+ (Mac) /Users/[user name]/Pictures 
+ You can use the following options to choose a preferred location for Lightroom ecosystem images and also specify a folder structure. 
+ Specify Location for Lightroom Ecosystem's Images
+ Choose a preferred path for downloading Lightroom ecosystem images. 
+ Use Subfolders Formatted By Capture Date
+ Select this option to choose a preferred subfolder format for downloading Lightroom ecosystem's images within the location specified above.   
+ Access Lightroom photos in Adobe Creative Cloud mobile app 
+ Photos within the synced collections in Lightroom Classic on your desktop are automatically available Adobe Creative Cloud mobile app. 
+ To access your synced Lightroom Classic Collection photos in the Adobe Creative Cloud mobile app, do the following:  
+ In Lightroom Classic on your desktop, ensure that Sync With Lightroom  option is 'on'. 
+ See Set up Lightroom Classic for sync for details.   
+ In the  Collections  panel, ensure that Sync With Lightroom  option is set for those collections that you want to sync. 
+ See Set up Collections for details.    
+ Open Adobe Creative Cloud app on your Android or iOS mobile device and sign in with your Adobe ID. 
+ In the Adobe Creative Cloud mobile app, tap  Your Work  and navigate to the Lr Photos tab.  
+ More like this Video tutorial: Sync photos between Lightroom Classic on your computer and mobile devices Work with All Synced Photographs collection Work with Adobe Photoshop Lightroom for mobile Adobe Photoshop Lightroom for mobile and Adobe Photoshop Lightroom for Apple TV | FAQ 
+    Adobe 
+ Get help faster and easier 
+ Sign in 
+ New user? 
+ Create an account 
+ Manage account 
+ Quick links 
+ View all your plans 
+ Manage your plans 
+ View quick links
+ Hide quick links
+ Legal Notices    |    Online Privacy Policy 
+ Share this page
+ Copied 
+ Adobe Photoshop Lightroom Classic 
+ < Visit Adobe Help Center 
+ Learn & Support 
+ Get Started 
+ User Guide 
+ Tutorials 
+ Ask the Community 
+ Post questions and get answers from experts. 
+ Ask now 
+ Contact Us 
+ Real help from real people. 
+ Start now 
+ ^ Back to top 
+ Language Navigation 
+ Language Navigation 
+ Choose a region 
+ Selecting a region changes the language and/or content on Adobe.com. 
+ Americas 
+ Brasil
+ Canada - English
+ Canada - Français
+ Latinoamérica
+ México
+ Argentina
+ Colombia
+ Perú
+ Chile
+ United States
+ Asia Pacific 
+ Australia
+ Hong Kong S.A.R. of China
+ India - English
+ Indonesia - English
+ Malaysia - English
+ New Zealand
+ Philippines - English
+ Vietnam - English
+ 中国
+ 中國香港特別行政區
+ 台灣地區
+ 日本
+ Indonesia
+ Malaysia
+ Pilipinas
+ Việt Nam
+ भारत
+ 한국
+ Singapore
+ Thailand - English
+ ประเทศไทย
+ Europe, Middle East and Africa 
+ Africa - English
+ België - Nederlands
+ Belgique - Français
+ Belgium - English
+ Česká republika
+ Danmark
+ Deutschland
+ Eesti
+ España
+ France
+ Greece - English
+ Ireland
+ Israel - English
+ Italia
+ Latvija
+ Lietuva
+ Luxembourg - Deutsch
+ Luxembourg - English
+ Luxembourg - Français
+ Magyarország
+ Middle East and North Africa - English
+ Nederland
+ Norge
+ Österreich
+ Polska
+ Portugal
+ România
+ Schweiz
+ Slovenija
+ Slovensko
+ Suisse
+ Suomi
+ Svizzera
+ Türkiye
+ United Kingdom
+ България
+ Россия
+ Україна
+ الشرق الأوسط وشمال أفريقيا - اللغة العربية
+ ישראל - עברית
+ Sverige
+ Saudi Arabia - English
+ United Arab Emirates - English
+ الإمارات العربية المتحدة
+ المملكة العربية السعودية

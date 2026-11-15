@@ -1,0 +1,232 @@
+Work with web gallery layouts in Lightroom Classic 
+ Work with web gallery layouts
+ Search 
+ Last updated on 
+ 2021-04-27 
+ Lightroom Classic User Guide 
+ Introduction to Lightroom Classic 
+ What's new in Lightroom Classic 
+ Lightroom Classic system requirements 
+ Lightroom Classic | Common Questions 
+ Lightroom Classic Key Concepts 
+ Lightroom Classic tutorials 
+ Feature summary | Lightroom CC 2015.x/Lightroom 6.x releases 
+ Lightroom and Adobe services 
+ Creative Cloud Libraries 
+ Using Adobe Stock in Creative Cloud apps 
+ Lightroom for mobile, TV, and the web 
+ Adobe Photoshop Lightroom for mobile and Apple TV | FAQ 
+ Sync Lightroom Classic with Lightroom ecosystem 
+ Photoshop family of mobile apps 
+ Import photos 
+ Import photos from a camera or card reader 
+ Import photos from a folder on a hard drive 
+ Import photos automatically 
+ Import photos from Photoshop Elements 
+ Import photos from a tethered camera 
+ Specify import options 
+ Set import preferences 
+ The Filename Template Editor and Text Template Editor 
+ Workflows 
+ Apply Masking in photos 
+ Export and save your photos as JPEGs 
+ Export and watermark your photos 
+ Import your photos 
+ Adjustment Brush: the basics 
+ Adjustments with the Tone Curve 
+ Advanced video slideshows 
+ Control white balance 
+ Create a contact sheet 
+ Enhance your workflow with Lightroom Classic 
+ Workspace 
+ Workspace basics 
+ Set preferences for working in Lightroom Classic 
+ Display the Library on a second monitor 
+ Personalize identity plates and module buttons 
+ Watermark your photos in Lightroom Classic 
+ Color management 
+ Viewing photos 
+ View photos 
+ Browse and compare photos 
+ Set Library view options 
+ Share photos for comments and feedback 
+ Smart Previews 
+ Manage catalogs and files 
+ Lightroom Classic catalog FAQ 
+ How Lightroom Classic catalogs work 
+ Create and manage catalogs 
+ Back up a catalog 
+ Locate missing photos 
+ Create and manage folders 
+ Manage photos within folders 
+ Maps 
+ Work with the Map module 
+ Organize photos in Lightroom Classic 
+ Face recognition 
+ Work with photo collections 
+ Group photos into stacks 
+ Flag, label, and rate photos 
+ Use keywords 
+ Metadata basics and actions 
+ Find photos in the catalog 
+ Work with video in Lightroom Classic 
+ Advanced metadata actions 
+ Use the Quick Develop panel 
+ Process and develop photos 
+ Develop module basics 
+ Create panoramas and HDR panoramas 
+ Flat-Field Correction 
+ Correct distorted perspective in photos using Upright 
+ Improve image quality using Enhance 
+ Work with image tone and color 
+ Masking 
+ Apply local adjustments 
+ HDR photo merge 
+ Develop module options 
+ Retouch photos 
+ Cure red eye and pet eye effects 
+ Use the Radial Filter tool 
+ Use the enhanced Spot Removal tool 
+ Export photos 
+ Export files to disk or CD 
+ Export photos from Lightroom Classic 
+ Publish photos online 
+ Export to hard drive using publish services 
+ Presets for export, and other settings 
+ Work with external editors 
+ External Editing preferences 
+ Open and edit Lightroom Classic photos in Photoshop or Photoshop Elements 
+ Slideshows 
+ Create slideshows 
+ Slideshow module panels and tools 
+ Specify the slide layout 
+ Add overlays to slides 
+ Play and export slideshows 
+ Print photos 
+ Print module basics 
+ Print module layouts and templates 
+ Work with print job options and settings 
+ Photo books 
+ Create photo books 
+ Web galleries 
+ Create web galleries 
+ Use the Web module panels and tools 
+ Work with web gallery layouts 
+ Work with web gallery templates and settings 
+ Preview, export, and upload web photo galleries 
+ Keyboard shortcuts 
+ Keyboard shortcuts 
+ Updated in Lightroom CC 2015/Lightroom 6
+ Note: 
+ Beginning with Lightroom CC 2015/Lightroom 6, the support for Flash galleries has been removed.
+ Choose a web gallery template
+ Lightroom Classic has premade HTML5 web gallery templates that you can select in the Template Browser. You can customize premade templates and create new custom templates by specifying certain elements—such as colors, gallery layout, text, and an identity plate—for your gallery. Custom templates are listed in the Template Browser of the Web module. See Web gallery templates and settings .
+ In the Web module, click a template in the Template
+Browser.
+ The preset templates appear under the Lightroom Classic Templates folder, but you can add new folders and custom templates. Click the arrow next to a folder to expand or collapse it.
+ Note: 
+ To download a variety of third-party web gallery
+templates, visit www.adobe.com/go/exchange .
+ Rearrange web gallery photo order
+ If the source for your web photo gallery is
+a collection or a folder that does not contain subfolders, you can
+manually rearrange the photos in the gallery.
+ In the Web module, drag photos in the Filmstrip
+to rearrange them.
+ Choose colors for gallery elements
+ In the Color Palette panel, click the
+color box beside an element.
+ Choose from the color pop-up window.
+ Specify the appearance of Lightroom Classic HTML galleries
+ Select an HTML gallery in the Template
+Browser.
+ In the Appearance panel, do any of the following:
+ To add drop shadows to all photos, select
+Add Drop Shadows To Photos.
+ To add a horizontal rule under the site title, select
+Section Borders. Click the color picker to choose a color for the
+rule.
+ To specify the grid layout on the thumbnail index
+page, click in the grid to set the number of rows and columns.
+ To display an index number in the upper-left corner
+of each photo thumbnail, select Show Cell Numbers.
+ To add borders to photo thumbnails, select Photo
+Borders in the Grid Pages section of the panel, and then choose
+a border color from the color picker.
+ To specify the size of large-image pages, drag the
+Size slider or enter a pixel value.
+ To display a border around photos on large-image
+pages, select Photo Borders in the Image Pages section of the panel.
+Drag the Width slider or enter a pixel value to define the size
+of the border.
+ Display a copyright watermark in
+web photo galleries
+ In the Output Settings panel, select Watermarking and choose an option from the pop-up menu: 
+ Choose a text or graphical watermark that you have created in the Watermark Editor.
+ Choose Simple Copyright Watermark to use the IPTC copyright metadata as the watermark.
+ Choose Edit Watermarks to open the Watermark Editor.
+ Lightroom Classic displays the watermark on both thumbnails and large images in the gallery. However, the watermark is not always visible on small thumbnails.
+ Tip : To display copyright metadata below the large photos in the gallery, in the Image Info panel, choose Caption > Edit. Then, insert the copyright IPTC metadata token. 
+ Add titles, description, and contact
+information to web photo galleries
+ Website titles, photo collection titles and
+descriptions, contact information, and a web or mail link appear
+on every web page in your web photo gallery. 
+ In the Site Info panel or in the work area, do
+either of the following:
+ Overwrite the text in the corresponding
+boxes with site and collection titles, a collection description,
+contact info, and a web or mail link. In the work area, double-click
+the text to activate the box you want to type in. The information you
+type appears on every web page.
+ Delete the text in the corresponding boxes so that
+web pages do not contain any titles, description, contact info,
+or a web or mail link.
+ Note: 
+ Each time you enter a site title, collection title, collection description, or contact info, Lightroom Classic stores the information as a preset. When creating other web photo galleries, click the triangles to the right of Site Title, Collection Title, Collection Description, Contact Info, and Web Or Mail Link to choose a preset from the pop-up menu.
+ Add your identity plate to web
+photo galleries
+ You can use your identity plate as your website
+or gallery title.
+ In the Site Info panel, select Identity Plate.
+ (Optional) To use a different identity plate, click the
+triangle in the lower-right corner of the identity plate preview
+area and choose from the menu.
+ Note: 
+ Choosing Edit opens the Identity Plate Editor.
+ Display photo titles and captions
+in web photo galleries
+ You can add titles and captions beneath the
+large versions of the images in your web photo gallery. You can
+either type the title and caption that you want to appear below
+every photo, or specify that metadata be displayed with each photo.
+For example, if you entered caption metadata for your photos in
+the Library module, you can display the caption metadata that is
+specific to the photos in your web gallery. 
+ In the Image Info panel, do any of the following:
+ To display the same title and caption under
+all photos, choose Custom Text from the pop-up menus next to Title
+and Caption, and then enter the title and caption in the boxes below
+those options.
+ To display a different caption or title for each
+photo, click the Custom Settings menu to the right of Title or Caption,
+and choose Edit. In the Text Template Editor that appears, insert
+the IPTC title or caption metadata element, and click Done.
+ To display information from a photo’s metadata,
+click the Custom Settings menu to the right of Title or Caption,
+and choose the metadata that you want from the pop-up menu.
+ More like this
+ Use the Watermark Editor 
+ Export files to disk or CD 
+ Personalize identity plates and module buttons 
+ The Filename Template Editor and Text Template Editor 
+ Work with web gallery templates and settings 
+ Sign in to your account 
+ Sign in
+ Manage account 
+ Quick links
+ View all your plans 
+ Manage your plans 
+ Legal Notices    |    Online Privacy Policy 
+ Language Navigation
+ Language Navigation

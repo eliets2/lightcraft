@@ -1,0 +1,308 @@
+
+ Export to hard drive using publish services | Lightroom Classic 
+ Adobe Photoshop Lightroom Classic 
+ What's New 
+ FAQ 
+ Learn & Support 
+ Free Trial 
+ Buy now
+ User Guide 
+ Cancel 
+ Export to hard drive using publish services 
+ Search 
+ Last updated on 
+ Apr 27, 2021 
+ Lightroom Classic 
+ Open on web 
+ Lightroom Classic User Guide 
+ Introduction to Lightroom Classic
+ What's new in Lightroom Classic 
+ Lightroom Classic system requirements 
+ Lightroom Classic | Common Questions 
+ Lightroom Classic Key Concepts 
+ Lightroom Classic tutorials 
+ Set Preferences for working in Lightroom Classic 
+ Reset Preferences for working in Lightroom Classic 
+ Workspace
+ Workspace basics 
+ Display the Library on a second monitor 
+ Personalize identity plates and module buttons 
+ Watermark your photos in Lightroom Classic 
+ Color management 
+ Import photos
+ Specify import options 
+ Set import preferences 
+ Import photos from a camera or card reader 
+ Import photos from a folder on a hard drive 
+ Import photos automatically 
+ Import photos from Photoshop Elements 
+ Import photos from a tethered camera 
+ The Filename Template Editor and Text Template Editor 
+ Organize photos in Lightroom Classic
+ Face recognition 
+ Work with photo collections 
+ Group photos into stacks 
+ Flag, label, and rate photos 
+ Use keywords 
+ Metadata basics and actions 
+ Find photos in the catalog 
+ Work with video in Lightroom Classic 
+ Advanced metadata actions 
+ Use the Quick Develop panel 
+ Process and develop photos
+ Develop module basics 
+ Create panoramas and HDR panoramas 
+ Flat-Field Correction 
+ Correct distorted perspective in photos using Upright 
+ Improve image quality using Enhance 
+ Work with image tone and color 
+ Masking 
+ Apply local adjustments 
+ HDR photo merge 
+ Develop module options 
+ Retouch photos 
+ Cure red eye and pet eye effects 
+ Use the Radial Filter tool 
+ Adjustments with Lens Blur 
+ Edit and Export in HDR 
+ Remove Tool 
+ Viewing photos
+ View photos 
+ Browse and compare photos 
+ Set Library view options 
+ Share photos for comments and feedback 
+ Smart Previews 
+ Export photos
+ Export files to disk or CD 
+ Export photos from Lightroom Classic 
+ Publish photos online 
+ Export to hard drive using publish services 
+ Presets for export, and other settings 
+ Work with external editors
+ External Editing preferences 
+ Open and edit Lightroom Classic photos in Photoshop 
+ Manage catalogs and files
+ How Lightroom Classic catalogs work 
+ Create and manage catalogs 
+ Back up a catalog 
+ Locate missing photos 
+ Create and manage folders 
+ Manage photos within folders 
+ Maps
+ Work with the Map module 
+ Photo books
+ Create photo books 
+ Slideshows
+ Create slideshows 
+ Slideshow module panels and tools 
+ Specify the slide layout 
+ Add overlays to slides 
+ Play and export slideshows 
+ Print photos
+ Print module basics 
+ Print module layouts and templates 
+ Work with print job options and settings 
+ Web galleries
+ Create web galleries 
+ Use the Web module panels and tools 
+ Work with web gallery layouts 
+ Work with web gallery templates and settings 
+ Preview, export, and upload web photo galleries 
+ Keyboard shortcuts
+ Keyboard shortcuts 
+ Content Authenticity 
+ Content Authenticity in Lightroom Classic 
+ Lightroom and Adobe services
+ Creative Cloud Libraries 
+ Using Adobe Stock in Creative Cloud apps 
+ Troubleshooting 
+ Fixed Issues 
+ Known Issues 
+ Technical Support
+ Performance Guidelines
+ Basic troubleshooting steps to fix issues in Lightroom Classic 
+ Optimize performance 
+ Keep Lightroom up to date 
+ Preference file and other file locations | Lightroom Classic 
+ Allow Permissions to Lightroom Classic on macOS 
+  Technical issues
+ GPU Issues
+ Troubleshoot graphics processor (GPU) and graphics driver issues | Lightroom Classic 
+ Lightroom Classic GPU FAQ 
+ Startup Issues
+ Windows | Lightroom doesn't start 
+ Error: Lightroom catalog cannot be opened 
+ Error: 'Unexpected error opening catalog' occurs in Lightroom after Windows 10 upgrade 
+ "Assertion failed" update error | Windows 
+ Error MSVCR110.dll opening apps in Windows 10 
+ Rendering Issues
+ Troubleshoot issues with Develop module 
+ Stability Issues
+ Troubleshoot crash or freeze in Lightroom Classic 
+ Miscellaneous Issues
+ FAQ | Color in Lightroom Classic 
+ Lightroom desktop and mobile apps unavailable to Education memberships | Kivuto 
+ Workflow Issues
+ Catalog Issues
+ Error : Lightroom catalog cannot be opened 
+ Troubleshoot corrupt catalog 
+ Locate missing photos 
+ Recover catalog and images after resetting preferences 
+ Lightroom Classic catalog FAQ 
+ Sync Issues
+ Lightroom Classic sync FAQ 
+ The Publish Services panel in the Library module allows you to export a collection of photos to your hard drive. Publishing to your hard drive folder is an expedient way to prepare photos for upload to a mobile phone or tablet device, such as an iPad. 
+ Set up a hard drive connection
+ The Publish Services connection allows
+you to define options for the export operation. 
+ In the Publish Services panel on the left side of the Library module, click the hard drive connection Set Up button. 
+ The Publish Services panel 
+ The Publish Services panel 
+ In the Lightroom Classic Publishing Manager dialog box, enter a Publish Services Description. 
+ Specify additional export options. For information on
+Export Location, File Naming, File Settings, Image Sizing, and other
+export options, see Export
+files to disk or CD .
+ (Optional) To change your hard drive connection settings at any time, click the + button at the top of the Publish Services panel and choose Hard Drive > Edit Settings. 
+ Add and manage photos in a hard drive folder
+ Photos that you want to export to your hard
+drive are managed in publish collections , also known
+as folders. 
+ To create a hard drive folder, right-click (Windows) or Control-click (Mac OS) the hard drive connection in the Publish Services panel and choose one of the following: 
+ Create Published Folder
+ A collection of any photos that you choose, saved in
+a folder. 
+ Create Published Smart Folder
+ A folder of photos based on rules that you specify. See Work
+with smart collections . 
+ Create Published Folder Set
+ A group of published folders. 
+ For a regular folder  , drag
+photos from the Grid view to the folder in the Publish Services
+panel. If you create a smart folder  , the
+photos that match your rules automatically appear in the folder.
+ To manage your hard drive collections, do any of the following: 
+ To edit, rename, or delete a folder, right-click (Windows) or Control-click (Mac OS) it in the Publish Services panel and choose Edit Collection, Rename, or Delete. 
+ To remove an unpublished photo from a regular hard drive folder, select it in the folder and press Delete. 
+ To add or remove photos in a smart folder, change the rules of the smart folder. 
+ To view the photos in a hard drive folder, select the folder in the Publish Services panel. The photos are organized in the following categories, or queues, in the image display area: 
+ New Photos To Publish   Photos that have not been exported. 
+ Modified Photos To Republish   Photos that were edited in the Library or Develop module after they were exported. 
+ Published Photos   Photos that have not been modified since they were exported. 
+ Deleted Photos To Remove   When you press Delete to remove one or more published photos from a folder, Lightroom Classic marks them as Deleted Photos To Remove. They are removed from the folder the next time you click Publish. 
+ Export photos to hard drive
+ Photos waiting to be published appear in one of two queues: New Photos To Publish or Modified Photos To Republish. Lightroom Classic uploads everything in both queues when you publish a folder or folder set. 
+ To publish photos to a hard drive connection, do one of the following: 
+ Select a hard drive folder and click Publish. 
+ Right-click (Windows) or Control-click (Mac OS) a hard drive folder and choose Publish Now. 
+ If prompted, click Replace to update published photos
+with newer versions.
+ Get help faster and easier 
+ Sign in 
+ New user? 
+ Create an account 
+ Manage account 
+ Quick links 
+ View all your plans 
+ Manage your plans 
+ View quick links
+ Hide quick links
+ Legal Notices    |    Online Privacy Policy 
+ Share this page
+ Copied 
+ Adobe Photoshop Lightroom Classic 
+ < Visit Adobe Help Center 
+ Learn & Support 
+ Get Started 
+ User Guide 
+ Tutorials 
+ Ask the Community 
+ Post questions and get answers from experts. 
+ Ask now 
+ Contact Us 
+ Real help from real people. 
+ Start now 
+ ^ Back to top 
+ Language Navigation 
+ Language Navigation 
+ Choose a region 
+ Selecting a region changes the language and/or content on Adobe.com. 
+ Americas 
+ Brasil
+ Canada - English
+ Canada - Français
+ Latinoamérica
+ México
+ Argentina
+ Colombia
+ Perú
+ Chile
+ United States
+ Asia Pacific 
+ Australia
+ Hong Kong S.A.R. of China
+ India - English
+ Indonesia - English
+ Malaysia - English
+ New Zealand
+ Philippines - English
+ Vietnam - English
+ 中国
+ 中國香港特別行政區
+ 台灣地區
+ 日本
+ Indonesia
+ Malaysia
+ Pilipinas
+ Việt Nam
+ भारत
+ 한국
+ Singapore
+ Thailand - English
+ ประเทศไทย
+ Europe, Middle East and Africa 
+ Africa - English
+ België - Nederlands
+ Belgique - Français
+ Belgium - English
+ Česká republika
+ Danmark
+ Deutschland
+ Eesti
+ España
+ France
+ Greece - English
+ Ireland
+ Israel - English
+ Italia
+ Latvija
+ Lietuva
+ Luxembourg - Deutsch
+ Luxembourg - English
+ Luxembourg - Français
+ Magyarország
+ Middle East and North Africa - English
+ Nederland
+ Norge
+ Österreich
+ Polska
+ Portugal
+ România
+ Schweiz
+ Slovenija
+ Slovensko
+ Suisse
+ Suomi
+ Svizzera
+ Türkiye
+ United Kingdom
+ България
+ Россия
+ Україна
+ الشرق الأوسط وشمال أفريقيا - اللغة العربية
+ ישראל - עברית
+ Sverige
+ Saudi Arabia - English
+ United Arab Emirates - English
+ الإمارات العربية المتحدة
+ المملكة العربية السعودية

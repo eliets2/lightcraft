@@ -1,0 +1,231 @@
+Adding overlays to slides in Lightroom Classic 
+ Add overlays to slides
+ Search 
+ Adobe Photoshop Lightroom Classic User Guide
+ Select an article: 
+ Select an article: 
+ On this page
+ Add your identity plate to a slideshow 
+ Display a copyright watermark in a slideshow 
+ Display ratings in a slideshow 
+ Add text and metadata to slides 
+ Add a drop shadow to text in a slideshow (Mac OS) 
+ Move and rotate text and other
+objects in a slide 
+ Scale the text and other objects
+in a slide 
+ Remove text and other objects from
+a slide 
+ Applies to: 
+ Adobe Photoshop Lightroom 5 
+ Note: 
+ You’re viewing help for Photoshop Lightroom Classic (formerly Lightroom CC). 
+Not your version? View help for  Photoshop Lightroom .
+ Add your identity plate to a slideshow
+ In the Overlays panel of the Slideshow
+module, select Identity Plate.
+ If necessary, do any of the following:
+ To use a different identity plate, click the Identity Plate preview and choose from the pop-up menu.
+ To adjust the opacity or scale of the identity plate, move the sliders or enter a percentage value.
+ Note : You can also scale the identity plate by clicking the identity plate text in the Slide Editor view and dragging a bounding box handle. 
+ To change the original color of your text identity plate, select Override Color and then choose a new color by clicking the color swatch to the right.
+ To move the identity plate, click the identity plate text in the Slide Editor view and drag inside the bounding box.
+ To move the identity plate behind the photos, select Render Behind Image.
+ Note : Make sure that the template layout lets enough of the identity plate show from behind the photos. 
+ Displaying the identity plate behind photos
+ Display a copyright watermark in a slideshow
+ In the Overlays panel of the Slideshow
+module, select Watermarking.
+ Choose a watermark from the pop-up menu.
+ Display ratings in a slideshow
+ The rating stars that you give to photos in the Library module can be displayed in a slideshow.
+ In the Overlays panel of the Slideshow module,
+select Rating Stars.
+ Click the color box on the right and choose the color
+you want for the stars from the pop-up window.
+ Change the size of the stars by doing one of the following:
+ Adjust the Scale slider or enter a Scale
+percentage value.
+ Click the rating stars in the Slide Editor view
+and drag one of the bounding box handles.
+ Click the rating stars in the Slide Editor view, and
+then do any of the following to position them in the slide layout:
+ Drag from within the bounding box.
+ Click the Rotate Left or Rotate Right in the toolbar.
+ As you move the rating stars, the bounding box tethers
+itself to points on the image border. This behavior allows the stars
+to float next to or within an image at a consistent distance from
+the image border, regardless of the size or orientation of the image.
+ Add text and metadata to slides
+ You can add text that appears on every slide,
+or a unique caption on each slide. For example, you can display
+the stars rating that you applied to an image, or the caption that
+is recorded in an image’s metadata.
+ In the toolbar on the Slideshow module, click
+ABC.
+ The Custom Text pop-up menu and text box appear in
+the toolbar.
+ Do any of the following in the toolbar:
+ To create text that displays on all the
+slides, type the text in the Custom Text box and press Enter (Windows)
+or Return (Mac OS).
+ To display a caption that is different for each
+slide, click the Custom Text pop-up menu and choose a metadata option.
+ To use the Text Template Editor to specify the text
+that appears under each slide, click the Custom Text pop-up menu
+and choose Edit. Then, select tokens to create a custom text string.
+See The
+Filename Template Editor and Text Template Editor .
+ Text Overlays is automatically selected in the Overlays
+panel, and the text and bounding box appear in the Slide Editor
+view.
+ Format the text by doing any of the following in the
+Text Overlays section of the Overlays panel:
+ To choose a text color, click the color
+box to the right of Text Overlays and choose a color from the pop-up
+window.
+ To adjust the text opacity, drag the Opacity slider
+or enter a percentage value.
+ To choose a font, click the triangle next to the
+font name and choose from the pop-up menu.
+ To choose a font face, click the triangle next to
+the face name and choose from the pop-up menu.
+ Do any of the following to position or scale the text
+or object in the Slide Editor view:
+ To adjust the size of the text, drag one
+of the bounding box handles.
+ To move the text to a specific location, drag from
+within the box.
+ As you move the text, the bounding box tethers itself
+to points on the image border. This behavior allows the text to
+float next to an image or within an image at a consistent distance
+from the border, regardless of the size or orientation of the images.
+ (Optional) If you want to add another text box, click
+ABC in the toolbar and specify the text options.
+ Add as many text boxes as needed.
+ Add a drop shadow to text in a slideshow (Mac OS)
+ In the Slideshow module, click the text
+in the Slide Editor view.
+ The text is selected and a bounding box appears.
+ In the Overlays panel, select Shadow.
+ A preview of the drop shadow with default values
+appears in the Slide Editor view.
+ Adjust the Shadow options:
+ Opacity 
+ Sets the shadow’s lightness or darkness.
+ Offset 
+ Sets the shadow’s distance from the image.
+ Radius 
+ Sets the hardness or softness of the shadow’s edge. 
+ Angle 
+ Sets the direction of the cast shadow. Turn the knob
+or move the slider to adjust the shadow’s angle.
+ Move and rotate text and other
+objects in a slide
+ All text elements, rating stars, and an identity plate can be moved anywhere in a slideshow template layout. Selecting them in the Slide Editor view displays a bounding box. The bounding boxes are anchored to points on the image’s border, which allows the text or object to float next to an image or within an image at a consistent distance from the image’s border, regardless of the size or orientation of the images.
+ In the Slideshow module, click the text, rating
+stars, or identity plate in the Slide Editor view to display its
+bounding box.
+ Do any of the following:
+ Drag the bounding box to the location you
+want. To set the anchor point to a fixed location, click it. The
+anchor point becomes yellow when fixed.
+ In the toolbar, click Rotate Left or Rotate Right.
+ Text boxes anchored to a cell line
+ Scale the text and other objects
+in a slide
+ Click the text, rating stars, or identity
+plate in the Slide Editor view.
+ Drag a bounding box handle to adjust the size of the
+text or object.
+ Dragging a bounding box handle to adjust the text or object
+size.
+ Remove text and other objects from
+a slide
+ You can remove text from a slide layout. You can also temporarily turn off the text overlay so that it’s no longer visible in the slideshow. Temporarily turning off the text gives you the option of restoring it at any time by turning the text overlay back on.
+ Do any of the following:
+ To permanently remove text from a slide layout, click the text or object in the Slide Editor view to select it, and then press the Delete key.
+ To turn off text visibility, deselect Text Overlays in the Overlays panel.
+ Note : Deselecting Text Overlays does not turn off the visibility of the identity plate or rating stars. 
+ To turn off the visibility of your identity plate or rating stars, either deselect Identity Plate or Rating Stars in the Overlays panel, or select the object in the Slide Editor view and press the Delete key. You can always restore your identity plate or rating stars to a slide layout by selecting their options in the Overlays panel.
+ More like this
+ Personalize identity plates and module buttons 
+ Use the Watermark Editor 
+ Flag, label, and rate photos 
+ Slideshow panels and tools 
+ Specify the slide layout 
+  Twitter™ and Facebook posts are not covered under the terms of Creative Commons.
+ Legal Notices 
+   |  
+ Online Privacy Policy 
+ Choose your region 
+ Selecting a region changes the language and/or content on Adobe.com.
+ Americas 
+ Brasil 
+ Canada - English 
+ Canada - Français 
+ Latinoamérica 
+ México 
+ United States 
+ Europe, Middle East and Africa 
+ Africa - English 
+ Belgique - Français 
+ Belgium - English 
+ België - Nederlands 
+ Česká republika 
+ Cyprus - English 
+ Danmark 
+ Deutschland 
+ Eesti 
+ España 
+ France 
+ Greece - English 
+ Ireland 
+ Israel - English 
+ Italia 
+ Latvija 
+ Lietuva 
+ Luxembourg - Deutsch 
+ Luxembourg - English 
+ Luxembourg - Français 
+ Magyarország 
+ Malta - English 
+ Middle East and North Africa - English 
+ Nederland 
+ Norge 
+ Österreich 
+ Polska 
+ Portugal 
+ România 
+ Schweiz 
+ Slovenija 
+ Slovensko 
+ Suisse 
+ Suomi 
+ Sverige 
+ Svizzera 
+ Türkiye 
+ United Kingdom 
+ България 
+ Россия 
+ Україна 
+ الشرق الأوسط
+ وشمال أفريقيا -
+ اللغة العربية 
+ ישראל - עברית 
+ Asia - Pacific 
+ Australia 
+ Hong Kong S.A.R. of China 
+ India - English 
+ New Zealand 
+ Southeast Asia (Includes Indonesia, Malaysia, Philippines, Singapore, Thailand,
+ and
+ Vietnam) - English 
+ 中国 
+ 中國香港特別行政區 
+ 台灣地區 
+ 日本 
+ 한국 
+ Commonwealth of Independent States 
+ Includes Armenia, Azerbaijan, Belarus, Georgia, Kazakhstan, Kyrgyzstan, Moldova, Tajikistan,
+ Turkmenistan, Ukraine, Uzbekistan

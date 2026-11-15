@@ -1,0 +1,122 @@
+How to create slideshows in Lightroom Classic 
+ Create slideshows
+ Search 
+ Adobe Photoshop Lightroom Classic User Guide
+ Select an article: 
+ Applies to: 
+ Adobe Photoshop Lightroom Classic 
+ Note: 
+ You’re viewing help for Photoshop Lightroom Classic (formerly Lightroom CC). 
+Not your version? View help for  Photoshop Lightroom .
+ Most of the work of creating slideshows in Lightroom Classic is done in the Slideshow module, where you can select layout templates, choose transitions, and set playback options.
+ In the Slideshow module, the left panels contain a list of templates and previews of their layouts. The Slide Editor view in the center of the workspace displays the photos in the selected slide template. The toolbar below the Slide Editor contains controls for playing a preview of the slideshow, refining the selection, and adding text to the slides. The right panels contain controls for modifying the template, adding text to the slide layout, and selecting playback settings. See Slideshow module panels and tools .
+ The Slideshow module
+ A. Slide Editor view  B. Template
+preview  C. Slideshow templates and Collections  D. Playback
+controls  E. Rotate and Add Text
+tools  F. Panels
+for setting layout and playback options 
+ Note: 
+ You can also play an "impromptu" slideshow in any module by choosing Window > Impromptu Slideshow . An impromptu slideshow uses the current template and settings in the Slideshow module. Playing an impromptu slideshow in the Library module is a convenient way to quickly view images in a folder at full-screen size and rate, rotate, or delete photos using keyboard shortcuts.
+ To create a slideshow in Lightroom Classic, follow these basic steps:
+ 1. Select the photos you want to include in your slideshow. 
+ In the Library module, select photos in the Grid view or Filmstrip. Or use the Folders or Collections panel to select an entire folder or a collection of photos to use for the slideshow. See Selecting photos in the Grid view and the Filmstrip .
+ 2. Arrange the slide order. 
+ Switch to the Slideshow module. If your source photos are in a collection or in a folder that doesn't contain any subfolders, drag the photos in the Filmstrip to arrange them in the desired order. See Rearrange slide order .
+ Alternatively, let Lightroom Classic choose the order in which the slides play: In the Playback panel on the right side of the Slideshow module, select Random Order . See  Randomize the slide order .
+ 3. Choose a template for the slideshow. 
+ A template provides a basic layout for your slides.
+ On the left side of the Slideshow module, move the pointer over a name in the Template Browser; a preview of the template appears in the Preview panel above the Template Browser. Click a template name to select it for your slideshow. See Choose a slide show template .
+ 4. (Optional) Customize the template. 
+ Customize your slideshow by modifying the options in the Options, Layout, Overlays, Backdrop, and Titles panels. For example, add a drop shadow; specify whether to show your identity plate or a caption; and specify a color or image for the background. See Adding overlays to slides and Set the slide background .
+ Customize your slideshow using the Options, Layout, Overlays, Backdrop, and Titles panels.
+ 5. Set playback options. 
+ Using the options in the Music and Playback panels, set slide duration and transition options. You can also specify introductory and ending slides, and select a music playlist to accompany the slideshow. See Set slide and transition duration and Play music with a slideshow .
+ Add music and interstitial slides using the Playback panel.
+ 6. Preview or play the slideshow. 
+ Click the Preview button in the lower-right corner of the Slideshow module to see the slideshow play in the Slideshow Editor view. Click the Play button to play the slideshow in full-screen mode. Use the buttons in the toolbar to pause, stop, or advance slides. See Preview a slideshow and Play a slideshow .
+ 7. (Optional) Export the slideshow. 
+ To share your slideshow, save it as an MP4 video that can play with transitions and music. Or, save it as a static PDF document that others can open. Click the Export Video or Export PDF button in the lower-left corner of the Slideshow module. See Export a slideshow  for information on the video and PDF options.
+ 8. (Optional) Save the layout as a custom template or as a slideshow collection. 
+ Save your slideshow layout as a custom template so you can reuse it easily. Or save the slideshow settings as a slideshow collection. A slideshow collection lets you easily return to a specific set of slide show options for a collection of photos. See Create custom slideshow templates and Save slide show settings as a slideshow collection .
+ Video tutorial:
+ Video tutorial:
+ Adobe TV
+ Video Tutorial:
+ Video Tutorial:
+ Lynda.com
+  Twitter™ and Facebook posts are not covered under the terms of Creative Commons.
+ Legal Notices 
+   |  
+ Online Privacy Policy 
+ Choose your region 
+ Selecting a region changes the language and/or content on Adobe.com.
+ Americas 
+ Brasil 
+ Canada - English 
+ Canada - Français 
+ Latinoamérica 
+ México 
+ United States 
+ Europe, Middle East and Africa 
+ Africa - English 
+ Belgique - Français 
+ Belgium - English 
+ België - Nederlands 
+ Česká republika 
+ Cyprus - English 
+ Danmark 
+ Deutschland 
+ Eesti 
+ España 
+ France 
+ Greece - English 
+ Ireland 
+ Israel - English 
+ Italia 
+ Latvija 
+ Lietuva 
+ Luxembourg - Deutsch 
+ Luxembourg - English 
+ Luxembourg - Français 
+ Magyarország 
+ Malta - English 
+ Middle East and North Africa - English 
+ Nederland 
+ Norge 
+ Österreich 
+ Polska 
+ Portugal 
+ România 
+ Schweiz 
+ Slovenija 
+ Slovensko 
+ Suisse 
+ Suomi 
+ Sverige 
+ Svizzera 
+ Türkiye 
+ United Kingdom 
+ България 
+ Россия 
+ Україна 
+ الشرق الأوسط
+ وشمال أفريقيا -
+ اللغة العربية 
+ ישראל - עברית 
+ Asia - Pacific 
+ Australia 
+ Hong Kong S.A.R. of China 
+ India - English 
+ New Zealand 
+ Southeast Asia (Includes Indonesia, Malaysia, Philippines, Singapore, Thailand,
+ and
+ Vietnam) - English 
+ 中国 
+ 中國香港特別行政區 
+ 台灣地區 
+ 日本 
+ 한국 
+ Commonwealth of Independent States 
+ Includes Armenia, Azerbaijan, Belarus, Georgia, Kazakhstan, Kyrgyzstan, Moldova, Tajikistan,
+ Turkmenistan, Ukraine, Uzbekistan

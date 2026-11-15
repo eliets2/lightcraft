@@ -1,0 +1,328 @@
+
+ Export presets, settings, and plug-ins in Lightroom Classic 
+ Adobe Photoshop Lightroom Classic 
+ What's New 
+ FAQ 
+ Learn & Support 
+ Free Trial 
+ Buy now
+ User Guide 
+ Cancel 
+ Presets for export, and other settings 
+ Search 
+ Last updated on 
+ Jul 12, 2024 
+ Lightroom Classic 
+ Open on web 
+ Lightroom Classic User Guide 
+ Introduction to Lightroom Classic
+ What's new in Lightroom Classic 
+ Lightroom Classic system requirements 
+ Lightroom Classic | Common Questions 
+ Lightroom Classic Key Concepts 
+ Lightroom Classic tutorials 
+ Set Preferences for working in Lightroom Classic 
+ Reset Preferences for working in Lightroom Classic 
+ Workspace
+ Workspace basics 
+ Display the Library on a second monitor 
+ Personalize identity plates and module buttons 
+ Watermark your photos in Lightroom Classic 
+ Color management 
+ Import photos
+ Specify import options 
+ Set import preferences 
+ Import photos from a camera or card reader 
+ Import photos from a folder on a hard drive 
+ Import photos automatically 
+ Import photos from Photoshop Elements 
+ Import photos from a tethered camera 
+ The Filename Template Editor and Text Template Editor 
+ Organize photos in Lightroom Classic
+ Face recognition 
+ Work with photo collections 
+ Group photos into stacks 
+ Flag, label, and rate photos 
+ Use keywords 
+ Metadata basics and actions 
+ Find photos in the catalog 
+ Work with video in Lightroom Classic 
+ Advanced metadata actions 
+ Use the Quick Develop panel 
+ Process and develop photos
+ Develop module basics 
+ Create panoramas and HDR panoramas 
+ Flat-Field Correction 
+ Correct distorted perspective in photos using Upright 
+ Improve image quality using Enhance 
+ Work with image tone and color 
+ Masking 
+ Apply local adjustments 
+ HDR photo merge 
+ Develop module options 
+ Retouch photos 
+ Cure red eye and pet eye effects 
+ Use the Radial Filter tool 
+ Adjustments with Lens Blur 
+ Edit and Export in HDR 
+ Remove Tool 
+ Viewing photos
+ View photos 
+ Browse and compare photos 
+ Set Library view options 
+ Share photos for comments and feedback 
+ Smart Previews 
+ Export photos
+ Export files to disk or CD 
+ Export photos from Lightroom Classic 
+ Publish photos online 
+ Export to hard drive using publish services 
+ Presets for export, and other settings 
+ Work with external editors
+ External Editing preferences 
+ Open and edit Lightroom Classic photos in Photoshop 
+ Manage catalogs and files
+ How Lightroom Classic catalogs work 
+ Create and manage catalogs 
+ Back up a catalog 
+ Locate missing photos 
+ Create and manage folders 
+ Manage photos within folders 
+ Maps
+ Work with the Map module 
+ Photo books
+ Create photo books 
+ Slideshows
+ Create slideshows 
+ Slideshow module panels and tools 
+ Specify the slide layout 
+ Add overlays to slides 
+ Play and export slideshows 
+ Print photos
+ Print module basics 
+ Print module layouts and templates 
+ Work with print job options and settings 
+ Web galleries
+ Create web galleries 
+ Use the Web module panels and tools 
+ Work with web gallery layouts 
+ Work with web gallery templates and settings 
+ Preview, export, and upload web photo galleries 
+ Keyboard shortcuts
+ Keyboard shortcuts 
+ Content Authenticity 
+ Content Authenticity in Lightroom Classic 
+ Lightroom and Adobe services
+ Creative Cloud Libraries 
+ Using Adobe Stock in Creative Cloud apps 
+ Troubleshooting 
+ Fixed Issues 
+ Known Issues 
+ Technical Support
+ Performance Guidelines
+ Basic troubleshooting steps to fix issues in Lightroom Classic 
+ Optimize performance 
+ Keep Lightroom up to date 
+ Preference file and other file locations | Lightroom Classic 
+ Allow Permissions to Lightroom Classic on macOS 
+  Technical issues
+ GPU Issues
+ Troubleshoot graphics processor (GPU) and graphics driver issues | Lightroom Classic 
+ Lightroom Classic GPU FAQ 
+ Startup Issues
+ Windows | Lightroom doesn't start 
+ Error: Lightroom catalog cannot be opened 
+ Error: 'Unexpected error opening catalog' occurs in Lightroom after Windows 10 upgrade 
+ "Assertion failed" update error | Windows 
+ Error MSVCR110.dll opening apps in Windows 10 
+ Rendering Issues
+ Troubleshoot issues with Develop module 
+ Stability Issues
+ Troubleshoot crash or freeze in Lightroom Classic 
+ Miscellaneous Issues
+ FAQ | Color in Lightroom Classic 
+ Lightroom desktop and mobile apps unavailable to Education memberships | Kivuto 
+ Workflow Issues
+ Catalog Issues
+ Error : Lightroom catalog cannot be opened 
+ Troubleshoot corrupt catalog 
+ Locate missing photos 
+ Recover catalog and images after resetting preferences 
+ Lightroom Classic catalog FAQ 
+ Sync Issues
+ Lightroom Classic sync FAQ 
+ Export photos using presets 
+ Export presets make it faster to export photos for common uses. For example, you can use a Lightroom Classic preset to export JPEG files suitable to e-mail to clients or friends. 
+ Export photos using presets 
+ Select the photos you want to export
+and then choose File > Export With Preset or click the
+Export button.
+ Choose a preset. Lightroom Classic offers the following built-in export presets: 
+ Burn Full-Sized JPEGs
+ Exports photos as JPEGs converted to and tagged as sRGB with maximum quality, no scaling, and a resolution of 240 pixels per inch. By default, this preset saves the exported files to the Files On CD/DVD destination specified at the top of the Export dialog box, in a subfolder named Lightroom Classic Burned Exports. 
+ Export To DNG
+ Exports photos in DNG file format. By default, this preset specifies
+no postprocessing action and allows you to choose a destination
+folder after you click Export. 
+ For Email
+ Opens a message to allow you to send the photos to someone using email. See Email photos from Lightroom Classic . 
+ For Email (Hard Drive)
+ Exports photos to the hard drive as sRGB JPEG files. Exported photos have a maximum size of 640 pixels (width or height), medium quality, and a resolution of 72 pixels per inch. Upon completion, Lightroom Classic shows the photos in the Explorer (Windows) or the Finder (Mac OS). Choose the destination folder after you click Export. 
+ Save export settings as presets 
+ In the Export dialog box, specify the
+export settings you want to save.
+ Click Add at the bottom of the Preset panel on the left
+side of the dialog box.
+ In the New Preset dialog box, type a name in the Preset
+Name box and click Create.
+ Export photos using the previous
+settings 
+ You can export photos using the same settings
+from the most recent export session that was set manually, including
+modified presets. Otherwise, the Export With Previous command does
+not work with export presets. 
+ Select the photos to export.
+ Choose File > Export With Previous.
+ Create export actions
+ You can put any item in the Export Actions
+folder that can be opened with a set of photo files. For example,
+you can place an executable file or shortcut (Windows), or application
+or alias (Mac OS) in the Export Actions folder. Items added
+to the folder are listed in the After Export menu of the Export
+dialog box the next time you export photos. 
+ Note: 
+ You
+can also add Photoshop droplets or script files to the Export Actions
+folder. 
+ Do any of the following to open the Export Actions
+folder:
+ In the Export dialog box, choose After Export > Go To Export Actions Folder Now. 
+ Windows 10 and 11: Navigate to \Users\ [user name] \AppData\Roaming\Adobe\Lightroom\Export Actions\. 
+ Mac OS: Navigate to /Users/ [user name] /Library/Application Support/Adobe/Lightroom/Export Actions/. 
+ Add the item to the Export Actions folder.
+ Export plug-ins 
+ Lightroom Classic supports plug-ins from third parties that add functionality to the Export dialog box. Depending on what third-party plug-ins you have installed, different options may be available in the Export dialog box. Check with the plug-in developer for support or documentation for their software. 
+ Plug-ins located in the following folders are automatically loaded by Lightroom Classic and can be enabled and disabled by the Plug-In Manager, but not removed: 
+ Mac OS: /Library/Application Support/Adobe/Lightroom/Modules 
+ Windows 10 and 11: C:\Users\ [user name] \AppData\Roaming\Adobe\Lightroom\Modules 
+ For documentation on the Lightroom Classic SDK, visit www.adobe.com/go/devnet . 
+ Manage export plug-ins 
+ Choose File > Plug-In Manager
+or click the Plug-In Manager button in the lower-left corner of
+the Export dialog box.
+ The Lightroom Classic Plug-In Manager dialog box lists installed plug-ins in the left panel. 
+ Do any of the following:
+ Select a plug-in from the left panel to view information about it in the main panel. 
+ To add a plug-in to Lightroom Classic, click the Add button. Navigate to the plug-in, select it, and then click Add Plug-In. 
+ To remove a plug-in from Lightroom Classic, select it from the left panel and then click Remove. 
+ Click Plug-In Exchange to go to the Adobe website and search for plug-ins. 
+ Click Done to close the Lightroom Classic Plug-In Manager and return to the Export dialog box. 
+ Get help faster and easier 
+ Sign in 
+ New user? 
+ Create an account 
+ Manage account 
+ Quick links 
+ View all your plans 
+ Manage your plans 
+ View quick links
+ Hide quick links
+ Legal Notices    |    Online Privacy Policy 
+ Share this page
+ Copied 
+ Adobe Photoshop Lightroom Classic 
+ < Visit Adobe Help Center 
+ Learn & Support 
+ Get Started 
+ User Guide 
+ Tutorials 
+ Ask the Community 
+ Post questions and get answers from experts. 
+ Ask now 
+ Contact Us 
+ Real help from real people. 
+ Start now 
+ ^ Back to top 
+ Language Navigation 
+ Language Navigation 
+ Choose a region 
+ Selecting a region changes the language and/or content on Adobe.com. 
+ Americas 
+ Brasil
+ Canada - English
+ Canada - Français
+ Latinoamérica
+ México
+ Argentina
+ Colombia
+ Perú
+ Chile
+ United States
+ Asia Pacific 
+ Australia
+ Hong Kong S.A.R. of China
+ India - English
+ Indonesia - English
+ Malaysia - English
+ New Zealand
+ Philippines - English
+ Vietnam - English
+ 中国
+ 中國香港特別行政區
+ 台灣地區
+ 日本
+ Indonesia
+ Malaysia
+ Pilipinas
+ Việt Nam
+ भारत
+ 한국
+ Singapore
+ Thailand - English
+ ประเทศไทย
+ Europe, Middle East and Africa 
+ Africa - English
+ België - Nederlands
+ Belgique - Français
+ Belgium - English
+ Česká republika
+ Danmark
+ Deutschland
+ Eesti
+ España
+ France
+ Greece - English
+ Ireland
+ Israel - English
+ Italia
+ Latvija
+ Lietuva
+ Luxembourg - Deutsch
+ Luxembourg - English
+ Luxembourg - Français
+ Magyarország
+ Middle East and North Africa - English
+ Nederland
+ Norge
+ Österreich
+ Polska
+ Portugal
+ România
+ Schweiz
+ Slovenija
+ Slovensko
+ Suisse
+ Suomi
+ Svizzera
+ Türkiye
+ United Kingdom
+ България
+ Россия
+ Україна
+ الشرق الأوسط وشمال أفريقيا - اللغة العربية
+ ישראל - עברית
+ Sverige
+ Saudi Arabia - English
+ United Arab Emirates - English
+ الإمارات العربية المتحدة
+ المملكة العربية السعودية

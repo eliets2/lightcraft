@@ -1,0 +1,102 @@
+Print module basics for Photoshop Lightroom Classic 
+ Print module basics
+ Search 
+ Adobe Photoshop Lightroom Classic User Guide
+ Select an article: 
+ Select an article: 
+ On this page
+ Print module panels 
+ View different pages in the Print
+module 
+ Select a printer and paper size 
+ Applies to: 
+ Adobe Photoshop Lightroom Classic 
+ 某些 Creative Cloud 应用程序、服务和功能在中国不可用。
+ The Print module lets you specify the page layout and print
+options for printing photos and contact sheets on your printer.
+ The Print module
+ A. Template Browser and Collections panels  B. Show Previous
+Page and Show Next Page buttons  C. Page number  D. Panels
+for specifying layout and output options 
+ Print module panels
+ The Print module includes the following panels:
+ Preview 
+ Displays the layout of a template. Moving the pointer over a template name in the Template Browser displays the page layout for that template in the Preview panel. 
+ Template Browser 
+ Selects or previews the layout for printing photos. Templates are organized into folders that include Lightroom Classic presets and user-defined templates. 
+ Collections 
+ Displays the collections in the catalog.
+ Layout Style 
+ Indicates whether the selected template is a Single Image/Contact Sheet, Picture Package, or Custom Package layout. Single Image/Contact Sheet layouts let you print one or more photos at the same size. Picture Package layouts let you print one photo in various sizes. Custom Package layouts let you print more than one photo at more than one size. 
+ Image Settings 
+ Determines how the photos fill the cells in a page layout. 
+ Layout 
+ (Single Image/Contact Sheet layouts) Specifies margins, number of rows and columns, and cell size in a Grid page layout. 
+ Guides 
+ (Single Image/Contact Sheet layouts) Shows rulers, bleeds, margins, image cells, and dimensions in a Grid page layout.
+ Rulers, Grid & Guides 
+ (Picture Package and Custom Package layouts) Determines whether and how rulers, page grid, and bleeds appear.
+ Cells 
+ (Picture Package and Custom Package layouts) Adds cells and pages to layouts.
+ Page 
+ Specifies the text and other items that get printed with the photos.
+ Print Job 
+ Specifies the print resolution, color management, and sharpening.
+ Video tutorial: Print photos
+ Video tutorial: Print photos
+ Lynda.com
+ View different pages in the Print
+module
+ When your print job has multiple pages, you
+can quickly navigate to different pages.
+ With a multiple-page print job open in the Print
+module, do any of the following in the toolbar:
+ To step forward or backward to a different
+page, click the Left or Right navigation arrows.
+ To move back to the first page, click the Show First
+Page icon  .
+ To quickly move forward and backward to different
+pages, drag the pointer across the page number box (on the right
+side of the toolbar).
+ To move to a specific page, double-click the page
+number in the toolbar and type a page number in the Go To Page dialog
+box.
+ Select a printer and paper size
+ The Print module has buttons that open the Print Setup dialog box (Windows) or Page Setup dialog box (Mac OS) to set the print orientation and paper size, and that open the Print Setup dialog box (Windows) or Print dialog box (Mac OS) to choose a printer and specify printer driver settings.
+ Select a paper size
+ In the Print module, click the Page
+Setup button in the lower-left corner of the window.
+ In the Print Setup dialog box (Windows) or Page Setup
+dialog box (Mac OS), choose a printer from the Name (Windows)
+or Format For (Mac OS) menu.
+ Note: 
+ (Mac OS) Choose Any Printer from the Format
+For menu if you want to apply the page setup settings to all printers
+used by your computer.
+ Choose a paper size from the Size (Windows) or Paper
+Size (Mac OS) menu.
+ Choose an orientation.
+ Note: 
+ Although it’s possible to set the Scale value in the printer’s Advanced Options dialog box (Windows) or Page Setup dialog box (Mac OS), it’s best to leave it at 100%. Changing the scale in these printer dialog boxes applies a second scaling operation to any scaling you set in Lightroom Classic, so your photos may not print at the size you expect.
+ Choose a printer
+ In the Print module, click the Print
+Settings button.
+ Choose a printer and specify the settings:
+ (Windows) In the Print Setup dialog box,
+choose a printer from the Name menu, click Properties, and then
+click the Advanced button to specify printer settings in the Advanced
+Options dialog box.
+ (Mac OS) In the Print dialog box, choose
+a printer and then specify printer settings. Use the pop-up menu
+below the Presets menu to choose the options to set.
+ Note: 
+ (Mac OS) Before clicking Save, choose Save
+As from the Presets menu if you want to save your printer settings
+as a preset. You can have multiple presets for a printer.
+ Legal Notices 
+   |  
+ Online Privacy Policy 
+ Language Navigation
+ Language Navigation
+ Language Navigation
+ Language Navigation

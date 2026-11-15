@@ -1,0 +1,208 @@
+How to make photo books in Lightroom Classic 
+ Create photo books
+ Search 
+ Adobe Photoshop Lightroom User Guide
+ Select an article: 
+ Select an article: 
+ On this page
+ About the Book module 
+ Create a photo book 
+ Applies to: 
+ Adobe Photoshop Lightroom Classic 
+ Note: 
+ You’re viewing help for Photoshop Lightroom Classic (formerly Lightroom CC). 
+Not your version? View help for  Photoshop Lightroom .
+ About the Book module
+ Using the Book module you can design photographic books and upload them to the on-demand print website Blurb.com. You can also save your books as Adobe PDF or individual JPEG files.
+ The Book module
+ A. Preview and Collections panels  B. Export
+Book to PDF button  C. Multi-Page
+View, Spread View, Single-Page View buttons  D. Selected
+page  E. Book Settings panels  F. Send Book to Blurb button 
+ Video tutorial: Lightroom Classic - Book Module Basics
+ Video tutorial: Lightroom Classic - Book Module Basics
+ Learn the basics of book creation using the Book module in Lightroom Classic.
+ Julieanne Kost, Principal Evangelist - Photoshop and Lightroom Classic
+ Create a photo book
+ To create a book, follow these steps:
+ Specify your default book-layout behaviors. In the Book module, choose Book  > Book Preferences .
+ Default Photo Zoom 
+ When photos are added to a cell, they can automatically zoom to fill, or zoom to fit. You can override the preference by right-clicking (Win) or Control-clicking (Mac) a photo in the preview area and toggling Zoom Photo To Fill Cell on or off.
+ Start New Books By Autofilling 
+ When you start a book, pages are automatically added using the current Auto Layout preset and the photos that are in the Filmstrip .
+ Fill Text Boxes With 
+ Layouts that include text boxes can automatically fill with the photo's Title , Caption, or File Name metadata. The option Filler Text displays placeholder text in the field to help you see whether the title, caption, or file name metadata is missing or not.
+ Note: 
+ To see filler text, select the Filler Text option in the Guides panel.
+ Constrain Captions To Safe Text Area 
+ Constrains photo and page caption fields to printable areas of the page. For example, if you adjust the Page Caption Offset , Constrain Captions To Safe Text Area prevents you from accidentally moving the caption outside the printable margins of the page.
+ In the Library module, select the photos you want to include in the book. See Selecting photos in the Grid view and the Filmstrip .
+ In the Book module, you can also select photos in the Collections panel and the Filmstrip.
+ In the Book module, use the panels along the right side of the application window to specify options.
+ Book Settings 
+ Choose whether you want to output to  Blurb Photo Book , Blurb Magazine , Blurb Trade Book , PDF , or JPEG , and specify the book size and type of cover (hardcover or softcover).
+ If printing to Blurb , the Estimated Price updates as you work based on your paper type and the number of pages in your book. For more information on Blurb , book sizes and cover and paper options, see the About Blurb Books FAQ on Blurb.com. For the exact print size, see the Blurb Book Dimensions specifications guide.
+ For PDF output, choose JPEG Qualit y, a Color Profile , the File Resolution , and whether you want to apply sharpening .
+ Auto Layout 
+ Automate the layout of books. Choose a preset and then click  Auto Layout . To start over, click  Clear Layout . If you are publishing to  Blurb , auto-layout is limited to books of 240 pages. If you are publishing to PDF, there is no page limit.
+ Note: 
+ Thumbnails in the Filmstrip display a number that indicates how many times that photo appears in the book.
+ Page 
+ Select the  Page Numbers   check box to show page numbers on the pages of a book. On enabling the check box ,  Location allows you to choose the position of the page number on a page and Display lets you decide whether you want the page numbers to be displayed only on the left page, or the right page, or both. Click Add Page to add a page next to the currently selected page. The new page takes on the formatting of the selected page or template. Click Add Blank to add a blank page next to the currently selected page. If no page is selected, Lightroom Classic adds the page to the end of the book. 
+ Guides 
+ Turn guides on or off in the image preview area. Guides do not print. They are used only to help you position photos and text on the page.
+ Grid Snap 
+ You can now easily align photos in a Book layout using the  Grid Snap  option under the  Guides  section. In Grid Snap, choose either  Cells  to align the cells of two photos with respect to each other, or  Grid  to align photos with the grid guide lines. On moving the photo, it would snap into place based on the selected setting. By default, the Grid Snap option is set to Cells .
+ Page Bleed 
+ The Page Bleed guide appears as a wide gray border around the edges of the page. Page bleed indicates the parts of the photos that are beyond the page boundary. Full bleed photos go to the very edge of the page.
+ Text Safe Area 
+ The Text Safe Area guide appears as a thin gray line inside the page perimeter. Text that falls outside this area doesn’t appear on the page.
+ Note: 
+ Caption fields also have a thin gray line to represent the perimeter of the field.
+ Photo Cells 
+ Photo cell guides appear as gray boxes with a cross hair in the middle. These indicate unfilled photo cells.
+ Filler Text 
+ Placeholder text appears in empty page and photo caption fields.
+ Note: 
+ You must select the Fill Text Boxes With > Filler Text option in Book Preferences in order for filler text to appear.
+ Cell 
+ Drag the Padding slider to add space, in points, around an image or text in its cell. Using padding is an effective way to customize the appearance of an image in its cell and therefore to customize individual page templates, as well. By default, padding is applied uniformly to all sides. Click the triangle to the right of the Padding title to apply different amounts of padding to each side of a cell. You can select multiple cells in the preview area and apply padding to all of them at once.
+ Text 
+ Allows you to add text fields to individual photos and to entire pages. When you click a photo, a transparent button Add Photo Text is displayed. Clicking the button lets you start adding text immediately. This tip applies to photos and pages. 
+ Photo Text 
+ The caption for the photo can be positioned above, below, or over the selected image cell or cells. You can use the Title or text from the photo’s metadata, or enter a custom caption by typing directly into the text field.
+ Offset 
+ Adjusting the Offset amount moves the text above, below, or on the photo, relative to where you’ve anchored it.
+ Above : Positions the caption text between the top edge of the photo and the top edge of the page. 
+ Below : Positions the caption text between the bottom edge of the photo, and the bottom edge of the page. 
+ Over : By default, the position of the caption is on the photo, at the bottom edge. Increasing this value moves the position of the caption toward the top edge of the photo.
+ Note : If the dimensions of the photo exceed the top and bottom page edges, the Offset is automatically set to Over . 
+ Align With Photo 
+ Keeps the left edge of the caption in line with the left edge of the photo when zooming or padding is applied to the photo.
+ Page Text 
+ The caption for the page can be positioned at the top or the bottom of the page. Enter the caption in the page text field in the preview area.
+ Offset 
+ Adjusting the Offset amount moves the caption up or down on the page, relative to where you’ve anchored it ( Top or Bottom ). For example, increasing the offset to a page caption at the top of the page moves the caption lower down on the page. Increasing the offset to a photo caption positioned below the photo moves the caption lower on the page, away from the photo.
+ Type 
+ Choose a font, style, color, point size, and opacity. Click the triangle to specify additional typographic options, including tracking, baseline shift, leading, kerning, columns, and gutter. You can also specify horizontal and vertical alignment.
+ Background 
+ You can apply a photographic, graphic, or colored background to the pages of your book. To add a background, do one of the following:
+ Select one or more pages in the preview area of the Book module.
+ (Optional) Select Apply Background Globally to apply it to all of the pages of your book, except the covers, even if they are not selected.
+ Do one of the following:
+ Drag a photo from the Filmstrip onto the Drop Photo Here placeholder in the Background panel. Drag the Opacity slider to adjust the degree of transparency.
+ In the Background panel, click the arrow and select a graphic background. Click the color swatch to change the color of the graphic, and drag the Opacity slider to adjust the degree of transparency.
+ In the Background panel, select the Background Color option and click the color swatch to choose the color.
+ Do any of the following to edit a page in the preview area.  
+ Add a new cell to the page. To do so:
+ 1. Select the page in the preview area. 
+2. Right-click (Win) / Control-click (Mac) anywhere on the page and choose Add Cell > Photo or a Photo Description from the context-menu .
+ Resize or move the cells within a page. To do so:
+ 1. Select a cell. A bounding box appears around the cell. 
+2. To move the selected cell to a specific location on the page, drag the square icon at the center of the bounding box. Alternatively, use Alt (Win)/Option (Mac) + Arrow keys to move the selected cell. 
+3. To adjust the size of the selected cell, drag one of the corner handles of the bounding box.
+ Arrange a cell to the front or back. To do so:
+ 1. Select a cell. 
+2. Right-click (Win) / Control-click (Mac) and choose one of the  Send to Back  or  Bring To Front options from the context-menu .
+ Drag pages to rearrange them.
+ Click the Change Page Layout button in the lower-right corner of a page preview to choose a different layout.
+ Drag a photo from one cell to another to swap them.
+ Select one or more photos and drag the zoom slider to adjust the photo’s size in the cell.
+ Type in any text field.
+ Save your page modifications as a custom page. To do so:
+ 1. Select a page in the preview area. 
+2. Right-click (Win) / Control-click (Mac) anywhere on the page and choose  Save As Custom Page from the  context-menu . You can access the saved custom page in the  Page  panel on the right.
+ Select multiple cells or pages to edit their properties together.
+ Right-click (Win) or Control-click (Mac) a cell or a page and choose Remove Photo or Remove Page to delete it from the book.
+ Click the appropriate button in the toolbar to work in Multi-Page View, Spread View, or Single Page View.
+ To save your book so that you can return to working on it after exiting the Book module, click the Create Saved Book button in the preview area.
+ In the Create Book dialog box, name the book, indicate if you want to save it inside a collection set, and choose other options. Then, click Create .
+ Saved books appear in the Collections panel with a book icon  .
+ When your book is ready, click one of the following:
+ Export Book To PDF 
+ Renders a paginated PDF file of your book and saves it to the location you specify. You can use the PDF as a proof and share it with clients, or upload the PDF to a service provider or printing website.
+ Export Book to JPEG 
+ Renders a JPEG file for each page in the book. 
+ Send Book To Blurb 
+ Connects you to Blurb and prompts you to sign up or sign in. Then, uploads the book to your Blurb account for previewing and printing. 
+ When uploading to Blurb :
+ Books must be 20 – 240 pages, not including front and back cover.
+ Blurb prints at 300 dpi. If an image is less than 300 dpi, a warning icon  appears in the upper-right corner of the image cell in the preview area. Click the warning to see the resolution the image can print. Blurb recommends a minimum of 200 dpi for optimum quality.
+ For help with printing, pricing, ordering, and other Blurb issues, visit Blurb.com Customer Support .
+ Pause and Resume the upload of Book to Blurb 
+ In the Activity and Status area at the upper-left corner of the window (next to the Lightroom icon), you can pause and resume the upload of the pages to Blurb in the expanded progress bar.
+  Twitter™ and Facebook posts are not covered under the terms of Creative Commons.
+ Legal Notices 
+   |  
+ Online Privacy Policy 
+ Choose your region 
+ Selecting a region changes the language and/or content on Adobe.com.
+ Americas 
+ Brasil 
+ Canada - English 
+ Canada - Français 
+ Latinoamérica 
+ México 
+ United States 
+ Europe, Middle East and Africa 
+ Africa - English 
+ Belgique - Français 
+ Belgium - English 
+ België - Nederlands 
+ Česká republika 
+ Cyprus - English 
+ Danmark 
+ Deutschland 
+ Eesti 
+ España 
+ France 
+ Greece - English 
+ Ireland 
+ Israel - English 
+ Italia 
+ Latvija 
+ Lietuva 
+ Luxembourg - Deutsch 
+ Luxembourg - English 
+ Luxembourg - Français 
+ Magyarország 
+ Malta - English 
+ Middle East and North Africa - English 
+ Nederland 
+ Norge 
+ Österreich 
+ Polska 
+ Portugal 
+ România 
+ Schweiz 
+ Slovenija 
+ Slovensko 
+ Suisse 
+ Suomi 
+ Sverige 
+ Svizzera 
+ Türkiye 
+ United Kingdom 
+ България 
+ Россия 
+ Україна 
+ الشرق الأوسط
+ وشمال أفريقيا -
+ اللغة العربية 
+ ישראל - עברית 
+ Asia - Pacific 
+ Australia 
+ Hong Kong S.A.R. of China 
+ India - English 
+ New Zealand 
+ Southeast Asia (Includes Indonesia, Malaysia, Philippines, Singapore, Thailand,
+ and
+ Vietnam) - English 
+ 中国 
+ 中國香港特別行政區 
+ 台灣地區 
+ 日本 
+ 한국 
+ Commonwealth of Independent States 
+ Includes Armenia, Azerbaijan, Belarus, Georgia, Kazakhstan, Kyrgyzstan, Moldova, Tajikistan,
+ Turkmenistan, Ukraine, Uzbekistan

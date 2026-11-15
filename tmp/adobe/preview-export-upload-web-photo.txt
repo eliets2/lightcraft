@@ -1,0 +1,216 @@
+Preview, export, and upload web photo galleries in Lightroom Classic 
+ Preview, export, and upload web photo galleries
+ Search 
+ Last updated on 
+ 2021-04-27 
+ Lightroom Classic User Guide 
+ Introduction to Lightroom Classic 
+ What's new in Lightroom Classic 
+ Lightroom Classic system requirements 
+ Lightroom Classic | Common Questions 
+ Lightroom Classic Key Concepts 
+ Lightroom Classic tutorials 
+ Feature summary | Lightroom CC 2015.x/Lightroom 6.x releases 
+ Lightroom and Adobe services 
+ Creative Cloud Libraries 
+ Using Adobe Stock in Creative Cloud apps 
+ Lightroom for mobile, TV, and the web 
+ Adobe Photoshop Lightroom for mobile and Apple TV | FAQ 
+ Sync Lightroom Classic with Lightroom ecosystem 
+ Photoshop family of mobile apps 
+ Import photos 
+ Import photos from a camera or card reader 
+ Import photos from a folder on a hard drive 
+ Import photos automatically 
+ Import photos from Photoshop Elements 
+ Import photos from a tethered camera 
+ Specify import options 
+ Set import preferences 
+ The Filename Template Editor and Text Template Editor 
+ Workflows 
+ Apply Masking in photos 
+ Export and save your photos as JPEGs 
+ Export and watermark your photos 
+ Import your photos 
+ Adjustment Brush: the basics 
+ Adjustments with the Tone Curve 
+ Advanced video slideshows 
+ Control white balance 
+ Create a contact sheet 
+ Enhance your workflow with Lightroom Classic 
+ Workspace 
+ Workspace basics 
+ Set preferences for working in Lightroom Classic 
+ Display the Library on a second monitor 
+ Personalize identity plates and module buttons 
+ Watermark your photos in Lightroom Classic 
+ Color management 
+ Viewing photos 
+ View photos 
+ Browse and compare photos 
+ Set Library view options 
+ Share photos for comments and feedback 
+ Smart Previews 
+ Manage catalogs and files 
+ Lightroom Classic catalog FAQ 
+ How Lightroom Classic catalogs work 
+ Create and manage catalogs 
+ Back up a catalog 
+ Locate missing photos 
+ Create and manage folders 
+ Manage photos within folders 
+ Maps 
+ Work with the Map module 
+ Organize photos in Lightroom Classic 
+ Face recognition 
+ Work with photo collections 
+ Group photos into stacks 
+ Flag, label, and rate photos 
+ Use keywords 
+ Metadata basics and actions 
+ Find photos in the catalog 
+ Work with video in Lightroom Classic 
+ Advanced metadata actions 
+ Use the Quick Develop panel 
+ Process and develop photos 
+ Develop module basics 
+ Create panoramas and HDR panoramas 
+ Flat-Field Correction 
+ Correct distorted perspective in photos using Upright 
+ Improve image quality using Enhance 
+ Work with image tone and color 
+ Masking 
+ Apply local adjustments 
+ HDR photo merge 
+ Develop module options 
+ Retouch photos 
+ Cure red eye and pet eye effects 
+ Use the Radial Filter tool 
+ Use the enhanced Spot Removal tool 
+ Export photos 
+ Export files to disk or CD 
+ Export photos from Lightroom Classic 
+ Publish photos online 
+ Export to hard drive using publish services 
+ Presets for export, and other settings 
+ Work with external editors 
+ External Editing preferences 
+ Open and edit Lightroom Classic photos in Photoshop or Photoshop Elements 
+ Slideshows 
+ Create slideshows 
+ Slideshow module panels and tools 
+ Specify the slide layout 
+ Add overlays to slides 
+ Play and export slideshows 
+ Print photos 
+ Print module basics 
+ Print module layouts and templates 
+ Work with print job options and settings 
+ Photo books 
+ Create photo books 
+ Web galleries 
+ Create web galleries 
+ Use the Web module panels and tools 
+ Work with web gallery layouts 
+ Work with web gallery templates and settings 
+ Preview, export, and upload web photo galleries 
+ Keyboard shortcuts 
+ Keyboard shortcuts 
+ Video tutorial: Host a Adobe Photoshop Lightroom web gallery
+ Howard Pinksy 
+ http://www.iceflowstudios.com/ 
+ Preview a web photo gallery
+ You can preview your web gallery in the Web
+module or in your default browser before saving or uploading it. 
+ In the Web module, do either of the following:
+ To preview your web photo gallery in a browser, click Preview In Browser in the lower-left corner of the window.
+ To update the web gallery preview in the Web module work area, choose Web > Reload from the Lightroom Classic main menu.
+ Note: 
+ The web gallery preview in Lightroom Classic updates as you make changes to the gallery, so you usually won't need to use the Reload command.
+ Save a web photo gallery locally
+ In the Web module, click the Export
+button.
+ In the Save Web Gallery dialog box, type a name for the
+gallery in the Filename text box and then specify a location for
+saving the files of your web photo gallery.
+ Click Save.
+ Upload a web photo gallery
+ You can specify the FTP server information in the Upload Settings panel and use the FTP capabilities in Lightroom Classic to upload your gallery to a web server. After you click the Upload button, Lightroom Classic automatically generates the necessary files and then transfers them to the web server you specify.
+ To use a separate FTP application for uploading your files, or to generate a gallery for offline viewing, you can first export the files. When you click the Export button, Lightroom Classic creates a folder containing HTML files, image files, and other web-related files. If you're saving a Flash gallery, the necessary SWF files are included. The folder is saved in a location that you specify.
+ Note: 
+ Web gallery
+photos and image thumbnails are saved as JPEGs with embedded sRGB
+profiles.
+ In the Upload Settings panel, choose a web server
+preset from the FTP Server pop-up menu.
+ Select Put In Subfolder and type the name of the folder
+(web output folder) that will contain your web photo gallery.
+ The Upload Settings panel displays the server output path
+(server path with subfolder containing the web gallery files).
+ Click the Upload button.
+ In the Enter Password dialog box, type the password to
+access the web server and click Upload.
+ Create and manage FTP presets
+ You can set up one or more FTP presets for
+uploading web photo galleries to specific web servers.
+ Create an FTP preset
+ In the Upload Settings panel on the
+right side of the Web module, choose Edit from the FTP Server pop-up
+menu.
+ Enter the URL of the web server in the Server box, and
+your username and password for accessing the web server.
+ You can let Lightroom Classic remember the password in the preset.
+ Do one of the following to specify the path to the appropriate
+directory on the web server:
+ Type the path in the Server Path box.
+ Click Browse and navigate to the directory.
+ (Optional) Specify a web server port.
+ Note: 
+ Port 21 is the default web server port for the FTP
+protocol and is usually the port to use.
+ (Optional) Choose Passive from the pop-up menu labeled
+Passive Mode For Data Transfers. Passive mode helps data transmission
+through a firewall.
+ Choose Save Current Settings As New Preset from the Preset
+menu at the top of the dialog box.
+ In the New Preset dialog box, type a name for the new
+preset and click Create.
+ Click OK in the Configure FTP File Transfer dialog box.
+ The FTP preset is added to the FTP Server menu.
+ (Optional) To create another FTP preset, choose FTP Server >
+Edit in the Upload Settings panel. Then specify the configuration
+for the preset and repeat steps 6 through 8.
+ About specifying a server path
+ The server path specifies the location on the
+web server for placing the web gallery folder you're uploading.
+ When
+typing the server path, use slashes for designating the directory
+and sub-directories. For example: /root_directory_name/www/ In
+this example, "root directory" is the name of the root level, the
+directory you must enter to access space on the web server, and
+"www" is the name of the specific sub-folder where the web files
+will be uploaded. Check with your web hosting provider to verify
+the path for accessing your public folder on the web server.
+ /root_directory_name/www/ 
+ Edit an FTP preset
+ In the Upload Settings panel on the
+right side of the Web module, choose FTP Server > Edit.
+ Choose the preset that you want to edit from the Preset
+menu at the top of the Configure FTP File Transfer dialog box.
+ Change the configuration for the preset and then choose Update Preset [Name Of Preset] from the Preset menu.
+ Click OK.
+ Delete an FTP preset
+ In the Upload Settings panel on the
+right side of the Web module, choose Edit from the FTP Server menu.
+ Choose a preset from the Preset menu.
+ Choose Delete Preset [Name Of Preset] from the Preset menu.
+ Click Delete to complete the operation, then click OK to close the Configure FTP FIle Transfer dialog box.
+ Sign in to your account 
+ Sign in
+ Manage account 
+ Quick links
+ View all your plans 
+ Manage your plans 
+ Legal Notices    |    Online Privacy Policy 
+ Language Navigation
+ Language Navigation

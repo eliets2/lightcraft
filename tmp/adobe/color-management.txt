@@ -1,0 +1,140 @@
+How to manage color in Lightroom Classic 
+ Color management
+ Search 
+ Adobe Photoshop Lightroom Classic User Guide
+ Select an article: 
+ On this page
+ The color conundrum 
+ How Lightroom Classic manages color 
+ Calibrate your monitor 
+ Install a color profile 
+ Applies to: 
+ Adobe Photoshop Lightroom Classic 
+ Note: 
+ You’re viewing help for Photoshop Lightroom Classic (formerly Lightroom CC). 
+Not your version? View help for  Photoshop Lightroom .
+ The color conundrum
+ No device in the digital photographic workflow can reproduce the full range of colors viewable to the human eye. Each device operates within a specific  color space , which simply describes a range, or  gamut , of colors that the device can record, store, edit, or output. Some color spaces are bigger than others. For example, the CIE Lab space is large; the sRGB space, used by many web browsers, is relatively small.
+ In addition, each device describes color either additively, using the RGB color model, or subtractively, using the CMYK color model. Cameras and monitors use RGB; printers use CMYK.
+ Color gamuts of various devices and images
+ A. Lab color space  B. An image's color spaces  C. Device color spaces 
+ Because of these varying color spaces, colors often look different depending on where you view them. Color management systems use profiles to reconcile color differences among devices so that you can confidently predict the color that you'll see when you share or print photos.
+ Matching color with profiles
+ A. Profiles describe the color spaces of the camera and the image.  B. Using the profiles, the color management system identifies the image's actual colors.  C. The monitor's profile tells the color management system how to translate the image's colors to the monitor's color space.  D. Using the printer profile, the color management system translates the image's colors to the printer's color space, so the colors appear correctly in print. 
+ Lightroom Classic simplifies color management by displaying colors using device-independent color spaces. This means that all you need to do before working in Lightroom Classic is to calibrate your monitor . Then, when you’re in Lightroom Classic, choose color settings or color profiles when you’re ready to output your photos.
+ How Lightroom Classic manages color
+ Lightroom Classic primarily uses the Adobe RGB color space to display colors. The Adobe RGB gamut includes most of the colors that digital cameras can capture as well as some printable colors (cyans and blues, in particular) that can’t be defined using the smaller, web-friendly sRGB color space.
+ Lightroom Classic uses Adobe RGB:
+ for previews in the Library, Map, Book, Slideshow, Print, and Web modules
+ when printing in Draft mode
+ in exported PDF slideshows and uploaded web galleries
+ when you send a book to Blurb.com (If you export books as PDF or JPEG from the Book module, however, you can choose sRGB or a different color profile.)
+ for photos uploaded to Facebook and other photo-sharing sites using the Publish Services panel
+ In the Develop module, by default Lightroom Classic CC displays previews using the ProPhoto RGB color space. ProPhoto RGB contains all of the colors that digital cameras can capture, making it an excellent choice for editing images. In the Develop module, you can also use the Soft Proofing panel to preview how color looks under various color-managed printing conditions.
+ Using a soft proof to preview the final output of an image in Lightroom Classic
+ A. Image is edited in the Develop module.  B. Image's color values are translated to the color space of chosen print conditions  C. Lightroom Classic displays proof profile's interpretation of the image's color values. 
+ When you export or print photos from Lightroom Classic, you can choose a profile or a color space to determine how the colors you see in Lightroom Classic will appear on the device you’re sending the photo to. For example, you can export using sRGB if you’re going to share photos online. If you’re printing (other than Draft mode), you can choose a custom color profile for your device.
+ See Export file settings and Set print color management .
+ Calibrate your monitor
+ To help Lightroom Classic display colors reliably and consistently, calibrate your monitor. When you calibrate your monitor, you are adjusting it so that it conforms to a known specification. After your monitor is calibrated, you can optionally save the settings as a color profile for your monitor. 
+ If you are calibrating a CRT monitor, make sure
+it has been turned on for at least a half hour. This gives it sufficient
+time to warm up and produce more consistent output.
+ Set the ambient lighting in your room to be consistent with the brightness and color of the lighting conditions that you usually work under.
+ Make sure your monitor is displaying thousands of colors
+or more. Ideally, make sure it is displaying millions of colors
+or 24-bit or higher.
+ Remove colorful background patterns on your monitor desktop,
+and set your desktop to display neutral grays. Busy patterns or
+bright colors surrounding a document interfere with accurate color
+perception.
+ For best results, calibrate and profile your monitor using third-party software and measuring devices. In general, using a measuring device such as a colorimeter along with software can create more accurate profiles because an instrument can measure the colors displayed on a monitor far more accurately than the human eye.
+ Otherwise, use the monitor calibration tools that come with Windows or Mac OS. To calibrate your monitor using the utility in your operating system see one of the following:
+ OS X Mavericks: Calibrate your display (Apple Support)
+ OS X Mountain Lion: Calibrate your display (Apple Support)
+ Calibrate your display in Windows 7 (Microsoft Support)
+ Get the best display on your monitor (Microsoft Support)
+ Note: 
+ Monitor performance changes and declines over time;
+recalibrate and profile your monitor every month or so. If you find
+it difficult or impossible to calibrate your monitor to a standard,
+it may be too old and faded.
+ Most profiling software automatically assigns the new profile as the default monitor profile. For instructions on how to manually assign the monitor profile, see your operating system’s Help.
+ Install a color profile
+ Color profiles are often installed when a device is added to your system. The accuracy of these profiles (often called generic profiles or canned profiles ) varies from manufacturer to manufacturer. You can also obtain profiles from a custom profile service, download profiles from the web, or create custom profiles using professional profiling equipment.
+ 1. To install a color profile, copy it to one of the following locations:
+ Windows 7, 8:  \Windows\system32\spool\drivers\color
+ Mac OS: /Library/ColorSync/Profiles or /Users/ [user name] /Library/ColorSync/Profiles Tip : By default on Mac OS 10.7 (Lion), the user Library folder is hidden. If you don’t see it in the Finder, press Option and click the Go menu. Then, choose Library. See Access hidden user library files | Mac OS 10.7 and later . 
+ 2. Restart Lightroom Classic.
+ More like this
+ FAQ | Color in Lightroom Classic 
+  Twitter™ and Facebook posts are not covered under the terms of Creative Commons.
+ Legal Notices 
+   |  
+ Online Privacy Policy 
+ Choose your region 
+ Selecting a region changes the language and/or content on Adobe.com.
+ Americas 
+ Brasil 
+ Canada - English 
+ Canada - Français 
+ Latinoamérica 
+ México 
+ United States 
+ Europe, Middle East and Africa 
+ Africa - English 
+ België 
+ Belgique 
+ Belgium - English 
+ Česká republika 
+ Cyprus - English 
+ Danmark 
+ Deutschland 
+ Eesti 
+ España 
+ France 
+ Greece - English 
+ Ireland 
+ Israel - English 
+ Italia 
+ Latvija 
+ Lietuva 
+ Luxembourg - Deutsch 
+ Luxembourg - English 
+ Luxembourg - Français 
+ Magyarország 
+ Malta - English 
+ Middle East and North Africa - English 
+ Nederland 
+ Norge 
+ Österreich 
+ Polska 
+ Portugal 
+ România 
+ Schweiz 
+ Slovenija 
+ Slovensko 
+ Suisse 
+ Suomi 
+ Sverige 
+ Svizzera 
+ Türkiye 
+ United Kingdom 
+ България 
+ Россия 
+ Україна 
+ الشرق الأوسط وشمال أفريقيا - اللغة العربية 
+ ישראל - עברית 
+ Asia - Pacific 
+ Australia 
+ Hong Kong S.A.R. of China 
+ India - English 
+ New Zealand 
+ Southeast Asia (Includes Indonesia, Malaysia, Philippines, Singapore, Thailand, and Vietnam) - English 
+ 中国 
+ 中國香港特別行政區 
+ 台灣地區 
+ 日本 
+ 한국 
+ Commonwealth of Independent States 
+ Includes Armenia, Azerbaijan, Belarus, Georgia, Kazakhstan, Kyrgyzstan, Moldova, Tajikistan, Turkmenistan, Ukraine, Uzbekistan

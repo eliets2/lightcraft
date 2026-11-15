@@ -1,0 +1,401 @@
+Print module layouts and templates in Lightroom Classic 
+ Print module layouts and templates
+ Search 
+ Adobe Photoshop Lightroom Classic User Guide
+ Select an article: 
+ On this page
+ Laying out photos in a print template 
+ Printing overlay text and graphics 
+ Work with custom print templates 
+ Applies to: 
+ Adobe Photoshop Lightroom Classic 
+ Note: 
+ You’re viewing help for Photoshop Lightroom Classic (formerly Lightroom CC). 
+Not your version? View help for  Photoshop Lightroom .
+ Laying out photos in a print template
+ About print templates
+ Templates contain layouts for printing your photos, including any text overlays and print job settings. The Lightroom Classic Template Browser in the Print module contains premade templates for common tasks, such as making contact sheets. The Template Browser also lists custom templates you have saved. Moving the pointer over a name in the Template Browser displays its page layout in the Preview panel at the top of the left column. Clicking a template name displays a preview of selected photos in the work area. The preview updates when you choose a different template or specify different print options, such as add text overlays.
+ Lightroom Classic offers three types of layout templates:
+ Single Image/Contact Sheet templates let you print one
+or more photos all at the same size in various configurations, such
+as in a 2-up greeting card.
+ Picture Package templates let you print one photo in various
+sizes, such as for school photos and wedding portraiture.
+ Custom Package templates let you print various photos at
+various sizes, in any configuration.
+ All templates have image cells for containing photos and margin
+information. If you specify overlay options, a template can also
+contain text areas. The image cells and margins in a template scale
+to accommodate the paper size you specify.
+ Print job settings, including the paper size and printer, are
+also saved in a print template.
+ You can create new templates by modifying the settings of existing
+templates. Select a template, use the controls in the right panels,
+specify the paper size and printer settings in the toolbar, and
+then add a custom template. You can also modify the image cells
+in a template by dragging the margin guides or cell boundaries.
+Layout setting modifications, overlays, and print job specifications can
+be saved as a custom template. 
+ Choose a print template
+ In the Library module, select the photo
+or photos you want to print.
+ In the Template Browser panel in the Print module, select
+a template. The Layout Style panel indicates the layout the template
+is:
+ Single Image/Contact
+Sheet 
+ Allows you to print one or more photos at the same size on a page.
+ Picture Package 
+ Allows you to print one photo in various sizes on a page.
+ Custom Package 
+ Allows you to print one or more photos, in any configuration of sizes, on a page, and allows multiple page layouts.
+ (Custom Package templates) Drag one or more photos from
+the Filmstrip to the page preview.
+ Adobe recommends
+ Adobe recommends
+ Adobe TV
+ Adobe recommends
+ Adobe recommends
+ Adobe TV
+ Specify how photos fill an image
+cell
+ You can specify photos to scale and rotate
+so that their entire image fits within an image cell. Blank spaces
+fill the areas where the aspect ratio of the photos and the image
+cells don’t match. You can also set an option so that photos completely
+fill the space within an image cell. When this option is selected,
+portions of the photos (especially vertical images) might be cropped
+to fill the aspect ratio of the image cells.
+ In the Image Settings panel of the Print module,
+select any of the following options, depending on which layout you’re
+using:
+ Zoom To Fill 
+ (Single Image/Contact Sheet and Picture Package layouts)
+Fills the entire image cell with a photo, cropping the edges of
+the image as necessary.
+ Rotate To Fit 
+ (Single Image/Contact Sheet and Picture Package layouts)
+Rotates images if necessary to produce the largest image that fits
+in each image cell.
+ Image settings
+ A. Photos with no image settings applied  B. Zoom To Fill  C. Rotate To Fit 
+ Tip : If an image cell doesn’t display the
+portion of a photo you want, drag the photo in the cell to reposition
+it. In a Picture Package layout, Ctrl-drag (Windows) or Command-drag
+(Mac OS). 
+ Dragging a photo in an image cell to reposition it.
+ Repeat One Photo Per
+Page 
+ (Single Image/Contact Sheet layouts) Repeats the selected
+in every image cell on the page in a Grid template layout.
+ Photo Border 
+ (Picture Package and Custom Package layouts) Adds a border
+of the specified width to the photo in each image cell.
+ Inner Stroke 
+ (All layouts) Adds an inner stroke of the specified width
+and color to the photo in each image cell.
+ Specify rulers and guides
+ (Single Image/Contact Sheet
+layout) In the Guides panel of the Print module, select or deselect
+Show Guides. Specify whether you want to show or hide rulers, page
+bleed guides, margins and gutters, and image cells.
+ (Picture Package and Custom Package layouts) In the Rulers,
+Grid & Guides panel, select whether you want to view a page
+ruler, a layout grid, or page bleed guides. Specify a unit of measure
+for the ruler, snap behavior for the grid, and whether to display
+image dimensions with the bleed layout.
+ Modify page margins and cell size
+(Single Image/Contact Sheet layouts)
+ In the Guides panel, select Show Guides
+and do any of the following:
+ Drag a guide in the work area to modify
+a cell or margin.
+ Use the sliders or enter values in the Layout panel. 
+ Select Keep Square to make the cell shape of the
+image square.
+ In the Layout panel, specify the following options:
+ Ruler Units 
+ Sets the ruler measurement units used in the work area.
+ Margins 
+ Sets the page margins. All cells fit within the margins.
+Move the slider, enter a margin value, or drag the margin indicators
+in the work area.
+ Page Grid 
+ Defines the number of image cell rows and columns on
+a page.
+ Cell Spacing 
+ Defines the space between cells for rows and columns.
+ Cell Size 
+ Defines the size of the image cells.
+ Margins and guides
+ A. Vertical cell spacing  B. Cell width  C. Margin  D. Cell height  E. Horizontal
+cell spacing 
+ Print a contact sheet
+ In the Library module, select photos
+for the contact sheet.
+ Note: 
+ The photos can be put into the Quick
+Collection, or you can create a collection to save the photo selection
+for reuse.
+ In the Print module, choose a contact sheet template
+from the Template Browser.
+ If necessary, choose a paper size and printer.
+ In the Page panel, select the text options you want printed.
+ (Optional) In the Print Job panel, select Draft Mode
+Printing.
+ Click Print.
+ Customize package layouts
+ You can add as many image cells as you like to a Picture Package or Custom Package layout, and arrange them on the page automatically or manually. Lightroom Classic offers six standard photo cell sizes. If you add more photos than fit on a page, Lightroom Classic automatically adds pages to the layout.
+ In the Cells panel, click to add cells in the desired size or sizes to the layout. Lightroom Classic optimizes their placement on the page for the fewest cuts.
+ Note: 
+ Alt-drag (Windows) or Option-drag (Mac OS)
+to duplicate a cell.
+ (Optional) Drag the image cells on the page to rearrange
+them.
+ (Optional) To resize a cell, select it in the work area
+and drag the handles from the side or from a corner. Or adjust the
+Height or Width slider in the Adjust Selected Cell area of the Cells
+panel.
+ Select any of the following options in the Cells panel:
+ New Page 
+ Adds a page to the layout.
+ Auto Layout 
+ (Picture Package layouts) Optimizes the arrangement of
+the photos on the page for the fewest cuts.
+ Clear Layout 
+ Erases the page layout.
+ Note: 
+ To delete a page, click the red X in the upper-left
+corner of the page in the work area.
+ You can save custom picture package layouts as a custom
+print template.
+ Printing overlay text and graphics
+ Print your identity plate
+ In the Page panel of the Print module,
+select Identity Plate.
+ (Optional) To choose or create a different identity plate,
+click the triangle on the lower-right of the identity plate preview
+window, and choose from the pop-up menu. See Personalizing
+identity plates and module buttons .
+ To adjust the opacity or scale of the identity plate,
+move the sliders or enter a percentage value.
+ Note: 
+ You can also scale the identity plate by clicking the
+identity plate text in the work area and dragging a slide or corner
+of the bounding box.
+ To rotate the identity plate, click the Rotate button (0°)
+and choose Rotate Onscreen 90°, Rotate Onscreen 180°, or Rotate
+Onscreen -90°.
+ To move the identity plate, drag it or press the Up Arrow,
+Down Arrow, Left Arrow, and Right Arrow keys.
+ To have the identity plate appear on every photo in a
+multiphoto template, select Render On Every Image. The identity
+plate is centered on each photo and can be scaled or rotated using
+the controls in the Overlays panel.
+ To have the identity plate text appear behind the photos,
+select Render Behind Image.
+ Note: 
+ Make sure the template layout lets enough of the identity plate show from behind the photos.
+ Print borders in Single Image/Contact
+Sheet layouts
+ In the Image Settings panel, select
+Stroke Border.
+ (Optional) Do any of the following:
+ To change the border color, click the color
+swatch and select a color in the color pop-up window that opens.
+ To adjust the width of the border, drag the Width
+slider.
+ Print borders and strokes in Picture
+Package and Custom Package layouts
+ In the Image Settings panel, select
+Photo Border.
+ (Optional) To adjust the width of the border, drag the
+Width slider.
+ Select Inner Stroke to add an inner stroke to the border.
+ (Optional) Do any of the following:
+ To change the inner stroke color, click
+the color swatch and select a color in the pop-up window that opens.
+ To adjust the width of the stroke, drag the Width
+slider.
+ Print a colored background
+ In the Page panel, select Page Background
+Color, and then click the color swatch and choose a color.
+ Print photos with a copyright watermark
+ In the Page panel, select Watermarking
+and choose a watermark from the pop-up menu.
+ Print filename, caption, and other
+information (Single Image/Contact Sheet layouts)
+ You can print information about photos, such
+as the filename, title, caption, and keywords, on Single Image/Contact
+Sheet photo layouts. The information is taken from the metadata
+that you enter in the Library module. The information prints below
+each photo. See also Viewing
+and editing metadata .
+ In the Page panel, select Photo Info and then
+click Custom Settings and choose one of the following:
+ Caption 
+ Prints the photo caption.
+ Custom Text 
+ Prints the text that you type into the Custom Text box.
+ Date 
+ Prints the creation date of the photo.
+ Equipment 
+ Prints information about the camera and lens used to
+take the photo.
+ Exposure 
+ Prints the shutter speed and f/stop information.
+ Filename 
+ Prints the name of the photo file.
+ Sequence 
+ Prints different sequential numbers on the photos based
+on how many photos you’re printing. For example, if you’ve selected
+nine photos to print, the sequential numbers would be 1/9, 2/9,
+3/9, and so forth.
+ Title 
+ Prints the photo title.
+ Edit 
+ Shows the photo information that you specify using the
+Text Template Editor dialog box.
+ Click the triangle to the right of Font Size and choose
+a size (in points) from the pop-up menu.
+ Print page numbers, print info,
+and crop marks (Single Image/Contact Sheet layouts)
+ You can add page numbers, printing information,
+and crop marks to the bottom of a Single Image/Contact Sheet layout.
+ In the Page panel of the Print module, select
+Page Options, and then select any of the following items:
+ Page Numbers 
+ Prints page numbers on the lower-right of each page.
+ Page Info 
+ Prints the Print Sharpening setting, Profile setting,
+and the printer name at the bottom of each page.
+ Crop Marks 
+ Prints crop marks around each photo to use as cutting
+guides after printing.
+ Show cut guides (Picture Package
+and Custom Package layouts)
+ In the Page panel, select Cut Guides,
+and then choose whether to view Lines or Crop Marks in the preview
+area.
+ Work with custom print templates
+ Saving a custom template preserves any modifications
+you’ve made to the image cells and margins, as well as any overlays
+and print settings you’ve specified. After it is saved, the custom
+template is listed in the Template Browser for reuse. You can create
+new folders in the Template Browser to help organize your templates.
+ Save custom print templates
+ In the Template Browser of the Print
+module, select any template on which to base your custom template.
+ Modify the layout and specify options in the panels on
+the right side of the Print module.
+ Click the Plus icon (+) in the Template Browser
+in the Print module.
+ Overwrite “Untitled Template” to give your custom template
+a name, and specify a folder (such as “User Templates”) for the
+template.
+ Create and organize template folders
+ Right-click (Windows) or Control-click
+(Mac OS) in the Template Browser and choose New Folder.
+ Type the name of the folder and click OK.
+ Drag a template to a folder name to move the template
+to that folder.
+ If you drag a Lightroom Classic preset template to a different folder, the template is copied to that folder.
+ Update custom templates
+ Modify colors, layout, text, and output
+settings as needed.
+ Right-click (Windows) or Control-click (Mac OS)
+a template in the Template Browser and choose Update With Current
+Settings.
+ Delete custom templates
+ You cannot delete Lightroom Classic preset templates.
+ Do one of the following:
+ Right-click (Windows) or Control-click
+(Mac OS) a template in the Template Browser and choose
+Delete from the context menu.
+ Select a template in the Template Browser and click
+the Minus (-) icon.
+ Import and export templates
+ You can export templates you’ve created to
+share with colleagues or to use on a different computer. Templates
+are saved with an .lrtemplate extension.
+ To export a template, right-click (Windows)
+or Control-click (Mac OS) a template and choose Export.
+Type the name of the template file and click Save.
+ To import a template, right-click (Windows) or Control-click
+(Mac OS) the area where you want the template to appear
+and choose Import. Double-click the template file.
+ More like this
+ Selecting photos in the Grid view and the Filmstrip 
+ Work with the Quick Collection 
+ Using the Watermark Editor 
+ The Filename Template Editor and Text Template Editor 
+  Twitter™ and Facebook posts are not covered under the terms of Creative Commons.
+ Legal Notices 
+   |  
+ Online Privacy Policy 
+ Choose your region 
+ Selecting a region changes the language and/or content on Adobe.com.
+ Americas 
+ Brasil 
+ Canada - English 
+ Canada - Français 
+ Latinoamérica 
+ México 
+ United States 
+ Europe, Middle East and Africa 
+ Africa - English 
+ België 
+ Belgique 
+ Belgium - English 
+ Česká republika 
+ Cyprus - English 
+ Danmark 
+ Deutschland 
+ Eesti 
+ España 
+ France 
+ Greece - English 
+ Ireland 
+ Israel - English 
+ Italia 
+ Latvija 
+ Lietuva 
+ Luxembourg - Deutsch 
+ Luxembourg - English 
+ Luxembourg - Français 
+ Magyarország 
+ Malta - English 
+ Middle East and North Africa - English 
+ Nederland 
+ Norge 
+ Österreich 
+ Polska 
+ Portugal 
+ România 
+ Schweiz 
+ Slovenija 
+ Slovensko 
+ Suisse 
+ Suomi 
+ Sverige 
+ Svizzera 
+ Türkiye 
+ United Kingdom 
+ България 
+ Россия 
+ Україна 
+ الشرق الأوسط وشمال أفريقيا - اللغة العربية 
+ ישראל - עברית 
+ Asia - Pacific 
+ Australia 
+ Hong Kong S.A.R. of China 
+ India - English 
+ New Zealand 
+ Southeast Asia (Includes Indonesia, Malaysia, Philippines, Singapore, Thailand, and Vietnam) - English 
+ 中国 
+ 中國香港特別行政區 
+ 台灣地區 
+ 日本 
+ 한국 
+ Commonwealth of Independent States 
+ Includes Armenia, Azerbaijan, Belarus, Georgia, Kazakhstan, Kyrgyzstan, Moldova, Tajikistan, Turkmenistan, Ukraine, Uzbekistan

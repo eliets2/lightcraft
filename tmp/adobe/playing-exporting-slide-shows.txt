@@ -1,0 +1,234 @@
+How to play and export slideshows in Lightroom Classic 
+ Play and export slideshows
+ Search 
+ Adobe Photoshop Lightroom Classic User Guide
+ Select an article: 
+ Select an article: 
+ On this page
+ Set slide and transition duration 
+ Add beginning and ending slides 
+ Play music with a slideshow 
+ Randomize the slide order 
+ Preview a slide show 
+ Play a slideshow 
+ Play an impromptu slideshow 
+ Export a slideshow 
+ Applies to: 
+ Adobe Photoshop Lightroom 6 
+ Adobe Photoshop Lightroom Classic 
+ Note: 
+ You’re viewing help for Photoshop Lightroom Classic (formerly Lightroom CC). 
+Not your version? View help for  Photoshop Lightroom .
+ Video: Advanced video slideshows
+ Video: Advanced video slideshows
+ Adobe Systems
+ Set slide and transition duration
+ The playback settings don’t apply to exported PDF slideshows. The slide duration and fade transition are fixed in PDF slideshows.
+ In the Playback panel of the Slideshow module, make sure that Slide Duration is selected. Then, adjust the sliders or enter a value for the following options: Slide Length 
+ Sets the time (in seconds) that each photo is displayed.
+ Crossfades 
+ Sets the time (in seconds) of the fade transition between slides.
+ To create a transitional fade to a solid color between slides, select the Fades Color option, and then click the color box and choose a color from the pop-up window.
+ Add beginning and ending slides
+ You can add a solid-colored slide at the beginning
+and end of your slide show for a gradual transition into and out
+of the presentation. You can display your identity plate on these
+slides.
+ In the Titles panel of the Slideshow module, select
+the Intro Screen and Ending Screen options.
+ For each type of slide, specify the following options:
+ Click the color box to specify a slide
+color from the pop-up window.
+ Select Add Identity Plate to display your identity
+plate on the slide. By default, the identity plate is white.
+ To change the color of the identity plate, select
+Override Color and then click the color box and choose a new color
+from the pop-up window.
+ To adjust the size of the identity plate, drag the
+Scale slider or type in a value.
+ Play music with a slideshow
+ Lightroom Classic can play any .mp3, .m4a, or .m4b music file as a soundtrack to a slideshow. Music plays as the slideshow is viewed from within Lightroom Classic or exported as a video. Music does not play in exported PDF slideshows.
+ In the Music panel of the Slideshow module, click Add Music and then navigate to the music file you want to use.
+ You can now add up to 10 music tracks to slideshows. The tracks play sequentially in the order that you choose. You can add, reorder, or remove the tracks in the Music panel.
+ (Optional) Click Fit To Music in the Playback panel to adjust the duration of the slideshow to the length of the audio track.
+ (Optional) Click Sync Slide to Music in the Playback panel to automatically synchronize slide transitions to music. 
+ Randomize the slide order
+ Selecting Random Order plays your slides in random order when you play the slideshow in Lightroom Classic or export to video.
+ In the Playback panel of the Slideshow module,
+select Random Order.
+ Note: 
+ Deselecting this option restores the slides to the original order visible in the Filmstrip at the bottom. To change the order of your photos when you play the slideshow manually, simply drag and arrange your photos within the Filmstrip .  
+ Preview a slide show
+ You can preview a slideshow as you build it in the Slide Editor view.
+ Use the controls in the toolbar to stop  , display the previous slide  , display the next slide  , or play/pause  the slideshow.
+ Use the quality option in Playback panel to set the quality of the preview. Draft is the fastest preview but lowest quality whereas high is the slowest preview but high quality. 
+ Note: 
+ The quality option is only used for preview inside of Lightroom Classic and is not a part of export settings.
+ Play a slideshow
+ You can play a slideshow from within Lightroom Classic. When you play it, the presentation fills the computer screen.
+ Click Play at the bottom of the right panel in
+the Slideshow module.
+ Override the playback settings using the following keys.
+ Right Arrow 
+ Advances to the next slide.
+ Left Arrow 
+ Moves back one slide.
+ Spacebar 
+ Pauses or resumes playback.
+ Escape 
+ Ends the slide show.
+ To have your slideshow play back continually, select Repeat in the Playback panel.
+ You can now set a preference for the extent of movement that you'd like with the Pan And Zoom slider. Setting this preference to Low causes minimal panning and zooming. 
+ Preference for the Pan And Zoom slider
+ Play an impromptu slideshow
+ An impromptu slideshow is a full-screen slide show you can quickly play from any Lightroom Classic module. The impromptu slideshow uses the current template and settings in the Slideshow module.
+ In any module, display the photos you want to
+show in the Filmstrip.
+ If you want to show some but not all photos in the Filmstrip,
+select the photos you want.
+ Press Ctrl-Enter (Windows) or Command-Return (Mac OS) to start the impromptu slideshow.
+ Note: 
+ You can also play an impromptu slideshow by choosing Window > Impromptu Slideshow from the main menu in Lightroom Classic.
+ Override the current Duration settings by using the following
+keys:
+ Right Arrow 
+ Advances to the next slide.
+ Left Arrow 
+ Moves back one slide.
+ Spacebar 
+ Pauses and resumes play of the slideshow.
+ Escape 
+ Ends the slideshow.
+ Export a slideshow
+ Export a slideshow as PDF
+ You can export a slideshow as a PDF file so that you can view it on other computers. PDF slideshow transitions work when viewed using Adobe Acrobat or the free Adobe Reader. Exported PDF slideshows don’t include music, randomized images, or the duration settings you specify in Lightroom Classic.
+ In the Slideshow module, click Export PDF on the
+lower left.
+ In the Export Slideshow To PDF dialog box, type a name for the slideshow in the File Name (Windows) or Save As (Mac OS) box.
+ Navigate to and select a location to save the PDF file.
+ Set the following options:
+ Quality 
+ Renders each slide at a specified JPEG quality setting. Lower quality slides yield a smaller slide show file size. Drag the Quality slider or enter a numeric value from 0 to 100 (with 100 representing the highest quality, and 0 representing the lowest).
+ Note : Photos are embedded with sRGB profiles. 
+ Width and Height 
+ Specify the pixel dimensions for the slideshow. Lightroom Classic resizes the slides to fit within the dimensions without cropping or changing the slide’s aspect ratio. The pixel dimensions of your computer display are the default size.
+ Common Sizes 
+ Specifies common dimensions for a slideshow, such as 640 x 480, and enters those values in the Width and Height fields. Screen applies the dimensions of your display.
+ Automatically Show Full Screen 
+ Displays slides at the full size of the screen that the slideshow is displayed on. The full-screen option works when the slideshow is played in Adobe Reader or Adobe Acrobat.
+ Click Save (Windows) or Export (Mac OS).
+ Export a slideshow as JPEGs
+ You can export a slideshow as a series of JPEG files that you can share with clients or other people. Each JPEG file includes the slide’s layout, background, and cell options. No transitions or playback options are exported.
+ In the Slideshow module, press Alt (Windows) or
+Option (Mac OS) and then click the Export JPEG button on
+the lower left.
+ In the Export Slideshow To JPEGs dialog box, type a name for the slideshow in the File Name (Windows) or Save As (Mac OS) box. The name is used for a folder that contains the JPEG images. The JPEG images use the filename you specify plus a sequence number and the .jpeg filename extension.
+ Navigate to and select a location to save the folder
+that contains the JPEG images.
+ Set the following options:
+ Quality 
+ Renders each JPEG at a specified quality setting. Lower-quality images yields a smaller file size. Drag the Quality slider or enter a numeric value from 0 to 100 (with 100 representing the highest quality, and 0 representing the lowest).
+ Note : Photos are embedded with sRGB profiles. 
+ Width and Height 
+ Specifies the pixel dimensions for the exported JPEG files. Lightroom Classic resizes the slides to fit within the dimensions without cropping or changing the slides’ aspect ratio. The pixel dimensions of your computer display are the default size.
+ Common Sizes 
+ Specifies common dimensions for the files, such as 640
+x 480, and enters those values in the Width and Height fields. Screen
+applies the dimensions of your display.
+ Click Save (Windows) or Export (Mac OS).
+ Export a slideshow as video
+ You can export a slideshow as a video file that you can watch on other computers. Lightroom Classic saves video slideshows as H.264 MPEG-4 files complete with slide layout, soundtrack, and other playback options. The exported video is compatible with Adobe Media Player, Apple Quicktime, and Windows Media Player 12.
+ In the Slideshow module, click Export Video on
+the lower left.
+ In the Export Slideshow To Video dialog box, enter a
+filename and choose where you want to save the video.
+ Choose a Video Preset to determine pixel size and frame
+rate. Use the guidelines in the dialog box to help you choose.
+ 480 X 270 (16:9) 
+ Optimized for Android and iOS mobile devices.
+ 640 X 480 (4:3) 
+ Optimized for small handheld devices and web.
+ 720p (16:9) 
+ Optimized for online sharing on social media platforms such as Youtube, Facebook, etc.
+ 1080p (16:9) 
+ Optimized for high quality HD video.
+ Click Save (Windows) or Export (Mac OS).
+ Video tutorial: Exporting slideshows to PDF and video
+ Video tutorial: Exporting slideshows to PDF and video
+ Infinite Skills
+ http://infiniteskills.com/ 
+  Twitter™ and Facebook posts are not covered under the terms of Creative Commons.
+ Legal Notices 
+   |  
+ Online Privacy Policy 
+ Choose your region 
+ Selecting a region changes the language and/or content on Adobe.com.
+ Americas 
+ Brasil 
+ Canada - English 
+ Canada - Français 
+ Latinoamérica 
+ México 
+ United States 
+ Europe, Middle East and Africa 
+ Africa - English 
+ Belgique - Français 
+ Belgium - English 
+ België - Nederlands 
+ Česká republika 
+ Cyprus - English 
+ Danmark 
+ Deutschland 
+ Eesti 
+ España 
+ France 
+ Greece - English 
+ Ireland 
+ Israel - English 
+ Italia 
+ Latvija 
+ Lietuva 
+ Luxembourg - Deutsch 
+ Luxembourg - English 
+ Luxembourg - Français 
+ Magyarország 
+ Malta - English 
+ Middle East and North Africa - English 
+ Nederland 
+ Norge 
+ Österreich 
+ Polska 
+ Portugal 
+ România 
+ Schweiz 
+ Slovenija 
+ Slovensko 
+ Suisse 
+ Suomi 
+ Sverige 
+ Svizzera 
+ Türkiye 
+ United Kingdom 
+ България 
+ Россия 
+ Україна 
+ الشرق الأوسط
+ وشمال أفريقيا -
+ اللغة العربية 
+ ישראל - עברית 
+ Asia - Pacific 
+ Australia 
+ Hong Kong S.A.R. of China 
+ India - English 
+ New Zealand 
+ Southeast Asia (Includes Indonesia, Malaysia, Philippines, Singapore, Thailand,
+ and
+ Vietnam) - English 
+ 中国 
+ 中國香港特別行政區 
+ 台灣地區 
+ 日本 
+ 한국 
+ Commonwealth of Independent States 
+ Includes Armenia, Azerbaijan, Belarus, Georgia, Kazakhstan, Kyrgyzstan, Moldova, Tajikistan,
+ Turkmenistan, Ukraine, Uzbekistan

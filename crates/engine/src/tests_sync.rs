@@ -32,7 +32,13 @@ impl Scratch {
         Scratch(dir)
     }
     fn path(&self, rel: &str) -> String {
-        self.0.join(rel).to_string_lossy().to_string()
+        // Push components individually so the helper emits fully native separators
+        // (join("a/b") keeps the '/' inside rel on Windows, unlike the engine's paths).
+        let mut p = self.0.clone();
+        for part in rel.split('/') {
+            p.push(part);
+        }
+        p.to_string_lossy().to_string()
     }
 }
 

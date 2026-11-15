@@ -1,0 +1,69 @@
+Print photos from Lightroom Classic 
+ Print photos
+ Search 
+ Adobe Photoshop Lightroom Classic User Guide
+ Select an article: 
+ Select an article: 
+ Applies to: 
+ Adobe Photoshop Lightroom 5 
+ 某些 Creative Cloud 应用程序、服务和功能在中国不可用。
+ The Print module lets you specify the page layout and print options for printing photos and contact sheets on your printer.
+ The left panels contain a list of templates and a preview of their page layouts. The area in the center of the Print module displays the photos in the chosen template. The right panels contain controls for specifying how the photos appear in the layout; modifying the template; adding text to the printed page; and selecting settings for print color management, resolution, and sharpening. See Print module panels and tools .
+ The Print module
+ A. Template Browser and Collections panels  B. Show Previous
+Page and Show Next Page buttons  C. Page number  D. Panels
+for specifying layout and output options 
+ To print photos from Lightroom Classic, follow these basic steps:
+ 1. Select the photos you want to print. 
+ In the Library module, use the Grid view or the Filmstrip to select the photos you want to print. See Selecting photos in the Grid view and the Filmstrip .
+ You can also select a folder or a collection of photos using the Folders or Collections panel.
+ 2. Choose the page size. 
+ Switch to the Print module and click the Page Setup button in the lower-left corner of the module.  Choose a page size by doing one of the following: 
+ (Windows) In the Paper area of the Printing Preferences or Print Setup dialog box, choose a page size from the Size menu. Then, click OK .
+ (Mac OS) In the Page Setup dialog box, choose a printer from the Format For menu and choose a page size from the Paper Size menu. Then, click OK .
+ Important: Leave the Scale set to 100% and make size adjustments in Lightroom Classic. 
+ 3. Choose a template. 
+ A template provides a basic layout for your photo prints. Lightroom Classic includes three types of print templates: 
+ Single Image/Contact Sheet templates let you print one or more photos, all at the same size, on a page.
+ Picture Package templates let you print one photo in multiple sizes on a page.
+ Custom Package templates let you print multiple photos at various sizes on one or more pages.
+ Lightroom Classic print templates scale the photos to accommodate the paper size you choose.
+ On the left side of the Print module, move the pointer over a name in the Template Browser; a preview of the template appears in the Preview panel above the Template Browser. Click a template name to select it for the photo or photos you want to print. See About print templates and  Choose a print template .
+ Note: 
+ After you select a template, look in the Layout Style panel, at the top of the right side of the module, to see whether it's a Single Image/Contact Sheet, Picture Package, or Custom Package template.
+ 4. Add or remove photos from the layout. 
+ Depending on the type of template you choose, you may need to add, change, or remove photos from the layout.
+ For Single Image/Contact Sheet templates and Picture Package templates, select one or more photos in the Filmstrip to add them to image cells in the preview area. Deselect photos in the Filmstrip to remove them from the template.
+ For Custom Package templates, drag a thumbnail from the Filmstrip to image cell in the preview area.
+ 5. (Optional) Customize the template. 
+ For Single Image/Contact Sheet layouts, modify the template using the controls in the Image Settings and Layout panels. For example, zoom to fill the photos in the cell, add a stroke border, and adjust margins and cell size. You can also drag the guides in the preview area to resize cells.
+ For Picture Package and Custom Package templates, you can drag cells freely in the preview area and specify options in the Image Settings panel. Use the Rulers, Grid & Guides panel to adjust the display of the work area. Use the Cells panel to add new cells or pages to the layout.
+ See Specify how photos fill an image cell , Specify rulers and guides , Modify page margins and cell size (Single Image/Contact Sheet layouts) , and Print borders and strokes in Picture Package and Custom Package layouts .
+ 6. (Optional) Add text and other extras. 
+ In the Page panel, specify whether to print a background color, your identity plate, and a copyright watermark. See Printing overlay text and graphics .
+ 7. Specify output settings. 
+ In
+the Print Job panel, do any of the following:
+ Specify a print resolution or leave the setting at its default (240 ppi). See Set print resolution .
+ Specify how color management is handled for your photos. Choose from the Profile and Rendering Intent pop-up menus. See Set print color management .
+ Select whether to use Draft Mode Printing. See Print in draft mode .
+ Select 16 Bit Output to print to a 16-bit color printer on Mac OS 10.5 or higher.
+ Select whether to sharpen the photos. If you select Print Sharpening, use the pop-up menus to choose how much sharpening to apply and whether you want to sharpen for matte or glossy paper. See Sharpen a photo for print .
+ To achieve colors that more closely resemble the bright and saturated look of onscreen colors, select Print Adjustment and drag the Brightness and Contrast sliders.
+ Note: 
+ Print adjustments do not preview onscreen. It may take some experimentation to determine what Brightness and Contrast settings work best for your photos and your printer.
+ 8. Check printer settings. 
+ Click Printer (in the lower-right corner) and Print Settings (in the lower-left corner), in turn, to check that the options for your device are configured as you desire. If you want Lightroom Classic to manage color, turn off any color management in the printer settings.
+ 9. Click Print. 
+ 10. (Optional) Save the layout as a custom template or as a print collection. 
+ If you plan to reuse your settings, including layout and overlay options, save the settings as a custom print template. Or save the settings as a print collection to preserve a set of specific Print module options with a collection of photos. See Work with custom print templates and Save print settings as a print collection .
+ Video tutorial:
+ Video tutorial:
+ Adobe TV
+ Legal Notices 
+   |  
+ Online Privacy Policy 
+ Language Navigation
+ Language Navigation
+ Language Navigation
+ Language Navigation

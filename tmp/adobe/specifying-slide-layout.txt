@@ -1,0 +1,260 @@
+Specifying the slide layout in Lightroom Classic 
+ Specify the slide layout
+ Search 
+ Adobe Photoshop Lightroom Classic User Guide
+ Select an article: 
+ Select an article: 
+ On this page
+ Choose a slideshow template 
+ Specify how photos fill a slide’s
+image cell 
+ Add a border or cast shadow to a slideshow image 
+ Set the slide margins 
+ Set the slide background 
+ Rotate slides 
+ Rearrange slide order 
+ Create custom slideshow templates 
+ Save slideshow settings as a slideshow collection 
+ Applies to: 
+ Adobe Photoshop Lightroom Classic 
+ Note: 
+ You’re viewing help for Photoshop Lightroom Classic (formerly Lightroom CC). 
+Not your version? View help for  Photoshop Lightroom .
+ Choose a slideshow template
+ Slideshow templates provide a quick way to define the look and behavior of your presentation. They specify whether the slides have borders, drop shadows, text, or logo, and the color or image behind each photo.
+ Lightroom Classic comes with several templates you can select from the Template Browser. Moving the pointer over a template name in the Template Browser of the Slideshow module displays a template preview at the top of the left panel.
+ You can customize the settings in a slideshow template using the controls in the panels on the right side of the Slideshow module or by moving elements in the Slide Editor view. You can save your modifications as a custom template, which appears in the Template Browser list.
+ Premade slideshow templates
+ Caption And Rating 
+ Centers the photo on a gray background with rating stars and
+caption metadata visible.
+ Crop To Fill 
+ Displays the photos full screen. Portions of the images (especially vertical
+images) might be cropped to fill the screen’s aspect ratio.
+ Default 
+ Centers the photo on a gray background with rating stars,
+filename, and your identity plate visible.
+ EXIF Metadata 
+ Centers photos on a black background with rating stars, EXIF information,
+and your identity plate visible.
+ Widescreen 
+ Displays the full frame of each photo, adding black bars
+to fill the aspect ratio of the screen.
+ Preview and select a slideshow template
+ To preview a template, position the pointer over the template name in the Template Browser panel. The template preview displays the currently selected slide with the template options applied.
+ To select a template, click the template name in the Template Browser panel.
+ Specify how photos fill a slide’s
+image cell
+ By default, slideshow templates (except Crop To Fill) scale photos so that the entire image fits within the slide’s image cell. The slide background shows in the spaces where the aspect ratio of the photos and the image cells don’t match. You can set an option so that all photos completely fill the space in the image cells. When this option is selected, portions of the photos (especially vertical images) might be cropped to fill the image cell’s aspect ratio.
+ In the Options panel of the Slideshow module,
+select Zoom To Fill Frame.
+ Add a border or cast shadow to a slideshow image
+ To make photos in a slideshow stand out from the background, add a border or a cast shadow to each photo. Your adjustments are displayed in the Slide Editor view.
+ In the Template Browser of the Slideshow module, select any template except Crop To Fill.
+ In the Options panel, do any of the following:
+ To add a border, select Stroke Border. Click the color box on the right to open the color pop-up window and specify a border color.
+ To adjust the border width, either drag the Width slider or type a pixel value in the box to the right of the slider.
+ To add a cast shadow, select Cast Shadow and use the controls to adjust it:
+ Opacity 
+ Sets the shadow's lightness or darkness.
+ Offset 
+ Sets the shadow's distance from the image.
+ Radius 
+ Sets the hardness or softness of the shadow's edge.
+ Angle 
+ Sets the direction of the drop shadow. Turn the knob or move the slider to adjust the shadow's angle.
+ Set the slide margins
+ The controls in the Layout panel of the Slideshow
+module set the margins that define the image cell in a slide template. 
+ In the Template Browser, select any template except Crop To Fill and do any of the following in the Layout panel:
+ To adjust all margins simultaneously and maintain their relative proportions, make sure the Link All box is selected.
+ To change the size of a margin independently of the other margins, deselect the link box next to the specific margin.
+ Deselect the small box next to a slide margin exclude it from a group adjustment.
+ Move one or more sliders in the Layout panel or drag
+the guides in the Slide Editor view.
+ Dragging a guide in the Slide Editor view to adjust the layout margins
+ Set the slide background
+ You can set slide background colors or use a background image throughout an entire slideshow. If all the background options are deselected, the slide background is black.
+ Add a background
+ In the Template Browser, select any template except Crop To Fill.
+ In the Backdrop panel, select any combination of the
+following options:
+ Color Wash 
+ Applies a gradient wash color on top of the background color and background image. The gradient transitions from the background color to the color you set in the color box on the right. See Add a color wash to a slide background .
+ Background Image 
+ Uses an image that you drag from the Filmstrip into the background
+of the slide. Use the Opacity slider to adjust the image’s transparency and
+partially show the background color.
+ Background Color 
+ Uses the background color you specify. Click the color
+box on the right to select a color from the color pop-up window.
+ Add a color wash to a slide background
+ In the Backdrop panel of the Slideshow
+module, select Color Wash.
+ Click the color box on the right and select a color from
+the color pop-up window.
+ Specify the appearance of the color:
+ Opacity 
+ Sets the opaqueness or transparency of the color wash
+overlay.
+ Angle 
+ Sets the direction of the gradient transition of the
+background color or background image to the color wash. Turn the
+Angle dial, move the slider, or enter a value in degrees.
+ Rotate slides
+ Individual slides can be rotated clockwise or counterclockwise.
+ In the Slideshow module, navigate to the slide
+you want to rotate.
+ From the Lightroom Classic main menu, choose Slideshow > Rotate Left (CCW) or Rotate Right (CW).
+ Rearrange slide order
+ In the Library module, choose a regular collection or a folder that does not contain subfolders as the source for your slideshow. Make your selection in the Folders panel or the Collections panel.
+ Note: 
+ For an accurate view of what’s in a
+selected folder in the Library module, and to be sure you are in
+the lowest folder in the hierarchy, select a folder in the Folders panel,
+click the Library menu, and make sure Show Folders In Subfolders
+is unchecked .
+ In the Slideshow module, drag photos in the Filmstrip
+to rearrange them. Drag from the center of the thumbnail, not the
+edge.
+ Note: 
+ You cannot drag to rearrange photos in the Slideshow module if you have chosen a smart collection or if you have chosen All Photographs or Previous Import in the Catalog panel of the Library module.
+ Create custom slideshow templates
+ Modifications you make to the colors, layout, text, and output settings can be saved as a custom template. After you save it, the custom template is listed in the Template Browser for reuse. You can create new folders in the Template Browser to help organize your templates.
+ Save custom slideshow templates
+ In the Template Browser of the Slideshow module, select a template on which to base your custom template, and modify the layout.
+ Specify the settings you want in the Options, Layout,
+Overlays, Backdrop, and Playback panels.
+ Click the Plus sign (+) in the Template Browser panel.
+ Overwrite “Untitled Template” to give your custom template
+a name, and specify a folder (such as “User Templates”) for the
+template.
+ Create and organize template folders
+ Right-click (Windows) or Control-click
+(Mac OS) the area where you want the folder to appear and
+choose New Folder.
+ Type the name of the folder and click OK.
+ Drag a template to a folder name to move the template
+to that folder.
+ If you drag a Lightroom Classic preset template to a different folder, the template is copied to that folder.
+ Update custom templates
+ Modify colors, layout, text, and output
+settings as needed.
+ Right-click (Windows) or Control-click (Mac OS)
+a template in the Template Browser and choose Update With Current
+Settings.
+ Delete custom templates
+ Do one of the following:
+ Right-click (Windows) or Control-click
+(Mac OS) a template in the Template Browser and choose
+Delete from the context menu.
+ Select a template in the Template Browser and click
+the Remove button.
+ Note: 
+ You cannot delete Lightroom Classic preset templates.
+ Import and export templates
+ You can export templates you’ve created to
+share with colleagues or to use on a different computer. Templates
+are saved with an .lrtemplate extension.
+ To export a template, right-click (Windows)
+or Control-click (Mac OS) a template and choose Export.
+Type the name of the template file and click Save.
+ To import a template, right-click (Windows) or Control-click
+(Mac OS) the area where you want the template to appear
+and choose Import. Double-click the template file.
+ Save slideshow settings as a slideshow collection
+ When you save slideshow settings as a slideshow collection, you can add new photos to the collection, and they automatically include the slideshow settings. This is different from a custom template, which includes the slideshow options but no photos. A slideshow collection applies the output settings to the photos in the collection.
+ In the Library module, select the photos for the slideshow.
+ In the Slideshow module, select a template and specify
+the settings you want in the Options, Layout, Overlays, Backdrop,
+and Playback panels.
+ In the Filmstrip, select the photos to include them in the slideshow collection.
+ Click the Plus icon (+) in the Collections panel and
+choose Create Slideshow.
+ Type a name for your slideshow collection in the Create Slideshow dialog box. Choose a collection set from the Set pop-up menu to add the collection to an existing set, or choose None.
+ Under Slideshow Options, select Include Selected Photos.
+Select Make New Virtual Copies if you want the collection to include
+virtual copies instead of the original photos.
+ Click Create.
+ Lightroom Classic adds the slideshow collection to the Collections panel and gives it a slide icon  .
+ More like this
+ Play and export slideshows 
+ Work with photo collections 
+ Manage photos within folders 
+ Slideshow panels and tools 
+ Add overlays to slides 
+  Twitter™ and Facebook posts are not covered under the terms of Creative Commons.
+ Legal Notices 
+   |  
+ Online Privacy Policy 
+ Choose your region 
+ Selecting a region changes the language and/or content on Adobe.com.
+ Americas 
+ Brasil 
+ Canada - English 
+ Canada - Français 
+ Latinoamérica 
+ México 
+ United States 
+ Europe, Middle East and Africa 
+ Africa - English 
+ Belgique - Français 
+ Belgium - English 
+ België - Nederlands 
+ Česká republika 
+ Cyprus - English 
+ Danmark 
+ Deutschland 
+ Eesti 
+ España 
+ France 
+ Greece - English 
+ Ireland 
+ Israel - English 
+ Italia 
+ Latvija 
+ Lietuva 
+ Luxembourg - Deutsch 
+ Luxembourg - English 
+ Luxembourg - Français 
+ Magyarország 
+ Malta - English 
+ Middle East and North Africa - English 
+ Nederland 
+ Norge 
+ Österreich 
+ Polska 
+ Portugal 
+ România 
+ Schweiz 
+ Slovenija 
+ Slovensko 
+ Suisse 
+ Suomi 
+ Sverige 
+ Svizzera 
+ Türkiye 
+ United Kingdom 
+ България 
+ Россия 
+ Україна 
+ الشرق الأوسط
+ وشمال أفريقيا -
+ اللغة العربية 
+ ישראל - עברית 
+ Asia - Pacific 
+ Australia 
+ Hong Kong S.A.R. of China 
+ India - English 
+ New Zealand 
+ Southeast Asia (Includes Indonesia, Malaysia, Philippines, Singapore, Thailand,
+ and
+ Vietnam) - English 
+ 中国 
+ 中國香港特別行政區 
+ 台灣地區 
+ 日本 
+ 한국 
+ Commonwealth of Independent States 
+ Includes Armenia, Azerbaijan, Belarus, Georgia, Kazakhstan, Kyrgyzstan, Moldova, Tajikistan,
+ Turkmenistan, Ukraine, Uzbekistan

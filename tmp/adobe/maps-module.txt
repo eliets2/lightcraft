@@ -1,0 +1,197 @@
+Work with the Map module in Lightroom Classic 
+ Work with the Map module
+ Search 
+ Adobe Photoshop Lightroom Classic User Guide
+ Select an article: 
+ On this page
+ View photos on a map 
+ Navigate the map 
+ Create collection from a photo pin on the map 
+ Work with photos and GPS data 
+ Save locations 
+ Applies to: 
+ Adobe Photoshop Lightroom Classic 
+ Note: 
+ You’re viewing help for Photoshop Lightroom Classic (formerly Lightroom CC). 
+Not your version? View help for  Photoshop Lightroom .
+ View photos on a map
+ The Map module lets you see where your photos were captured on a Google map. It uses GPS coordinates embedded in your photos’ metadata to plot the photos on the map.
+ Most mobile phone cameras, including iPhones, record GPS coordinates in metadata. If your camera doesn’t record GPS coordinates you can add it in the Map module, or import a track log from a GPS device.
+ You must be online to use the Map module. Maps appear in the language that your default web browser uses, which may be different from the language version of Lightroom Classic that you’re using.
+ Note: 
+ To see if a photo is tagged with GPS metadata,
+choose the Location preset in the Metadata panel of the Library
+or Map module. Then, look for coordinates in the GPS field.
+ The Map module
+ A. Saved Locations panel  B. Map Style menu  C. Zoom slider  D. Selected
+photo  E. Map key  F. Metadata
+panel 
+ Navigate the map
+ To navigate the map in the Map module, do any of the following:
+ Double-click the map to zoom in to that location.
+ Drag the Zoom slider in the toolbar to zoom in or out.
+ Note : The Map module also supports zooming using a mouse wheel and multitouch gestures on a trackpad. 
+ Press Alt (Windows) or Option (Mac OS) and drag in the preview area to zoom in to that area.
+ Drag the map to reposition it in the preview area.
+ Enter a location in the Search field in the upper-right corner of the preview area to go to that location.
+ Specify the map’s appearance by choosing an option from the Map Style menu in the toolbar:
+ Satellite 
+ Displays satellite photography of the location.
+ Road Map 
+ Displays roads and geopolitical borders and landmarks on a flat, graphical background.
+ Hybrid 
+ Overlays roads and geopolitical data on satellite photography.
+ Terrain 
+ A graphical representation of the landscape.
+ Light or Dark 
+ A light or dark low-contrast depiction of road map data.
+ Create collection from a photo pin on the map
+ To create a collection from a group of photos at the same location on the map, do the following:
+ Create collection from a photo pin on the map
+ In the Map module, right-click (Windows) or Control-click (macOS) a photo pin.
+ Choose Create Collection from the context-menu.
+ The Create Collection dialog box appears. Follow the instructions to Create a collection from Step 2 onwards. 
+ The collection appears in the Collections panel.
+ Work with photos and GPS data
+ To add GPS coordinates to photos (and add the photos to the map), do any of the following:
+ Drag photos from the Filmstrip and drop them onto the map.
+ Select one or more photos in the Filmstrip and Ctrl-click (Windows) or Command-click (Mac OS) the map location.
+ Select one or more photos in the Filmstrip and right-click (Windows) or Control-click (Mac OS) the map location and choose Add GPS Location To Selected Photos.
+ To see a thumbnail preview of photos at a certain location, click a photo pin.
+ Note: 
+ Choose View > Show Map Key for an overlay that explains the photo pins.
+ Key to Map module preview pins
+ To remove GPS metadata from photos (and remove the photos from the map), do any of the following:
+ Select the photo’s pin on the map and press Delete.
+ Right-click (Windows) or Control-click (Mac OS) the pin and choose Delete GPS Location.
+ Select the photo in the Filmstrip in the Map module and press Delete.
+ Click the GPS Tracklogs button and choose Load Tracklog to upload GPS data (a GPX file) from a third-party device.
+ The Location Filter shows you which photos in the Filmstrip appear on the map:
+ Visible On Map 
+ Shows which photos in the Filmstrip are in the current map view.
+ Tagged/Untagged 
+ Shows which photos in the Filmstrip are tagged or untagged with GPS data.
+ None 
+ Clears location filters.
+ Note: 
+ You can omit GPS metadata from photos when you export them.
+In the Export dialog box, go to the Metadata panel and choose Remove
+Location Info.
+ Match photos to a track log for auto-tagging GPS coordinates
+ Load a track log 
+ To load a track log (GPX file only), click Map > Tracklog > Load Tracklog . 
+ Once you load the track log (GPX file) in the Map module, Lightroom Classic looks for photos (in the current catalog selection) whose capture dates match with the track log dates. If matches are found, Lightroom Classic allows you to automatically tag the GPS coordinates of a selection of matching photos using Auto-Tag option. To do so:
+ In the Map module, select the matching photos in the filmstrip.
+ Choose Map > Tracklog > Auto-Tag Selected Photos .
+ Set the time zone offset 
+ If your photos were captured while travelling in another time zone or your camera’s clock was not set correctly, the photos may not match the recorded track log. In such cases, you can set a time zone offset value (in hours) in Lightroom Classic. This value lets you shift the times in the track log to match your camera's time/photo capture times; so you can then use the Auto-Tag option to place the photos on the track. 
+ To set the time zone offset:  
+ In the Map module, select those photos in the filmstrip that you want to match to the track log.
+ Choose Map > Tracklog > Set Time Zone Offset . 
+ In the Offset Time Zone dialog, adjust the Offset slider.
+ Click OK .
+ Note: 
+ The Offset Time Zone dialog displays the range of capture times of the selected photos and the range of times in the track log. Adjust the Offset slider to a value where these ranges overlap each other. 
+ Note: 
+ If the Offset slider value does not seem to match the track log timezone and the timezone of your photos, Lightroom Classic indicates it by highlighting the track log time in red. However, you can still set that Offset value.
+ Save locations
+ For photos captured within a defined proximity, you can
+create a saved location . For example, if you travel to Greece
+for a photo shoot for a client, you can create a saved location
+that encompasses the islands you visited. 
+ In the Map module, navigate to a location on the map and click the + button in the Saved Locations panel. The Saved Location panel is on the left side of the Lightroom Classic window.
+ In the New Location dialog box, enter a name for the location
+and select a folder to save it in.
+ Radius 
+ Defines a radius, in feet, miles, meters, or kilometers,
+from the center of the visible map area.
+ Private 
+ Removes all IPTC location metadata, including GPS coordinates, Sublocation, City, State/Province, Country, and ISO Country Code, when photos in the saved location are exported from Lightroom Classic.
+ Click Create.
+ The location appears on the map marked
+by a white circle, with one pin  in the
+center and another pin on the perimeter.
+ When working with saved locations, do any of the following:
+ Select or deselect a location in the Saved Locations panel to view it on the map.
+ The Saved Locations panel in the Map module
+ To add photos to the location, do one of the following:
+ Drag one or more photos from the Filmstrip into the white circle in the map.
+ Select one or more photos in the Filmstrip and select the check box next to the location name in the Saved Locations panel.
+ To go to a location on the map, click the right-arrow button by the location name in Saved Locations panel.
+ To edit a location, right-click (Windows) or Control-click (Mac OS) it in the Saved Locations panel and choose Location Options.
+ Tip : You can also drag the pin  at the top of the location circle in the map to adjust the radius. Drag the pin in the center of the circle to move the location on the map. 
+ To remove a location, select it in the Saved Locations panel and click the minus ( - ) button. Or, right-click (Windows) or Control-click (Mac OS) it in the Saved Locations panel or on the map and choose Delete.
+ From an expert: 
+ From an expert: 
+ Viewing images on a map in Lightroom Classic.
+ Julieanne Kost
+  Twitter™ and Facebook posts are not covered under the terms of Creative Commons.
+ Legal Notices 
+   |  
+ Online Privacy Policy 
+ Choose your region 
+ Selecting a region changes the language and/or content on Adobe.com.
+ Americas 
+ Brasil 
+ Canada - English 
+ Canada - Français 
+ Latinoamérica 
+ México 
+ United States 
+ Europe, Middle East and Africa 
+ Africa - English 
+ België 
+ Belgique 
+ Belgium - English 
+ Česká republika 
+ Cyprus - English 
+ Danmark 
+ Deutschland 
+ Eesti 
+ España 
+ France 
+ Greece - English 
+ Ireland 
+ Israel - English 
+ Italia 
+ Latvija 
+ Lietuva 
+ Luxembourg - Deutsch 
+ Luxembourg - English 
+ Luxembourg - Français 
+ Magyarország 
+ Malta - English 
+ Middle East and North Africa - English 
+ Nederland 
+ Norge 
+ Österreich 
+ Polska 
+ Portugal 
+ România 
+ Schweiz 
+ Slovenija 
+ Slovensko 
+ Suisse 
+ Suomi 
+ Sverige 
+ Svizzera 
+ Türkiye 
+ United Kingdom 
+ България 
+ Россия 
+ Україна 
+ الشرق الأوسط وشمال أفريقيا - اللغة العربية 
+ ישראל - עברית 
+ Asia - Pacific 
+ Australia 
+ Hong Kong S.A.R. of China 
+ India - English 
+ New Zealand 
+ Southeast Asia (Includes Indonesia, Malaysia, Philippines, Singapore, Thailand, and Vietnam) - English 
+ 中国 
+ 中國香港特別行政區 
+ 台灣地區 
+ 日本 
+ 한국 
+ Commonwealth of Independent States 
+ Includes Armenia, Azerbaijan, Belarus, Georgia, Kazakhstan, Kyrgyzstan, Moldova, Tajikistan, Turkmenistan, Ukraine, Uzbekistan

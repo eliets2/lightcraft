@@ -1,0 +1,49 @@
+Use the Web module panels and tools in Lightroom Classic 
+ Use the Web module panels and tools
+ Search 
+ Adobe Photoshop Lightroom Classic User Guide
+ Select an article: 
+ Select an article: 
+ Applies to: 
+ Adobe Photoshop Lightroom Classic 
+ 某些 Creative Cloud 应用程序、服务和功能在中国不可用。
+ The Web module lets you specify a website's layout.
+ The Web module includes the following panels:
+ Preview 
+ Displays the layout of a template. An icon on the lower-left side of the panel indicates whether the template is for a Lightroom Classic HTML gallery or Lightroom Classic Flash gallery  .
+ Template Browser 
+ Displays a list of web photo gallery templates. Moving the pointer
+over the template names displays its page layout in the Preview.
+ Collections 
+ Displays the collections in the catalog.
+ Layout Style 
+ Selects the default Lightroom Classic Flash Gallery or Lightroom Classic HTML Gallery templates, or one of three Airtight Interactive gallery layouts.
+ Site Info 
+ Specifies the title of your web photo gallery, the collection
+title and description, contact information, and the web or mail
+link. 
+ Color Palette 
+ Specifies the colors for text, web page background, cells,
+rollover, grid lines, and index numbers.
+ Appearance 
+ Specifies the image cell layout (for a Lightroom Classic HTML gallery) or page layout (for a Lightroom Classic Flash gallery). Also specifies whether an identity plate appears on the web pages and lets you add drop shadows and define section borders.
+ Image Info 
+ Specifies the text displayed with the image previews.
+ Output Settings 
+ Specifies the maximum pixel dimension of the photos and JPEG
+quality, and whether to add a copyright watermark.
+ Upload Settings 
+ Specifies upload settings to send your web gallery to a server.
+ Note: 
+ You can filter your selected photos in the Web
+module by clicking Use in the toolbar and choosing All Photos, Selected
+Photos, or Flagged Photos.
+ More like this
+ Create web galleries 
+ Legal Notices 
+   |  
+ Online Privacy Policy 
+ Language Navigation
+ Language Navigation
+ Language Navigation
+ Language Navigation

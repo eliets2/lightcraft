@@ -1,0 +1,357 @@
+
+ Open Lightroom Classic photos in external applications 
+ Adobe Photoshop Lightroom Classic 
+ What's New 
+ FAQ 
+ Learn & Support 
+ Free Trial 
+ Buy now
+ User Guide 
+ Cancel 
+ Open and edit Lightroom Classic photos in Photoshop 
+ Search 
+ Last updated on 
+ Aug 14, 2024 
+ Lightroom Classic 
+ Open on web 
+ Lightroom Classic User Guide 
+ Introduction to Lightroom Classic
+ What's new in Lightroom Classic 
+ Lightroom Classic system requirements 
+ Lightroom Classic | Common Questions 
+ Lightroom Classic Key Concepts 
+ Lightroom Classic tutorials 
+ Set Preferences for working in Lightroom Classic 
+ Reset Preferences for working in Lightroom Classic 
+ Workspace
+ Workspace basics 
+ Display the Library on a second monitor 
+ Personalize identity plates and module buttons 
+ Watermark your photos in Lightroom Classic 
+ Color management 
+ Import photos
+ Specify import options 
+ Set import preferences 
+ Import photos from a camera or card reader 
+ Import photos from a folder on a hard drive 
+ Import photos automatically 
+ Import photos from Photoshop Elements 
+ Import photos from a tethered camera 
+ The Filename Template Editor and Text Template Editor 
+ Organize photos in Lightroom Classic
+ Face recognition 
+ Work with photo collections 
+ Group photos into stacks 
+ Flag, label, and rate photos 
+ Use keywords 
+ Metadata basics and actions 
+ Find photos in the catalog 
+ Work with video in Lightroom Classic 
+ Advanced metadata actions 
+ Use the Quick Develop panel 
+ Process and develop photos
+ Develop module basics 
+ Create panoramas and HDR panoramas 
+ Flat-Field Correction 
+ Correct distorted perspective in photos using Upright 
+ Improve image quality using Enhance 
+ Work with image tone and color 
+ Masking 
+ Apply local adjustments 
+ HDR photo merge 
+ Develop module options 
+ Retouch photos 
+ Cure red eye and pet eye effects 
+ Use the Radial Filter tool 
+ Adjustments with Lens Blur 
+ Edit and Export in HDR 
+ Remove Tool 
+ Viewing photos
+ View photos 
+ Browse and compare photos 
+ Set Library view options 
+ Share photos for comments and feedback 
+ Smart Previews 
+ Export photos
+ Export files to disk or CD 
+ Export photos from Lightroom Classic 
+ Publish photos online 
+ Export to hard drive using publish services 
+ Presets for export, and other settings 
+ Work with external editors
+ External Editing preferences 
+ Open and edit Lightroom Classic photos in Photoshop 
+ Manage catalogs and files
+ How Lightroom Classic catalogs work 
+ Create and manage catalogs 
+ Back up a catalog 
+ Locate missing photos 
+ Create and manage folders 
+ Manage photos within folders 
+ Maps
+ Work with the Map module 
+ Photo books
+ Create photo books 
+ Slideshows
+ Create slideshows 
+ Slideshow module panels and tools 
+ Specify the slide layout 
+ Add overlays to slides 
+ Play and export slideshows 
+ Print photos
+ Print module basics 
+ Print module layouts and templates 
+ Work with print job options and settings 
+ Web galleries
+ Create web galleries 
+ Use the Web module panels and tools 
+ Work with web gallery layouts 
+ Work with web gallery templates and settings 
+ Preview, export, and upload web photo galleries 
+ Keyboard shortcuts
+ Keyboard shortcuts 
+ Content Authenticity 
+ Content Authenticity in Lightroom Classic 
+ Lightroom and Adobe services
+ Creative Cloud Libraries 
+ Using Adobe Stock in Creative Cloud apps 
+ Troubleshooting 
+ Fixed Issues 
+ Known Issues 
+ Technical Support
+ Performance Guidelines
+ Basic troubleshooting steps to fix issues in Lightroom Classic 
+ Optimize performance 
+ Keep Lightroom up to date 
+ Preference file and other file locations | Lightroom Classic 
+ Allow Permissions to Lightroom Classic on macOS 
+  Technical issues
+ GPU Issues
+ Troubleshoot graphics processor (GPU) and graphics driver issues | Lightroom Classic 
+ Lightroom Classic GPU FAQ 
+ Startup Issues
+ Windows | Lightroom doesn't start 
+ Error: Lightroom catalog cannot be opened 
+ Error: 'Unexpected error opening catalog' occurs in Lightroom after Windows 10 upgrade 
+ "Assertion failed" update error | Windows 
+ Error MSVCR110.dll opening apps in Windows 10 
+ Rendering Issues
+ Troubleshoot issues with Develop module 
+ Stability Issues
+ Troubleshoot crash or freeze in Lightroom Classic 
+ Miscellaneous Issues
+ FAQ | Color in Lightroom Classic 
+ Lightroom desktop and mobile apps unavailable to Education memberships | Kivuto 
+ Workflow Issues
+ Catalog Issues
+ Error : Lightroom catalog cannot be opened 
+ Troubleshoot corrupt catalog 
+ Locate missing photos 
+ Recover catalog and images after resetting preferences 
+ Lightroom Classic catalog FAQ 
+ Sync Issues
+ Lightroom Classic sync FAQ 
+ Open and edit photos in Photoshop 
+ You can perform additional editing to your photos using Photoshop from within Lightroom Classic. You must have Photoshop installed on your computer for this feature to be available. 
+ In the Library module or Develop module, select the photo you want to edit. Select Photo  > Edit in Photoshop . 
+ In the Edit Photo dialog box, select one of the following: 
+ Edit A Copy With Lightroom Classic 
+Adjustments
+ Applies any Lightroom Classic adjustments you’ve made to a copy of the file and sends that file to Photoshop for editing. 
+ Edit A Copy
+ Edits a copy of the original file without Lightroom Classic adjustments. This option is applicable for JPEG, TIFF, and PSD files only; not for camera raw or DNG files. 
+ Edit Original
+ Edits the original file without Lightroom Classic adjustments. This option is applicable for JPEG, TIFF, and PSD files only; not for camera raw or DNG files. 
+ Note: 
+ To stack the edited photo with the original in the containing folder, select Edit (Win)/ Lightroom Classic  (macOS) > Preferences > External Editing > Stack With Original . If you edit a photo while viewing a collection, two stacks will be created, one in the folder and one in the collection. 
+ Select Edit . 
+ When opening a raw image from Lightroom Classic in Photoshop, if the Adobe Camera Raw versions in both Lightroom Classic and Photoshop are not the same, Lightroom Classic displays a message prompting you to update the Photoshop Camera Raw plug-in for full compatibility. 
+ For details about updating Photoshop and Adobe Camera Raw to the latest version, see Keep Photoshop up to date .  
+ Select any of the following: 
+ Don't show again
+ Select this option if you don't want to see this dialog in the future. The raw image from Lightroom Classic opens directly in Photoshop. However, some of your Lightroom Classic edits may not appear in Photoshop if the Camera Raw versions are incompatible. 
+ Render using Lightroom Classic
+ Lightroom Classic processes your raw file to render a new TIFF or PSD file, which automatically opens in Photoshop. The file format of the rendered file — TIFF or PSD  — is based on the File Format preference that you've specified for external editing ( Edit > Preferences > External Editing ). All the edits that you've made in Lightroom Classic appear in Photoshop when you render using Lightroom Classic.   
+ Open Anyway
+ Continues to open your raw file in Photoshop. However, some of your Lightroom Classic edits may not appear in Photoshop due to the incompatibility between the Adobe Camera Raw versions.  
+ If you edit a copy of the photo, Lightroom Classic automatically adds the copy, with -Edit appended to the filename, to the catalog as you open it in Photoshop. 
+ Edit the photo as desired in Photoshop and then select File  > Save . 
+ Edited camera raw and DNG files are automatically added to the Lightroom Classic catalog with -Edit appended to the filename. The file format is either TIFF or PSD, depending on what is specified in External Editing preferences. 
+ JPEG, TIFF, and PSD files edited as copies with adjustments are also saved according to the format specified in External Editing preferences. 
+ Note: 
+ When saving changes to JPEG, TIFF, and PSD images in Photoshop, make sure the filename and format are the same as the copy or the original in Lightroom Classic if you want the photo to be updated in the catalog. 
+ Switch to Lightroom Classic to see the edited photo in the catalog. 
+ Note: 
+ When saving from Photoshop, be sure to turn on the Maximize Compatibility option so that Lightroom Classic can read the images. Photoshop and later automatically save PSD files from Lightroom Classic with maximum compatibility. 
+ Additional information
+ The primary external editor feature of Lightroom Classic has functions designed to work specifically with Photoshop.  
+ Open photos as Smart Objects in Photoshop 
+ Select the photo you want to edit in the Library or Develop module. 
+ Select Photo  > Edit In  > Open As Smart Object In Photoshop . 
+ To open a photo as Smart Object , you can select  Cmd + Opt + X   (macOS )and Ctrl + Alt + X (Windows). 
+ Edit the photo in Photoshop and then select File  > Save . 
+ The newly saved photo is automatically added into the Lightroom Classic catalog. 
+ Open photos as Smart Objects Layers in Photoshop 
+ In the Library or Develop module, select two or more photos to edit. 
+ Select Photo  > Edit In  > Open as Smart Object Layers in Photoshop . 
+ Photoshop opens the photos as one layered file. 
+ Edit the photos in Photoshop and then select File  > Save . 
+ The newly saved image with layers is automatically added to the Lightroom Classic catalog. 
+ Open photos as layers in Photoshop 
+ In the Library or Develop module, select two or more photos to edit. 
+ Select Photo  > Edit In  > Open as Layers in Photoshop . 
+ Photoshop opens the photos as one layered file. 
+ Edit the image in Photoshop and then select File  > Save . 
+ The newly saved photo is automatically added to the Lightroom Classic catalog. 
+ Merge photos as panoramas in Photoshop 
+ In the Library or Develop module, select two or more photos to merge into a panoramic image. 
+ Select Photo  > Edit In  > Merge to Panorama in Photoshop . 
+ In the Photomerge dialog box, check your source photos, specify other options, and select OK . 
+ Photoshop merges the photos into a multi-layer image,
+adding layer masks to create optimal blending where the photos overlap. 
+ Edit the panorama as desired in Photoshop and then select File  > Save . 
+ The saved panorama is automatically added to the Lightroom Classic catalog. 
+ You can also learn how to assemble individual frames into a seamless photograph with a tutorial on creating composite panoramic images in Photoshop . 
+ Merge photos to HDR in Photoshop 
+ High dynamic range (HDR) images combine multiple photos captured at different exposures. HDR images allow you to represent a wider and more realistic range of dark and bright regions of a scene in a single photo. 
+ Learn how to assemble the individual frames of an HDR (high dynamic range) composition with a tutorial on creating HDR images using Photoshop and Lightroom Classic . 
+ In the Library or Develop module, select two or
+more photos to merge to HDR.
+ Choose Photo > Edit In > Merge
+To HDR Pro In Photoshop.
+ If one or more photos lacks exposure metadata, specify
+values in the Manually Set EV dialog box.
+ If you plan to tone map the image in Lightroom Classic, choose 32 Bit from the Mode menu in the Photoshop Merge To HDR Pro dialog box and select OK.  
+ Note: 
+ You can also tone map the image in the Merge
+to HDR Pro dialog box and then choose 32, 16, or 8 bit modes. 
+ Photoshop
+merges the photos into a background layer in one HDR image. 
+ Choose File > Save.
+ The saved photo is automatically added to the Lightroom Classic catalog. 
+ Open and edit photos in third-party imaging applications
+ In the Library module or Develop module,
+select the photos you want to edit and then do one of the following:
+ Choose Photo > Edit In >
+Edit In [ Name of Application ]. If you have created an external editor preset, choose
+Photo > Edit In > Edit In [ Name of Preset ]. 
+ Note: 
+ If you’re editing using another application for the
+first time, choose Photo > Edit In > Edit
+In Other Application. Navigate to and choose the application you
+want to use. Once you choose the application for editing photos,
+the name of the application is added to the Edit In command. You
+can always choose a different editing application in the External
+Editing preferences. 
+ In the Edit Photo With dialog box, specify the editing
+option you want to use and click Edit.
+ More like this External editing preferences Editing HDR images 
+ Get help faster and easier 
+ Sign in 
+ New user? 
+ Create an account 
+ Manage account 
+ Quick links 
+ View all your plans 
+ Manage your plans 
+ View quick links
+ Hide quick links
+ Legal Notices    |    Online Privacy Policy 
+ Share this page
+ Copied 
+ Adobe Photoshop Lightroom Classic 
+ < Visit Adobe Help Center 
+ Learn & Support 
+ Get Started 
+ User Guide 
+ Tutorials 
+ Ask the Community 
+ Post questions and get answers from experts. 
+ Ask now 
+ Contact Us 
+ Real help from real people. 
+ Start now 
+ ^ Back to top 
+ Language Navigation 
+ Language Navigation 
+ Choose a region 
+ Selecting a region changes the language and/or content on Adobe.com. 
+ Americas 
+ Brasil
+ Canada - English
+ Canada - Français
+ Latinoamérica
+ México
+ Argentina
+ Colombia
+ Perú
+ Chile
+ United States
+ Asia Pacific 
+ Australia
+ Hong Kong S.A.R. of China
+ India - English
+ Indonesia - English
+ Malaysia - English
+ New Zealand
+ Philippines - English
+ Vietnam - English
+ 中国
+ 中國香港特別行政區
+ 台灣地區
+ 日本
+ Indonesia
+ Malaysia
+ Pilipinas
+ Việt Nam
+ भारत
+ 한국
+ Singapore
+ Thailand - English
+ ประเทศไทย
+ Europe, Middle East and Africa 
+ Africa - English
+ België - Nederlands
+ Belgique - Français
+ Belgium - English
+ Česká republika
+ Danmark
+ Deutschland
+ Eesti
+ España
+ France
+ Greece - English
+ Ireland
+ Israel - English
+ Italia
+ Latvija
+ Lietuva
+ Luxembourg - Deutsch
+ Luxembourg - English
+ Luxembourg - Français
+ Magyarország
+ Middle East and North Africa - English
+ Nederland
+ Norge
+ Österreich
+ Polska
+ Portugal
+ România
+ Schweiz
+ Slovenija
+ Slovensko
+ Suisse
+ Suomi
+ Svizzera
+ Türkiye
+ United Kingdom
+ България
+ Россия
+ Україна
+ الشرق الأوسط وشمال أفريقيا - اللغة العربية
+ ישראל - עברית
+ Sverige
+ Saudi Arabia - English
+ United Arab Emirates - English
+ الإمارات العربية المتحدة
+ المملكة العربية السعودية

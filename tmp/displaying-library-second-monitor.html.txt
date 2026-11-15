@@ -1,0 +1,315 @@
+
+ Displaying the Lightroom Classic Library on a second monitor 
+ Adobe Photoshop Lightroom Classic 
+ What's New 
+ FAQ 
+ Learn & Support 
+ Free Trial 
+ Buy now
+ User Guide 
+ Cancel 
+ Display the Library on a second monitor 
+ Search 
+ Last updated on 
+ Apr 27, 2021 
+ Lightroom Classic 
+ Open on web 
+ Lightroom Classic User Guide 
+ Introduction to Lightroom Classic
+ What's new in Lightroom Classic 
+ Lightroom Classic system requirements 
+ Lightroom Classic | Common Questions 
+ Lightroom Classic Key Concepts 
+ Lightroom Classic tutorials 
+ Set Preferences for working in Lightroom Classic 
+ Reset Preferences for working in Lightroom Classic 
+ Workspace
+ Workspace basics 
+ Display the Library on a second monitor 
+ Personalize identity plates and module buttons 
+ Watermark your photos in Lightroom Classic 
+ Color management 
+ Import photos
+ Specify import options 
+ Set import preferences 
+ Import photos from a camera or card reader 
+ Import photos from a folder on a hard drive 
+ Import photos automatically 
+ Import photos from Photoshop Elements 
+ Import photos from a tethered camera 
+ The Filename Template Editor and Text Template Editor 
+ Organize photos in Lightroom Classic
+ Face recognition 
+ Work with photo collections 
+ Group photos into stacks 
+ Flag, label, and rate photos 
+ Use keywords 
+ Metadata basics and actions 
+ Find photos in the catalog 
+ Work with video in Lightroom Classic 
+ Advanced metadata actions 
+ Use the Quick Develop panel 
+ Process and develop photos
+ Develop module basics 
+ Create panoramas and HDR panoramas 
+ Flat-Field Correction 
+ Correct distorted perspective in photos using Upright 
+ Improve image quality using Enhance 
+ Work with image tone and color 
+ Masking 
+ Apply local adjustments 
+ HDR photo merge 
+ Develop module options 
+ Retouch photos 
+ Cure red eye and pet eye effects 
+ Use the Radial Filter tool 
+ Adjustments with Lens Blur 
+ Edit and Export in HDR 
+ Remove Tool 
+ Viewing photos
+ View photos 
+ Browse and compare photos 
+ Set Library view options 
+ Share photos for comments and feedback 
+ Smart Previews 
+ Export photos
+ Export files to disk or CD 
+ Export photos from Lightroom Classic 
+ Publish photos online 
+ Export to hard drive using publish services 
+ Presets for export, and other settings 
+ Work with external editors
+ External Editing preferences 
+ Open and edit Lightroom Classic photos in Photoshop 
+ Manage catalogs and files
+ How Lightroom Classic catalogs work 
+ Create and manage catalogs 
+ Back up a catalog 
+ Locate missing photos 
+ Create and manage folders 
+ Manage photos within folders 
+ Maps
+ Work with the Map module 
+ Photo books
+ Create photo books 
+ Slideshows
+ Create slideshows 
+ Slideshow module panels and tools 
+ Specify the slide layout 
+ Add overlays to slides 
+ Play and export slideshows 
+ Print photos
+ Print module basics 
+ Print module layouts and templates 
+ Work with print job options and settings 
+ Web galleries
+ Create web galleries 
+ Use the Web module panels and tools 
+ Work with web gallery layouts 
+ Work with web gallery templates and settings 
+ Preview, export, and upload web photo galleries 
+ Keyboard shortcuts
+ Keyboard shortcuts 
+ Content Authenticity 
+ Content Authenticity in Lightroom Classic 
+ Lightroom and Adobe services
+ Creative Cloud Libraries 
+ Using Adobe Stock in Creative Cloud apps 
+ Troubleshooting 
+ Fixed Issues 
+ Known Issues 
+ Technical Support
+ Performance Guidelines
+ Basic troubleshooting steps to fix issues in Lightroom Classic 
+ Optimize performance 
+ Keep Lightroom up to date 
+ Preference file and other file locations | Lightroom Classic 
+ Allow Permissions to Lightroom Classic on macOS 
+  Technical issues
+ GPU Issues
+ Troubleshoot graphics processor (GPU) and graphics driver issues | Lightroom Classic 
+ Lightroom Classic GPU FAQ 
+ Startup Issues
+ Windows | Lightroom doesn't start 
+ Error: Lightroom catalog cannot be opened 
+ Error: 'Unexpected error opening catalog' occurs in Lightroom after Windows 10 upgrade 
+ "Assertion failed" update error | Windows 
+ Error MSVCR110.dll opening apps in Windows 10 
+ Rendering Issues
+ Troubleshoot issues with Develop module 
+ Stability Issues
+ Troubleshoot crash or freeze in Lightroom Classic 
+ Miscellaneous Issues
+ FAQ | Color in Lightroom Classic 
+ Lightroom desktop and mobile apps unavailable to Education memberships | Kivuto 
+ Workflow Issues
+ Catalog Issues
+ Error : Lightroom catalog cannot be opened 
+ Troubleshoot corrupt catalog 
+ Locate missing photos 
+ Recover catalog and images after resetting preferences 
+ Lightroom Classic catalog FAQ 
+ Sync Issues
+ Lightroom Classic sync FAQ 
+ You can open a window that displays a second view of the Library. This second window displays the photos that are selected in the Library module, and uses the Library module view options that are specified in the primary Lightroom Classic window for Grid and Loupe view. The second window can stay open regardless of which module you’re working in, so it’s easy to view and select different photos at any time. If you have a second monitor connected to the computer that runs Lightroom Classic, you can display the second window on that screen. 
+ When working with multiple windows, Lightroom Classic applies commands and edits to the photo or photos that are selected in the main application window regardless of what is selected in the second window. To apply a command to one or more selected photos in the second window, right-click (Windows) or Control-click (Mac OS) the selected photos in Grid, Compare, or Survey view in the second window and choose a command. 
+ Click the Second Window button  in
+the Filmstrip to open the second window.
+ The Library module in the main window, and the Loupe view
+in the secondary window (inset) 
+ The Library module in the main window, and the Loupe view
+in the secondary window (inset) 
+ By default, the second window opens the selected photo in Loupe view. If you have a second monitor connected to the computer, the second window automatically opens on that monitor in full-screen display. Otherwise, Lightroom Classic opens a floating Secondary Display window. 
+ To change the view mode of the Lightroom Classic Library second window, right-click the Second Window button and choose an option from the menu. Or, click Grid, Loupe, Compare, or Survey in the second window. If you have a second monitor, you can also select the Slideshow option. 
+ Specify view options.
+ Grid
+ Resize thumbnails by dragging the Thumbnails slider and
+filter photos using the Library Filter bar. See Find
+photos using the Library Filter bar . 
+ Loupe
+ Choose Normal, Live, or Locked. Normal displays the most-selected photo
+from the primary window. Live displays the photo that is under the
+pointer in the Filmstrip or Grid view in the primary window. Locked
+displays the selected photo even if you choose a different photo
+in the primary window. In all Loupe modes in the second window,
+you can adjust the zoom level. You can lock any photo by right-clicking
+(Windows) or Control-clicking (Mac OS) it in the main window
+and choosing Lock To Second Monitor. Or select the photo and press
+Ctrl+Shift+Enter (Windows) or Command+Shift+Return (Mac OS).
+The photo that is currently locked to the second monitor displays
+a second-window badge  in
+the Filmstrip and in the thumbnail in Grid view of the main window. 
+ Compare
+ Offers the same functionality as the Compare view in the primary window. See Compare photos in the Library module . 
+ Survey
+ Offers the same functionality as the Survey view in the primary window. See Compare photos in the Library module . 
+ Slideshow
+ (Available with a second monitor) Allows you to play
+a full-screen slide show of the currently selected folder or collection
+on a second monitor. Click Play to play the slide show; click the
+slide or press Esc to end it. To override the current options in
+the Slideshow module for Intro Screen, Pause On Intro, Ending Screen,
+and Repeat, select Override and then select the option. 
+ (Available with a second monitor) Display the second
+window as a floating window by clicking the Second Monitor button
+in the main window and deselecting Full Screen.
+ (Available in Full Screen mode on a second monitor) Click
+the Second Monitor button in the main window and choose Show Second
+Monitor Preview to open a small floating window that lets you remotely
+control the second monitor display. Use the Second Monitor preview
+window to toggle between Grid, Loupe, Compare, Survey, and Slideshow
+views on the second monitor. You can also use the Second Monitor
+preview window to control playback of the slide show. The Second
+Monitor preview window is meant to be used when your second monitor
+is not visible from your location.
+ To close the second window, click the Second Window button,
+or click it and deselect Show.
+ Get help faster and easier 
+ Sign in 
+ New user? 
+ Create an account 
+ Manage account 
+ Quick links 
+ View all your plans 
+ Manage your plans 
+ View quick links
+ Hide quick links
+ Legal Notices    |    Online Privacy Policy 
+ Share this page
+ Copied 
+ Adobe Photoshop Lightroom Classic 
+ < Visit Adobe Help Center 
+ Learn & Support 
+ Get Started 
+ User Guide 
+ Tutorials 
+ Ask the Community 
+ Post questions and get answers from experts. 
+ Ask now 
+ Contact Us 
+ Real help from real people. 
+ Start now 
+ ^ Back to top 
+ Language Navigation 
+ Language Navigation 
+ Choose a region 
+ Selecting a region changes the language and/or content on Adobe.com. 
+ Americas 
+ Brasil
+ Canada - English
+ Canada - Français
+ Latinoamérica
+ México
+ Argentina
+ Colombia
+ Perú
+ Chile
+ United States
+ Asia Pacific 
+ Australia
+ Hong Kong S.A.R. of China
+ India - English
+ Indonesia - English
+ Malaysia - English
+ New Zealand
+ Philippines - English
+ Vietnam - English
+ 中国
+ 中國香港特別行政區
+ 台灣地區
+ 日本
+ Indonesia
+ Malaysia
+ Pilipinas
+ Việt Nam
+ भारत
+ 한국
+ Singapore
+ Thailand - English
+ ประเทศไทย
+ Europe, Middle East and Africa 
+ Africa - English
+ België - Nederlands
+ Belgique - Français
+ Belgium - English
+ Česká republika
+ Danmark
+ Deutschland
+ Eesti
+ España
+ France
+ Greece - English
+ Ireland
+ Israel - English
+ Italia
+ Latvija
+ Lietuva
+ Luxembourg - Deutsch
+ Luxembourg - English
+ Luxembourg - Français
+ Magyarország
+ Middle East and North Africa - English
+ Nederland
+ Norge
+ Österreich
+ Polska
+ Portugal
+ România
+ Schweiz
+ Slovenija
+ Slovensko
+ Suisse
+ Suomi
+ Svizzera
+ Türkiye
+ United Kingdom
+ България
+ Россия
+ Україна
+ الشرق الأوسط وشمال أفريقيا - اللغة العربية
+ ישראל - עברית
+ Sverige
+ Saudi Arabia - English
+ United Arab Emirates - English
+ الإمارات العربية المتحدة
+ المملكة العربية السعودية

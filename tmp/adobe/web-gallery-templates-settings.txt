@@ -1,0 +1,206 @@
+Work with web gallery templates and settings in Lightroom Classic 
+ Work with web gallery templates and settings
+ Search 
+ Last updated on 
+ 2021-04-27 
+ Lightroom Classic User Guide 
+ Introduction to Lightroom Classic 
+ What's new in Lightroom Classic 
+ Lightroom Classic system requirements 
+ Lightroom Classic | Common Questions 
+ Lightroom Classic Key Concepts 
+ Lightroom Classic tutorials 
+ Feature summary | Lightroom CC 2015.x/Lightroom 6.x releases 
+ Lightroom and Adobe services 
+ Creative Cloud Libraries 
+ Using Adobe Stock in Creative Cloud apps 
+ Lightroom for mobile, TV, and the web 
+ Adobe Photoshop Lightroom for mobile and Apple TV | FAQ 
+ Sync Lightroom Classic with Lightroom ecosystem 
+ Photoshop family of mobile apps 
+ Import photos 
+ Import photos from a camera or card reader 
+ Import photos from a folder on a hard drive 
+ Import photos automatically 
+ Import photos from Photoshop Elements 
+ Import photos from a tethered camera 
+ Specify import options 
+ Set import preferences 
+ The Filename Template Editor and Text Template Editor 
+ Workflows 
+ Apply Masking in photos 
+ Export and save your photos as JPEGs 
+ Export and watermark your photos 
+ Import your photos 
+ Adjustment Brush: the basics 
+ Adjustments with the Tone Curve 
+ Advanced video slideshows 
+ Control white balance 
+ Create a contact sheet 
+ Enhance your workflow with Lightroom Classic 
+ Workspace 
+ Workspace basics 
+ Set preferences for working in Lightroom Classic 
+ Display the Library on a second monitor 
+ Personalize identity plates and module buttons 
+ Watermark your photos in Lightroom Classic 
+ Color management 
+ Viewing photos 
+ View photos 
+ Browse and compare photos 
+ Set Library view options 
+ Share photos for comments and feedback 
+ Smart Previews 
+ Manage catalogs and files 
+ Lightroom Classic catalog FAQ 
+ How Lightroom Classic catalogs work 
+ Create and manage catalogs 
+ Back up a catalog 
+ Locate missing photos 
+ Create and manage folders 
+ Manage photos within folders 
+ Maps 
+ Work with the Map module 
+ Organize photos in Lightroom Classic 
+ Face recognition 
+ Work with photo collections 
+ Group photos into stacks 
+ Flag, label, and rate photos 
+ Use keywords 
+ Metadata basics and actions 
+ Find photos in the catalog 
+ Work with video in Lightroom Classic 
+ Advanced metadata actions 
+ Use the Quick Develop panel 
+ Process and develop photos 
+ Develop module basics 
+ Create panoramas and HDR panoramas 
+ Flat-Field Correction 
+ Correct distorted perspective in photos using Upright 
+ Improve image quality using Enhance 
+ Work with image tone and color 
+ Masking 
+ Apply local adjustments 
+ HDR photo merge 
+ Develop module options 
+ Retouch photos 
+ Cure red eye and pet eye effects 
+ Use the Radial Filter tool 
+ Use the enhanced Spot Removal tool 
+ Export photos 
+ Export files to disk or CD 
+ Export photos from Lightroom Classic 
+ Publish photos online 
+ Export to hard drive using publish services 
+ Presets for export, and other settings 
+ Work with external editors 
+ External Editing preferences 
+ Open and edit Lightroom Classic photos in Photoshop or Photoshop Elements 
+ Slideshows 
+ Create slideshows 
+ Slideshow module panels and tools 
+ Specify the slide layout 
+ Add overlays to slides 
+ Play and export slideshows 
+ Print photos 
+ Print module basics 
+ Print module layouts and templates 
+ Work with print job options and settings 
+ Photo books 
+ Create photo books 
+ Web galleries 
+ Create web galleries 
+ Use the Web module panels and tools 
+ Work with web gallery layouts 
+ Work with web gallery templates and settings 
+ Preview, export, and upload web photo galleries 
+ Keyboard shortcuts 
+ Keyboard shortcuts 
+ Create custom web gallery templates
+ Modifications you make to the colors, layout,
+text, and output settings can be saved as a custom web gallery template.
+After you save it, the custom template is listed in the Template
+Browser for reuse. You can create new folders in the Template Browser
+to help organize your templates.
+ Note: 
+ For information on premade templates, see Work with web gallery layouts .
+ Save custom web gallery templates
+ In the Template Browser of the Web module,
+select a template on which to base your custom template, and modify
+the layout.
+ Specify the settings you want in the Site Info, Color
+Palette, Appearance, Output Settings, Image Info, and Output Settings
+panels.
+ Click the Plus icon (+) in the Template Browser
+in the Web module.
+ Overwrite “Untitled Template” to give your custom template
+a name, and specify a folder (such as “User Templates”) for the
+template.
+ Create and organize template folders
+ Right-click (Windows) or Control-click
+(Mac OS) the area where you want the folder to appear and
+choose New Folder.
+ Type the name of the folder and click OK.
+ Drag a template to a folder name to move the template
+to that folder.
+ If you drag a Lightroom Classic preset template to a different folder, the template is copied to that folder.
+ Update custom templates
+ Modify colors, layout, text, and output
+settings as needed.
+ Right-click (Windows) or Control-click (Mac OS)
+a template in the Template Browser and choose Update With Current
+Settings.
+ Delete custom templates
+ You cannot delete Lightroom Classic preset templates.
+ Do one of the following:
+ Right-click (Windows) or Control-click
+(Mac OS) a template in the Template Browser and choose
+Delete from the context menu.
+ Select a template in the Template Browser and click
+the Remove button.
+ Import and export templates
+ You can export templates you’ve created to
+share with colleagues or to use on a different computer. Templates
+are saved with an .lrtemplate extension.
+ To export a template, right-click (Windows)
+or Control-click (Mac OS) a template and choose Export.
+Type the name of the template file and click Save.
+ To import a template, right-click (Windows) or Control-click
+(Mac OS) the area where you want the template to appear
+and choose Import. Double-click the template file.
+ Save web settings as a web collection
+ When you save web gallery settings as a web
+collection, you can add new photos to the collection and they automatically
+include the web settings. This is different from custom templates,
+which include the output options but no photos. A web collection
+applies the web settings to the photos in the collection.
+ In the Library module, select the photos for the
+web photo gallery.
+ In the Web module, select a template. Specify the settings
+you want in the Site Info, Color Palette, Appearance, Image Info,
+Output Settings, and Upload Settings panels.
+ In the Filmstrip, select the photos to include them in
+web collection.
+ Click the Plus icon (+) in the Collections panel
+and choose Create Web Gallery.
+ Type a name for your web collection in the Create Web
+Gallery dialog box. Choose a collection set from the Set pop-up
+menu to add the collection to an existing set, or choose None.
+ Under Web Gallery Options, select Include Selected Photos.
+Select Make New Virtual Copies if you want the collection to include
+virtual copies instead of the original photos.
+ Click Create.
+ Lightroom Classic adds the web collection to the Collections panel and gives it a grid icon  .
+ More like this
+ Work with photo collections 
+ Manage photos within folders 
+ Work with web gallery layouts 
+ Sign in to your account 
+ Sign in
+ Manage account 
+ Quick links
+ View all your plans 
+ Manage your plans 
+ Legal Notices    |    Online Privacy Policy 
+ Language Navigation
+ Language Navigation

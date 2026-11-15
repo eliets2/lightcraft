@@ -1,0 +1,296 @@
+
+ How to use Smart Previews to view and edit photos in Photoshop Lightroom Classic 
+ Adobe Photoshop Lightroom Classic 
+ What's New 
+ FAQ 
+ Learn & Support 
+ Free Trial 
+ Buy now
+ User Guide 
+ Cancel 
+ Smart Previews 
+ Search 
+ Last updated on 
+ Apr 7, 2024 
+ | 
+ Also applies to Adobe Photoshop Lightroom 6
+ Lightroom Classic 
+ Open on web 
+ Lightroom Classic User Guide 
+ Introduction to Lightroom Classic
+ What's new in Lightroom Classic 
+ Lightroom Classic system requirements 
+ Lightroom Classic | Common Questions 
+ Lightroom Classic Key Concepts 
+ Lightroom Classic tutorials 
+ Set Preferences for working in Lightroom Classic 
+ Reset Preferences for working in Lightroom Classic 
+ Workspace
+ Workspace basics 
+ Display the Library on a second monitor 
+ Personalize identity plates and module buttons 
+ Watermark your photos in Lightroom Classic 
+ Color management 
+ Import photos
+ Specify import options 
+ Set import preferences 
+ Import photos from a camera or card reader 
+ Import photos from a folder on a hard drive 
+ Import photos automatically 
+ Import photos from Photoshop Elements 
+ Import photos from a tethered camera 
+ The Filename Template Editor and Text Template Editor 
+ Organize photos in Lightroom Classic
+ Face recognition 
+ Work with photo collections 
+ Group photos into stacks 
+ Flag, label, and rate photos 
+ Use keywords 
+ Metadata basics and actions 
+ Find photos in the catalog 
+ Work with video in Lightroom Classic 
+ Advanced metadata actions 
+ Use the Quick Develop panel 
+ Process and develop photos
+ Develop module basics 
+ Create panoramas and HDR panoramas 
+ Flat-Field Correction 
+ Correct distorted perspective in photos using Upright 
+ Improve image quality using Enhance 
+ Work with image tone and color 
+ Masking 
+ Apply local adjustments 
+ HDR photo merge 
+ Develop module options 
+ Retouch photos 
+ Cure red eye and pet eye effects 
+ Use the Radial Filter tool 
+ Adjustments with Lens Blur 
+ Edit and Export in HDR 
+ Remove Tool 
+ Viewing photos
+ View photos 
+ Browse and compare photos 
+ Set Library view options 
+ Share photos for comments and feedback 
+ Smart Previews 
+ Export photos
+ Export files to disk or CD 
+ Export photos from Lightroom Classic 
+ Publish photos online 
+ Export to hard drive using publish services 
+ Presets for export, and other settings 
+ Work with external editors
+ External Editing preferences 
+ Open and edit Lightroom Classic photos in Photoshop 
+ Manage catalogs and files
+ How Lightroom Classic catalogs work 
+ Create and manage catalogs 
+ Back up a catalog 
+ Locate missing photos 
+ Create and manage folders 
+ Manage photos within folders 
+ Maps
+ Work with the Map module 
+ Photo books
+ Create photo books 
+ Slideshows
+ Create slideshows 
+ Slideshow module panels and tools 
+ Specify the slide layout 
+ Add overlays to slides 
+ Play and export slideshows 
+ Print photos
+ Print module basics 
+ Print module layouts and templates 
+ Work with print job options and settings 
+ Web galleries
+ Create web galleries 
+ Use the Web module panels and tools 
+ Work with web gallery layouts 
+ Work with web gallery templates and settings 
+ Preview, export, and upload web photo galleries 
+ Keyboard shortcuts
+ Keyboard shortcuts 
+ Content Authenticity 
+ Content Authenticity in Lightroom Classic 
+ Lightroom and Adobe services
+ Creative Cloud Libraries 
+ Using Adobe Stock in Creative Cloud apps 
+ Troubleshooting 
+ Fixed Issues 
+ Known Issues 
+ Technical Support
+ Performance Guidelines
+ Basic troubleshooting steps to fix issues in Lightroom Classic 
+ Optimize performance 
+ Keep Lightroom up to date 
+ Preference file and other file locations | Lightroom Classic 
+ Allow Permissions to Lightroom Classic on macOS 
+  Technical issues
+ GPU Issues
+ Troubleshoot graphics processor (GPU) and graphics driver issues | Lightroom Classic 
+ Lightroom Classic GPU FAQ 
+ Startup Issues
+ Windows | Lightroom doesn't start 
+ Error: Lightroom catalog cannot be opened 
+ Error: 'Unexpected error opening catalog' occurs in Lightroom after Windows 10 upgrade 
+ "Assertion failed" update error | Windows 
+ Error MSVCR110.dll opening apps in Windows 10 
+ Rendering Issues
+ Troubleshoot issues with Develop module 
+ Stability Issues
+ Troubleshoot crash or freeze in Lightroom Classic 
+ Miscellaneous Issues
+ FAQ | Color in Lightroom Classic 
+ Lightroom desktop and mobile apps unavailable to Education memberships | Kivuto 
+ Workflow Issues
+ Catalog Issues
+ Error : Lightroom catalog cannot be opened 
+ Troubleshoot corrupt catalog 
+ Locate missing photos 
+ Recover catalog and images after resetting preferences 
+ Lightroom Classic catalog FAQ 
+ Sync Issues
+ Lightroom Classic sync FAQ 
+ Importing photographs into your catalog establishes a link between the catalog and the physical file. The photograph can exist on an internal or external drive. In previous versions of Lightroom Classic, you could edit images that were contained on drives connected to Lightroom Classic. 
+ Smart Previews in Lightroom Classic allow you to edit images that are not physically connected to your computer. Smart Preview files are a lightweight, smaller, file format, based on the lossy DNG file format. 
+ Advantages of Smart Previews
+ Smart Previews are much smaller than the original photos. You can free up disk space on devices with smaller storage capacities (for example, SSD drives) by choosing to keep original files on a high-capacity external device (for example, NAS devices or external discs). For example, 500 raw images from a high-end DSLR camera may occupy 14 GB of disk space. The Smart Preview files for the same images amounted to 400 MB of disk space. 
+ Continue to work with your Smart Preview files even when the device containing your original photographs is disconnected. You can perform all edits that you would perform on the original file. 
+ Automatically sync any edits made on Smart Preview files with your original files, as soon as the device is reconnected to your computer. 
+ Once created, your Smart Preview files are always up to date. When your storage device is connected, any edits you make to the original file are applied instantly to the Smart Previews as well. 
+ Create Smart Previews
+ There are several ways to generate Smart Preview files: 
+ Import
+ When you import new images into your catalog, select Build Smart Previews ( Import dialog > File Handling section). Smart Previews are created for all the images imported into the catalog. 
+ Export
+ When you export a set of photographs as a catalog, you can choose to build and include Smart Previews in the exported catalog. Click File > Export as Catalog , and then select the  Build/Include Smart Previews checkbox. 
+ On the fly
+ You can create Smart Preview files on demand. Select the files for which you want Smart Previews, and then click Library > Previews > Build Smart Previews . 
+ Note: 
+ Smart Previews are stored in the [Catalog Name] Smart Previews.lrdata file, located in the same folder as the catalog. 
+ Work with Smart Previews
+ You can identify the Smart Preview status of a photograph based on the information displayed below the Histogram: 
+ Original: You are viewing the original image. No Smart Preview exists for this file. 
+ Original: You are viewing the original image. No Smart Preview exists for this file. 
+ Smart Preview: You are viewing a Smart Preview. Lightroom Classic cannot detect the device containing the original file. 
+ Smart Preview: You are viewing a Smart Preview. Lightroom Classic cannot detect the device containing the original file. 
+ Original + Smart Preview: You are viewing the original file. A corresponding Smart Preview exists. 
+ Original + Smart Preview: You are viewing the original file. A corresponding Smart Preview exists. 
+ Status icons displayed when multiple images are selected in Grid view (G): 
+ A. Originals without Smart Previews  B. Originals with Smart Previews  C. Smart Previews only (Disconnected from Original)  D. Original file missing (normal preview displayed) 
+ Status icons displayed when multiple images are selected in Grid view (G): 
+ Delete Smart Previews
+ Do one of the following: 
+ In the Library or Develop module, for a photo that has a Smart Preview, click the status Original + Smart Preview below the Histogram, and then click Discard Smart Preview . 
+ In Library or Develop module, click Library > Previews > Discard Smart Previews . 
+ Get help faster and easier 
+ Sign in 
+ New user? 
+ Create an account 
+ Manage account 
+ Quick links 
+ View all your plans 
+ Manage your plans 
+ View quick links
+ Hide quick links
+ Legal Notices    |    Online Privacy Policy 
+ Share this page
+ Copied 
+ Adobe Photoshop Lightroom Classic 
+ < Visit Adobe Help Center 
+ Learn & Support 
+ Get Started 
+ User Guide 
+ Tutorials 
+ Ask the Community 
+ Post questions and get answers from experts. 
+ Ask now 
+ Contact Us 
+ Real help from real people. 
+ Start now 
+ ^ Back to top 
+ Language Navigation 
+ Language Navigation 
+ Choose a region 
+ Selecting a region changes the language and/or content on Adobe.com. 
+ Americas 
+ Brasil
+ Canada - English
+ Canada - Français
+ Latinoamérica
+ México
+ Argentina
+ Colombia
+ Perú
+ Chile
+ United States
+ Asia Pacific 
+ Australia
+ Hong Kong S.A.R. of China
+ India - English
+ Indonesia - English
+ Malaysia - English
+ New Zealand
+ Philippines - English
+ Vietnam - English
+ 中国
+ 中國香港特別行政區
+ 台灣地區
+ 日本
+ Indonesia
+ Malaysia
+ Pilipinas
+ Việt Nam
+ भारत
+ 한국
+ Singapore
+ Thailand - English
+ ประเทศไทย
+ Europe, Middle East and Africa 
+ Africa - English
+ België - Nederlands
+ Belgique - Français
+ Belgium - English
+ Česká republika
+ Danmark
+ Deutschland
+ Eesti
+ España
+ France
+ Greece - English
+ Ireland
+ Israel - English
+ Italia
+ Latvija
+ Lietuva
+ Luxembourg - Deutsch
+ Luxembourg - English
+ Luxembourg - Français
+ Magyarország
+ Middle East and North Africa - English
+ Nederland
+ Norge
+ Österreich
+ Polska
+ Portugal
+ România
+ Schweiz
+ Slovenija
+ Slovensko
+ Suisse
+ Suomi
+ Svizzera
+ Türkiye
+ United Kingdom
+ България
+ Россия
+ Україна
+ الشرق الأوسط وشمال أفريقيا - اللغة العربية
+ ישראל - עברית
+ Sverige
+ Saudi Arabia - English
+ United Arab Emirates - English
+ الإمارات العربية المتحدة
+ المملكة العربية السعودية

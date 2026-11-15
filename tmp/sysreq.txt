@@ -1,0 +1,311 @@
+
+ Lightroom Classic system requirements 
+ Adobe Photoshop Lightroom Classic 
+ What's New 
+ FAQ 
+ Learn & Support 
+ Free Trial 
+ Buy now
+ User Guide 
+ Cancel 
+ Lightroom Classic system requirements 
+ Search 
+ Last updated on 
+ Oct 10, 2023 02:38:38 PM GMT 
+ Lightroom Classic User Guide 
+ Introduction to Lightroom Classic 
+ What's new in Lightroom Classic 
+ Lightroom Classic system requirements 
+ Lightroom Classic | Common Questions 
+ Lightroom Classic Key Concepts 
+ Lightroom Classic tutorials 
+ Feature summary | Lightroom CC 2015.x/Lightroom 6.x releases 
+ Lightroom and Adobe services 
+ Creative Cloud Libraries 
+ Using Adobe Stock in Creative Cloud apps 
+ Lightroom for mobile, TV, and the web 
+ Adobe Photoshop Lightroom for mobile and Apple TV | FAQ 
+ Sync Lightroom Classic with Lightroom ecosystem 
+ Photoshop family of mobile apps 
+ Import photos 
+ Import photos from a camera or card reader 
+ Import photos from a folder on a hard drive 
+ Import photos automatically 
+ Import photos from Photoshop Elements 
+ Import photos from a tethered camera 
+ Specify import options 
+ Set import preferences 
+ The Filename Template Editor and Text Template Editor 
+ Workflows 
+ Apply Masking in photos 
+ Export and save your photos as JPEGs 
+ Export and watermark your photos 
+ Import your photos 
+ Adjustment Brush: the basics 
+ Adjustments with the Tone Curve 
+ Advanced video slideshows 
+ Control white balance 
+ Create a contact sheet 
+ Enhance your workflow with Lightroom Classic 
+ Adjustments with Lens Blur 
+ Edit and Export in HDR 
+ Workspace 
+ Workspace basics 
+ Set preferences for working in Lightroom Classic 
+ Display the Library on a second monitor 
+ Personalize identity plates and module buttons 
+ Watermark your photos in Lightroom Classic 
+ Color management 
+ Viewing photos 
+ View photos 
+ Browse and compare photos 
+ Set Library view options 
+ Share photos for comments and feedback 
+ Smart Previews 
+ Manage catalogs and files 
+ Lightroom Classic catalog FAQ 
+ How Lightroom Classic catalogs work 
+ Create and manage catalogs 
+ Back up a catalog 
+ Locate missing photos 
+ Create and manage folders 
+ Manage photos within folders 
+ Maps 
+ Work with the Map module 
+ Organize photos in Lightroom Classic 
+ Face recognition 
+ Work with photo collections 
+ Group photos into stacks 
+ Flag, label, and rate photos 
+ Use keywords 
+ Metadata basics and actions 
+ Find photos in the catalog 
+ Work with video in Lightroom Classic 
+ Advanced metadata actions 
+ Use the Quick Develop panel 
+ Process and develop photos 
+ Develop module basics 
+ Create panoramas and HDR panoramas 
+ Flat-Field Correction 
+ Correct distorted perspective in photos using Upright 
+ Improve image quality using Enhance 
+ Work with image tone and color 
+ Masking 
+ Apply local adjustments 
+ HDR photo merge 
+ Develop module options 
+ Retouch photos 
+ Cure red eye and pet eye effects 
+ Use the Radial Filter tool 
+ Use the enhanced Spot Removal tool 
+ Export photos 
+ Export files to disk or CD 
+ Export photos from Lightroom Classic 
+ Publish photos online 
+ Export to hard drive using publish services 
+ Presets for export, and other settings 
+ Work with external editors 
+ External Editing preferences 
+ Open and edit Lightroom Classic photos in Photoshop or Photoshop Elements 
+ Slideshows 
+ Create slideshows 
+ Slideshow module panels and tools 
+ Specify the slide layout 
+ Add overlays to slides 
+ Play and export slideshows 
+ Print photos 
+ Print module basics 
+ Print module layouts and templates 
+ Work with print job options and settings 
+ Photo books 
+ Create photo books 
+ Web galleries 
+ Create web galleries 
+ Use the Web module panels and tools 
+ Work with web gallery layouts 
+ Work with web gallery templates and settings 
+ Preview, export, and upload web photo galleries 
+ Keyboard shortcuts 
+ Keyboard shortcuts 
+ Applicable for
+ October 2023 release (version 13.0) and later 
+ System requirements for earlier releases
+ Lightroom Classic system requirements | earlier releases 
+ Minimum and recommended system requirements for Lightroom Classic 
+ Windows 
+ Minimum 
+ Recommended 
+ Processor 
+ Intel® or AMD processor (2 GHz or faster with SSE 4.2 or later and 64-bit support) 
+ Operating system 
+ Windows 10 (version 22H2) or Windows 11 (version 21H2 or later) 
+ RAM 
+ 8 GB  
+ 16 GB or more 
+ Hard disk space 
+ 4 GB of available hard disk space; additional space is required for installation 
+ Monitor resolution 
+ 1024 x 768 display 
+ 1920 x 1080 display or greater 
+ Graphics card 
+ GPU with DirectX 12 support 
+ 2 GB of GPU memory 
+ GPU with DirectX 12 support 
+ 4 GB of GPU memory for 4k or greater displays 
+ 8 GB of dedicated GPU memory or 16 GB of shared memory for full GPU acceleration  
+ For more information, see the  Lightroom Classic GPU FAQ 
+ Internet 
+ Internet connection and registration are necessary for required software activation, validation of subscriptions, and access to online services.† 
+ macOS 
+ Minimum             
+ Recommended 
+ Processor 
+ Multicore Intel processor (2 GHz or faster with SSE 4.2 or later, and 64-bit support) or Apple Silicon processor 
+ Operating system 
+ macOS Monterey (version 12.0) or later 
+ RAM 
+ 8 GB 
+ 16 GB or more 
+ Hard disk space 
+ 4 GB of available hard-disk space; additional space is required for installation 
+ Lightroom Classic will not install on case-sensitive file systems or removable flash storage devices 
+ Monitor resolution 
+ 1024 x 768 display 
+ 1920 x 1080 display or greater 
+ Graphics card 
+ GPU with Metal support 
+ 2GB of GPU memory 
+ GPU with Metal support 
+ 4 GB of GPU memory for 4k or greater displays 
+ 8 GB of dedicated GPU memory or 16 GB of shared memory for full GPU acceleration 
+ To find out if your computer supports Metal, see  Mac computers that support Metal 
+ For more information, see the Lightroom Classic GPU FAQ 
+ Internet 
+ Internet connection and registration are necessary for required software activation, validation of subscriptions, and access to online services.† 
+ † NOTE: Internet connection, Adobe ID, and acceptance of license agreement required to activate and use this product; the application attempts to validate your software every 30 days. This product may integrate with or allow access to certain Adobe or third-party hosted online services. Adobe services are available only to users 13 and older and require agreement to additional  terms of use  and the  Adobe Privacy Policy . Applications and services may not be available in all countries or languages and may be subject to change or discontinuation without notice. Additional fees or membership charges may apply. 
+ Language versions available for Lightroom Classic 
+ Lightroom Classic is available in the following languages: 
+ Deutsch 
+ English 
+ Español 
+ Français 
+ Italiano 
+ Nederlands 
+ Português (Brasil) 
+ Russian 
+ Svenska 
+ Thai 
+ 日本語 
+ 简体中文 
+ 繁體中文 
+ 한국어 
+ Norsk 
+ Polski 
+    Adobe 
+ Get help faster and easier 
+ Sign in 
+ New user? 
+ Create an account 
+ Manage account 
+ Quick links 
+ View all your plans 
+ Manage your plans 
+ Legal Notices    |    Online Privacy Policy 
+ Share this page
+ Copied 
+ Adobe Photoshop Lightroom Classic 
+ < Visit Adobe Help Center 
+ Learn & Support 
+ Get Started 
+ User Guide 
+ Tutorials 
+ Ask the Community 
+ Post questions and get answers from experts. 
+ Ask now 
+ Contact Us 
+ Real help from real people. 
+ Start now 
+ ^ Back to top 
+ Language Navigation 
+ Language Navigation 
+ Choose a region 
+ Selecting a region changes the language and/or content on Adobe.com. 
+ Americas 
+ Brasil
+ Canada - English
+ Canada - Français
+ Latinoamérica
+ México
+ Argentina
+ Colombia
+ Perú
+ Chile
+ United States
+ Asia Pacific 
+ Australia
+ Hong Kong S.A.R. of China
+ India - English
+ Indonesia - English
+ Malaysia - English
+ New Zealand
+ Philippines - English
+ Vietnam - English
+ 中国
+ 中國香港特別行政區
+ 台灣地區
+ 日本
+ Indonesia
+ Malaysia
+ Pilipinas
+ Việt Nam
+ भारत
+ 한국
+ Singapore
+ Thailand - English
+ ประเทศไทย
+ Europe, Middle East and Africa 
+ Africa - English
+ België - Nederlands
+ Belgique - Français
+ Belgium - English
+ Česká republika
+ Danmark
+ Deutschland
+ Eesti
+ España
+ France
+ Greece - English
+ Ireland
+ Israel - English
+ Italia
+ Latvija
+ Lietuva
+ Luxembourg - Deutsch
+ Luxembourg - English
+ Luxembourg - Français
+ Magyarország
+ Middle East and North Africa - English
+ Nederland
+ Norge
+ Österreich
+ Polska
+ Portugal
+ România
+ Schweiz
+ Slovenija
+ Slovensko
+ Suisse
+ Suomi
+ Svizzera
+ Türkiye
+ United Kingdom
+ България
+ Россия
+ Україна
+ الشرق الأوسط وشمال أفريقيا - اللغة العربية
+ ישראל - עברית
+ Sverige
+ Saudi Arabia - English
+ United Arab Emirates - English
+ الإمارات العربية المتحدة
+ المملكة العربية السعودية

@@ -1,0 +1,417 @@
+
+ Get started with Lightroom for mobile (Android). 
+ Adobe Photoshop Lightroom 
+ Features 
+ What's New 
+ Photo Editing 
+ Photo Storage and Management 
+ Lightroom Presets 
+ Share photos 
+ Super Resolution 
+ Support 
+ Get started 
+ System Requirements 
+ Tutorials 
+ Free Trial 
+ Buy Now 
+ Compare plans
+ User Guide 
+ Cancel 
+ Get started with Lightroom for mobile (Android) 
+ Search 
+ Last updated on 
+ Oct 10, 2023 08:47:27 PM GMT 
+ Adobe Lightroom User Guide 
+ Introduction 
+ What's new in Lightroom 
+ Lightroom system requirements 
+ Lightroom | Common questions 
+ Lightroom tutorials 
+ Work with Adobe Photoshop Lightroom for mobile 
+ Set preferences 
+ In-app learning 
+ In-app learning and inspiration 
+ In-app learning and inspiration | Lightroom for mobile (iOS) 
+ In-app learning and inspiration | Lightroom for mobile (Android) 
+ Add, import, and capture photos 
+ Add photos 
+ Capture photos with Lightroom for mobile (iOS) 
+ Capture photos with Lightroom for mobile (Android) 
+ Import photos in Lightroom for mobile (iOS) 
+ Import photos and videos in Lightroom for mobile (Android) 
+ Organize photos 
+ Organize photos 
+ Find and organize photos of people in the People View 
+ Search and organize photos in Lightroom for mobile (iOS) 
+ Search and organize photos in Lightroom for mobile (Android) 
+ Edit photos 
+ Edit photos 
+ Masking in Lightroom 
+ Lens Blur in Lightroom 
+ Edit photos in Lightroom for mobile (iOS) 
+ Edit photos in Lightroom for mobile (Android) 
+ Merge photos to create HDRs, panoramas, and HDR panoramas 
+ Edit HDR photos 
+ Edit HDR photos in Lightroom for mobile (iOS) 
+ Edit HDR photos in Lightroom for mobile (Android) 
+ Easily enhance image quality in Lightroom 
+ Edit videos 
+ Edit videos   
+ Edit videos in Lightroom for mobile (iOS) 
+ Edit videos in Lightroom for mobile (Android) 
+ Save, share, and export 
+ Export or share your photos 
+ Export and share photos in Lightroom for mobile (iOS) 
+ Save, share, and export photos with Lightroom for mobile (Android) 
+ Lightroom for mobile, TV, and the web 
+ Get started with Lightroom for mobile (iOS) 
+ Get started with Lightroom for mobile (Android) 
+ Adobe Photoshop Lightroom on the web 
+ Set up Lightroom for Apple TV app 
+ Use keyboard shortcuts in Lightroom for mobile (iOS and Android) 
+ Adobe Photoshop Lightroom for mobile and Apple TV | FAQ 
+ View Lightroom photos and videos on your TV 
+ How to Add Presets/Sync Presets with mobile 
+ Migrate photos 
+ Migrate Apple Photos Library to Lightroom 
+ Migrate photos and videos from Lightroom Classic to Lightroom 
+ Migrate photos from Photoshop Elements to Lightroom 
+ Learn how to sign in and set up Lightroom account on your Android device. Get to know the workspace and set up app preferences. 
+ Adobe Lightroom for mobile is a free app that gives you a powerful, yet simple solution for capturing, editing and sharing your photos. And you can upgrade for premium features that give you precise control with seamless access across all your devices – mobile, desktop and web. 
+ Sign in 
+ Don't have Adobe Photoshop Lightroom for mobile (Android)? 
+ Visit the Adobe Photoshop Lightroom for mobile Getting Started page to learn about getting started with Adobe Photoshop Lightroom for mobile. 
+ I have Adobe Photoshop Lightroom for mobile. How do I get started? 
+ On your Android device, tap the Lightroom app icon. 
+ Sign in with your Adobe ID, Facebook, or Google. 
+ Sign in to Lightroom for mobile on your Android device 
+ Once you've signed in, you can view your device photos mirrored in the app. Tap a photo to start editing. Lightroom automatically saves your edits internally, you can also save a copy back to your device, share and export your photos. You can even import multiple photos, search and organize them. 
+ Get to know the workspace 
+ Gallery view 
+ Lightroom view 
+ People view 
+ Shared Albums view 
+ Community view 
+ Grid view 
+ Loupe view 
+ Settings 
+ Note: 
+ Starting from Lightroom for mobile (Android) version 8.4, you can instantly access all your photos and albums on your mobile device, making it easy to browse through and select any photo you want to edit with a select.   
+ Gallery view 
+ Opening the Lightroom app instantly gives access to edit your device's photos in the Gallery  view. To view the  Albums on your device , select the dropdown menu and select an album to populate the corresponding files to the Gallery  view. You can select any photo to start editing. The edited photo will appear in the Lightroom  view, and a Lightroom icon (   ) will appear in the top-left corner of the photo in the  Gallery  view. 
+ Filter and Sort photos in the  Gallery  view 
+ Select the sort icon to filter and sort the files by newest to oldest or vice versa. You can also filter the files in Gallery  view by tapping the filter icon and selecting any one or multiple Filters . 
+ JPGs/PNGs 
+ Videos 
+ Raws 
+ Lightroom view 
+ Alert: 
+ Lightroom view will appear as Edits view for freemium users. 
+ Select the Lightroom tab to view all the photos you've already edited in Lightroom or synced from Lightroom desktop or Lightroom Classic. You can select the drop-down icon menu to view and select the Lightroom albums or Create new . 
+ Note: 
+ Starting with Lightroom for mobile Android (version 8.5), you can: 
+ Access the Search functionality and more filter options in ' My edits ', ' Unedited ', and ' Imports ' albums. 
+ You can collapse the Lightroom albums using the drop-down arrow in the Albums view. 
+ You can access the camera icon  (   ) in the My edits album. 
+ You can specify the order of how the files appear in the Lightroom view. Select the sort icon in the screen's upper-right corner, and  choose one of the following Sort by options from the pop-up menu. 
+ Capture Date 
+ Import Date 
+ Modified Date   
+ File Name 
+ Star rating 
+ Once the order is selected, you may also choose Reverse order for ascending or descending order of the sorted list. 
+ To filter the files in Lightroom view, select the filter icon and choose from the following Filter by options: 
+ Star rating 
+ By Flag 
+ Type 
+ Camera 
+ People 
+ Location 
+ Keyword 
+ Edited 
+ All Photos view (all Lightroom photos) 
+ All Photos view for subscribed users is a collection of all your imported and edited photos across all Lightroom devices. For freemium users, it's a collection of all photos edited within the app. To access the All Photos view, select the Lightroom tab in the bottom panel of the screen and select  All Photos  from the drop-down icon menu. 
+ People view 
+ View people in your photos 
+ Show and Hide People 
+ Merge People 
+ Sort options in People View 
+ Name a people cluster 
+ Rename a people cluster 
+ Remove photos from a people cluster 
+ Move photos among people clusters 
+ Disable People View 
+ The People View in Lightroom for mobile (Android) recognizes and groups photos of the same person in a cluster. You can easily browse through the photos of any particular person using the People View. The People View in Lightroom for mobile (Android) is disabled by default, for new users. 
+ The No People Found Yet screen message is displayed when Lightroom is still analyzing all your photos to find people or when there aren't any people in your photos. 
+ Not able to view People clusters. Here's why. 
+ View people in your photos 
+ Select People from the Library view to navigate to the People View. In this view, you can access clusters of photos detected for a particular person. The total number of photos for each person is listed below the cover photo of the cluster. 
+ Show and Hide People 
+ Tap three dot icon from the upper-right corner of the People View . 
+ Select Show and Hide to bring up the Show and Hide People  panel. 
+ All people clusters that are shown in the People View are selected by default. In the Show and Hide People panel, select a hidden cluster to show it. To hide a cluster, deselect it. 
+ Tap the tick icon at the upper-right corner to apply your selection. 
+ Merge People 
+ You can combine photo clusters of the same person under separate people buckets using the Merge option. However, you cannot undo the merge action. 
+ Tap three dot icon from the upper-right corner of the People View. 
+ Select  Merge People to bring up the Merge People  panel. 
+ Select the people clusters that you want to merge. 
+ Tap tick icon at the upper-right corner. In the Are these the same person? dialog box that appears, approve the suggested cluster name or rename the cluster to a desired person's name in the Add a Name field. 
+ Tap Merge . All photos of the selected people clusters will merge together into one cluster. To exit the dialog box without the merge action, tap Cancel. 
+ Note: 
+ Lightroom for mobile (Android) can detect if two clusters belong to the same person. In this case, you can view a suggestion in the top panel to merge the clusters when you open one of them. Tap Yes to merge the clusters or N o to not merge. If you tap No , the merge suggestion for the specific clusters will not be shown again. You can also tap the cancel icon to remove the suggestion. The cancel action removes the suggestion only for that particular time and it re-appears on opening a cluster again. 
+ Sort options in People View 
+ Tap three dot icon from the upper-right corner of the People View . 
+ Select  Sort by option to bring up the  Sort By panel. 
+ Select an option from the Sort By panel to sort your people clusters: 
+     First Name     Sorts named people clusters in alphabetical order of their first names 
+     Last Name     Sorts named people clusters in alphabetical order of their last names 
+     Count     Sorts people clusters by the number of photos contained in the clusters 
+ Tap your selection again to toggle between ascending and descending order of the selected sorting option. Named people clusters always show up above the unnamed clusters. 
+ Sorting options in People view 
+ Name a people cluster 
+ In the People View , tap the unnamed cluster. The cluster opens. 
+ In the open cluster, tap the  Add Name  field at the top of the cluster and enter the desired name. 
+ Tap tick at the bottom of the keypad to save the name of the cluster. 
+ Rename a people cluster 
+ To rename a People cluster, tap a People cluster in the People View and do any of the following: 
+ Directly edit the name at the top of the named cluster. Once you have edited the name, tap tick icon at the bottom of the keypad. 
+ Tap three dot icon at the upper-right corner of the screen and select Rename Person . You can then edit the name at the top of the cluster and tap the tick icon at the bottom of the keypad. 
+ Remove photos from a people cluster 
+ In the People View , tap the name of a cluster to open it. 
+ Long press a photo to enter multi-select mode. 
+ Select the photos you want to remove from the cluster. 
+ Tap  from the top menu to bring up the Delete photos dialog box. 
+ Select Remove photos from person to remove the selected photos from the cluster. Select Delete to delete photos from All Photos and any corresponding album. 
+ Move photos among people clusters 
+ You can now manually select and move photos from one people cluster to other if you feel any of the photos don't belong to that cluster. The move operation is valid for both named and unnamed clusters. Change of cluster is also reflected in the  Info  panel with updated People tag corresponding to the new destination cluster. 
+ To move photos from one cluster to other, do the following: 
+ Long press any photo in a People cluster to enter multi-select mode. 
+ Select the photos you want to move. 
+ Tap three dot icon from the top right corner. 
+ Tap Move To in the context menu. 
+ In the Move photos to window that opens, select your destination People cluster and tap tick icon at the top right corner. 
+ Disable People View 
+ If you're a new user, the People view is disabled by default. When the People view feature is enabled, Lightroom for desktop (Mac and Windows) and Lightroom for mobile (iOS and Android) analyze photos in the cloud to create models of faces to group similar faces together. By enabling this feature, you're letting us know that it's okay for Adobe to create these models on your behalf and that you have approval from the individuals featured in your photos. 
+ When you disable People view, all existing face model data is deleted from Lightroom servers. Existing groups of similar faces will remain showing in the People view, but Lightroom will stop analyzing your photos to find people and similar faces will no longer be automatically grouped together. 
+ To disable People view, follow these steps: 
+ Select  Edit > Preferences  (Windows) or Adobe Lightroom > Preferences  (macOS). 
+ In the preferences dialog box, click the General tab. 
+ Under the  Privacy  section, select Enable People View . If you want to disable People view, deselect this option. 
+ Click Done . 
+ To know more about this preferences setting, see  General preferences . 
+ Do one of the following to access the Settings menu: 
+ If you're in the Albums view, tap the Settings icon ( ) at the upper-right corner of the screen. 
+ If you're in the Grid view or Loupe view, tap the three-dot icon at the upper-right corner of the screen, and select Settings from the pop-up menu. 
+ In the Settings panel, select People View  to enable the feature. If you want to disable this feature, deselect this option. 
+ Launch the app and tap App Settings ( ) in the upper-left corner of the screen. 
+ Select Preferences > People View  and use the toggle to turn on or off the People view categorization. 
+ Shared Albums view 
+ In the  Lightroom  view, from the drop-down menu, select the My albums  to navigate to  Shared , which lists all the albums shared with you or the ones you've shared publicly. 
+ Community view 
+ The Community view provides photos by fellow photography members. You can browse through different categories of photos and select them to view how the photo was edited, step-by-step. You can also save the edits as a preset.  
+ Grid view (viewing photos in an album) 
+ The Grid view is available when you are looking at the photos within an album. In the Library view, tap an album to open the Grid view. 
+ Grid view 
+ Specify a cover photo for the album 
+ By default, Lightroom picks one of the pictures to be the cover photo for the album. You can change this option and specify a photo of your choice. 
+ In the Grid view, tap and hold a photo to select it. 
+ Tap three dot icon to bring up the context menu and select Set as Cover . 
+ Note: 
+ You can't specify a cover photo for All Photos album. You can only specify a cover photo for the albums that you've created. 
+ Filtering options 
+ In the Grid view, you can set a filter to see only specific photo filtered based on their flagging status, star rating, or other filter options. 
+ Tap three-dot icon located at the upper-right of the Grid view. Choose one of the filtering options, as explained in Filter Photos . 
+ Sorting and Segmentation options 
+ In the Grid view, you can choose to view a flat grid or segment photos in the grid. Further, you can sort the photos by capture time or modification date. 
+ Tap three dot icon located at the upper-right corner in the Grid view. From the context menu that appears, choose any of the following options:    
+ Grid Segmentation 
+ When you enable this option, Lightroom for mobile (Android) segments the grid photos By Month (default). You can also choose more segmentation options— By Year , By Day , By Hour .    
+ Sort By > Capture Date | Import Date | Modified Date | File Name | Star Rating 
+ Select one of these sorting options to reorder the display of photos based on the selected criteria. Clicking the option again toggles between ascending and descending orders. 
+ You can also sort by File Name and  Star Rating when the Grid Segmentation is off.   
+ Sort By > Custom Order 
+ Use this sort option to manually reorder your grid photos.   
+ Tap the edit icon beside the Custom Order option, to show the Reorder panel. Long-press a photo and drag-drop it to the desired location, guided by a blue markup line that is visible as you drag a photo. 
+ Tap the Custom Order option again to toggle between ascending and descending orders. 
+ You can sort by Custom Order when the Grid Segmentation is off. 
+ Loupe view (preparing to edit a photo) 
+ The Loupe view is available when you select a photo in the Grid view. Only one photo is visible at a time. In the Loupe view, you can apply Masking , Healing , Crop ,  Presets , and more. 
+ Note: 
+ To view the Exif information of a photo in the Loupe view ( Edit panel and Rate & Review panel only ), tap three dot icon at the upper-right corner and enable Show Info option from the menu that appears. Now, you can tap on the displayed information to cycle through the metadata. 
+ To view Histogram of a photo in the Loupe view, tap three dot icon at the upper-right corner and enable Show Histogram option from the menu that appears. 
+ The Loupe view is the window where you will perform edits and modifications on a photo. In addition to modifying the photo, you can share by mail or messages, copy, move, and more.  
+ Sidebar 
+ The sidebar, when expanded, allows you to specify certain preferences and view your disk usage. You can also view a list of shortcuts used in Adobe Photoshop Lightroom for mobile (Android). 
+ To expand the Sidebar, select ( ) at the upper-left corner of the Lightroom for mobile (Android) window. 
+ To collapse the Sidebar, swipe it to the left. 
+ Contextual Help 
+ Starting with Lightroom for mobile (Android) version 5.0, when you switch to the Loupe view, you can view the Help icon  at the upper-right corner. Tap the Help icon  to access the Contextual Help menu. 
+ Note: 
+ If you can not find the Help icon  , tap three-dot icon and select Help to access the Contextual Help. 
+ Using Contextual Help, you can easily find help within Lightroom for using a tool or feature. You can find and select the tool or feature that you want help with and based on where you currently are in Lightroom for mobile workspace, Lightroom will guide you to that tool or feature. 
+ Find help for a tool or feature 
+ Search resources using keywords 
+ Find help for a tool or feature 
+ Tap the Help icon  at the upper-right corner in the Loupe view. 
+ In the pop-up menu that is displayed, the first section displays tutorials for specific tool and features such as Exposure, Contrast, Shadows, and more. Tap More Tools & Features to view the entire list of tutorials. 
+ Tap a tutorial of your choice and follow the steps within the app to learn about it. 
+ Search resources using keywords 
+ Tap the Help icon  at the upper-right corner in the Loupe view. 
+ In the Search bar at the top of the pop-up menu, enter a keyword that is relevant to your interest. This can be a tool or feature. 
+ The search results appear as you type in the keyword. In case you are unable to find what you are looking for, try an alternative keyword. 
+ Set app preferences 
+ Note: 
+ Technology Preview is now renamed as Early Access . 
+ Sharing Options have been moved from preferences. To access the Sharing Options, select the   icon while sharing or exporting your images. 
+ Account  - Select to view your subscription status, cloud storage usage, and sign-out option. 
+ Premium Features  - Displays the premium features that you get when you upgrade to a paid subscription. 
+ Early Access - View and enable experimental and soft-launched features listed here and provide feedback to Adobe. 
+ Notify Me About New Previews  - Select the checkbox to be notified when new previews are available. 
+ New editor - Access the new and simple editor with enhanced UI.  
+ HDR Support  - Enable to use the  HDR mode on devices that meet the required specifications . 
+ Preferences 
+ Enable Auto Add  -  Switch on Auto Add From Device to automatically import any new picture from the Camera Roll or Gallery. You can also choose the formats to import - JPG/PNG and Raws. 
+ Photo Import Options  - Specify settings for importing photos. 
+ Raw Default  - Specify default settings to process raw photos during import. For more information, see Set up raw defaults . 
+ Add Copyright  - Optionally, add your copyright metadata to the images while importing them. 
+ Send Usage Data  - Switch on, to get a more personalized experience and improve product features by allowing Lightroom to send information about how you use the app to Adobe. 
+ Use Cellular Data  - Switch off, to sync only over WiFi. Switch on to sync using the bandwidth on your cellular data plan. Learn more . 
+ Only Download Smart Previews  -  Switch on to only download reduced resolution, editable proxies of your photos. Switch off to auto-download full-resolution photos on supported devices * while editing. 
+ * Check the App Version in Device Info & Storage > Device Info; if the App Version displays 'Arm 8', this feature is supported on your device . 
+ What's New  - Displays a chronological list of fixes and improvements made in Lightroom for mobile (Android). 
+ About Lightroom  - Select to view the names of the awesome people who made Adobe Photoshop Lightroom for mobile (Android). 
+ The Sidebar; representative snapshot from Lightroom for mobile (Android). 
+ Local Storage . 
+ Device Storage  - Displays how much local space is available to Lightroom for syncing and importing image data. 
+ Manage Storage  - Select to view a list of all the albums for which you've enabled the  Store Locally  album option. In the list of albums displayed, choose one or more albums and select Clear to release its locally stored copies and free up space on your device; the originals are still backed up in the cloud.  
+ Clear Cache - Select to clear previews and temporary files, from your mobile device. No photos or edits are deleted. 
+ Device Information - Select to view the Android OS version, Open GL version, DNG capture supported (Yes/No), HDR capture supported (Yes/No), Manufacturer, and Model of your mobile device. 
+ Help & Support 
+ Check out FAQs. View answers to frequently asked questions in the web browser. 
+ Access our Support Forum. Select to access the support forum in the web browser. 
+ Contact Adobe Support. Select to open Adobe Customer Support page in the web browser. 
+ Request a feature. Select to access Lightroom for mobile (Android) forum where you can request a new feature. 
+ Reset Coach Marks and Dialogs . Select, to restore the gesture tips and help overlays displayed after you installed Lightroom for mobile (Android). 
+ Gesture & Keyboard Shortcuts .  Select, to view the gestures shortcuts and keyboard shortcuts that you can use in Lightroom for mobile (Android). 
+ Note: 
+ Device Info & Storage > Manage Storage 
+ When you clear or purge the offline content of a locally stored album, Lightroom for mobile (Android) removes cache files stored for offline use in that album. Any images in the album that also marked for offline use in another locally stored album are not removed. Your images remain in the album and are not deleted.     
+ Device Info & Storage > Clear cache 
+ Clearing the cache removes any cache files stored for offline use by the Lightroom for mobile (Android). However, the offline content of the albums that you've stored locally is not impacted. Clearing the cache doesn't delete any of your Lightroom photos. 
+ Learn essential photography workflows 
+ Once you've signed in and acquainted yourself with the workspace in Lightroom for mobile (Android), here's what all you can do with your photos: 
+ Capture photos  - You can capture photos in Auto, Pro, or HDR modes. You can use Lightroom's in-app camera to adjust settings like shutter speed, focus, flash, and others, in the Pro mode. You can capture photos in DNG raw formats on supported devices. 
+ Search and organize photos  - You can create albums and further organize them into folders. You can also arrange photos in order using filter options. You can search for photos within an album or in the All Photos view using metadata, keywords, and facets. 
+ Edit photos - You can apply many cool edits to your photos. You can crop your photo and adjust its tonal scale. You can apply selective edits and even remove unwanted objects from your photos. You can also choose to apply various Presets and Profiles or create a custom preset and apply the same. 
+ Save, export, and share photos - You can save photos to which you have made edits as well as export original photos. You can share an album of photos or a random selection of photos as a shareable link or to Adobe Portfolio while controlling whether details like copyright data, location data, and metadata are available to the viewer. You can also include a custom watermark in your photos while sharing or saving them to the Camera Roll. 
+ Note: 
+ To learn how to work with Lightroom on your iPad or iPhone, see  Get started with Lightroom for mobile (iOS) . 
+ More like this Capture photos with Lightroom for mobile (Android) Import photos in Lightroom for mobile (Android) Search and organize photos in Lightroom for mobile (Android) Edit photos in Lightroom for mobile (Android) Save, share, and export photos from Lightroom for mobile (Android) Get started with Lightroom for mobile (iOS) Keyboard shortcuts for Lightroom mobile People View: How to find photos of a specific person in Lightroom for Mobile (Android) 
+ Sign in to your account 
+ Sign in
+ Manage account 
+ Quick links 
+ View all your plans 
+ Manage your plans 
+ Legal Notices    |    Online Privacy Policy 
+ Share this page
+ Copied 
+ Adobe Photoshop Lightroom 
+ < Visit Adobe Help Center 
+ Learn & Support 
+ Get Started 
+ User Guide 
+ Tutorials 
+ Ask the Community 
+ Post questions and get answers from experts. 
+ Ask now 
+ Contact Us 
+ Real help from real people. 
+ Start now 
+ ^ Back to top 
+ Language Navigation 
+ Language Navigation 
+ Choose a region 
+ Selecting a region changes the language and/or content on Adobe.com. 
+ Americas 
+ Brasil
+ Canada - English
+ Canada - Français
+ Latinoamérica
+ México
+ Argentina
+ Colombia
+ Perú
+ Chile
+ United States
+ Asia Pacific 
+ Australia
+ Hong Kong S.A.R. of China
+ India - English
+ Indonesia - English
+ Malaysia - English
+ New Zealand
+ Philippines - English
+ Vietnam - English
+ 中国
+ 中國香港特別行政區
+ 台灣地區
+ 日本
+ Indonesia
+ Malaysia
+ Pilipinas
+ Việt Nam
+ भारत
+ 한국
+ Singapore
+ Thailand - English
+ ประเทศไทย
+ Europe, Middle East and Africa 
+ Africa - English
+ België - Nederlands
+ Belgique - Français
+ Belgium - English
+ Česká republika
+ Cyprus - English
+ Danmark
+ Deutschland
+ Eesti
+ España
+ France
+ Greece - English
+ Ireland
+ Israel - English
+ Italia
+ Latvija
+ Lietuva
+ Luxembourg - Deutsch
+ Luxembourg - English
+ Luxembourg - Français
+ Magyarország
+ Malta - English
+ Middle East and North Africa - English
+ Nederland
+ Norge
+ Österreich
+ Polska
+ Portugal
+ România
+ Schweiz
+ Slovenija
+ Slovensko
+ Suisse
+ Suomi
+ Svizzera
+ Türkiye
+ United Kingdom
+ България
+ Россия
+ Україна
+ الشرق الأوسط وشمال أفريقيا - اللغة العربية
+ ישראל - עברית
+ Sverige
+ Saudi Arabia - English
+ United Arab Emirates - English
+ الإمارات العربية المتحدة
+ المملكة العربية السعودية

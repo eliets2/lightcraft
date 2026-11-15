@@ -1,0 +1,116 @@
+Slideshow module panels and tools in Lightroom Classic 
+ Slideshow module panels and tools
+ Search 
+ Adobe Photoshop Lightroom Classic User Guide
+ Select an article: 
+ Select an article: 
+ Applies to: 
+ Adobe Photoshop Lightroom 5 
+ Note: 
+ You’re viewing help for Photoshop Lightroom Classic (formerly Lightroom CC). 
+Not your version? View help for  Photoshop Lightroom .
+ In the Slideshow module, you specify the photo and text
+layout of the slides in your presentation.
+ The Slideshow module
+ A. Slide Editor view  B. Template
+preview  C. Slideshow templates and Collections  D. Playback
+controls  E. Rotate and Add Text
+tools  F. Panels
+for setting layout and playback options 
+ The Slideshow module includes the following panels:
+ Preview 
+ Displays the layout of a template with a thumbnail preview. Moving the pointer over a template name displays that layout in the Preview panel.
+ Template Browser 
+ Selects or previews the slide layout for photos.
+ Collections 
+ Displays the collections in the catalog.
+ Options 
+ Determines how the photos appear in the slide layout and whether they have a border or cast shadow.
+ Layout 
+ Customizes the page layout by specifying the size of the image cell in the slide template.
+ Overlays 
+ Specifies the text and other objects that are displayed in the slide with the photo.
+ Backdrop 
+ Specifies the colors or image behind the photo on each slide.
+ Titles 
+ Specifies introductory and ending slides for the show.
+ Playback 
+ Specifies how long each slide is displayed in the presentation, the duration of the transition between slides, whether music plays with the slideshow, and whether the photos appear in random order. 
+ More like this
+ Create slideshows 
+ Play and export slideshows 
+  Twitter™ and Facebook posts are not covered under the terms of Creative Commons.
+ Legal Notices 
+   |  
+ Online Privacy Policy 
+ Choose your region 
+ Selecting a region changes the language and/or content on Adobe.com.
+ Americas 
+ Brasil 
+ Canada - English 
+ Canada - Français 
+ Latinoamérica 
+ México 
+ United States 
+ Europe, Middle East and Africa 
+ Africa - English 
+ Belgique - Français 
+ Belgium - English 
+ België - Nederlands 
+ Česká republika 
+ Cyprus - English 
+ Danmark 
+ Deutschland 
+ Eesti 
+ España 
+ France 
+ Greece - English 
+ Ireland 
+ Israel - English 
+ Italia 
+ Latvija 
+ Lietuva 
+ Luxembourg - Deutsch 
+ Luxembourg - English 
+ Luxembourg - Français 
+ Magyarország 
+ Malta - English 
+ Middle East and North Africa - English 
+ Nederland 
+ Norge 
+ Österreich 
+ Polska 
+ Portugal 
+ România 
+ Schweiz 
+ Slovenija 
+ Slovensko 
+ Suisse 
+ Suomi 
+ Sverige 
+ Svizzera 
+ Türkiye 
+ United Kingdom 
+ България 
+ Россия 
+ Україна 
+ الشرق الأوسط
+ وشمال أفريقيا -
+ اللغة العربية 
+ ישראל - עברית 
+ Asia - Pacific 
+ Australia 
+ Hong Kong S.A.R. of China 
+ India - English 
+ New Zealand 
+ Southeast Asia (Includes Indonesia, Malaysia, Philippines, Singapore, Thailand,
+ and
+ Vietnam) - English 
+ 中国 
+ 中國香港特別行政區 
+ 台灣地區 
+ 日本 
+ 한국 
+ Commonwealth of Independent States 
+ Includes Armenia, Azerbaijan, Belarus, Georgia, Kazakhstan, Kyrgyzstan, Moldova, Tajikistan,
+ Turkmenistan, Ukraine, Uzbekistan
