@@ -200,6 +200,15 @@ fn top_bar_has_no_cloud_widget() {
 }
 
 #[test]
+fn top_bar_has_no_cloud_widget_review_regression_1() {
+    // right_icons in topbar.rs still lists the cloud button with an empty command,
+    // registering icon:cloud, contrary to the no-cloud top-bar requirement.
+    let mut h = Headless::new(app(), [1400.0, 900.0], 1.0);
+    h.settle(T);
+    assert!(!h.app.widgets.iter().any(|(id, _)| id == "icon:cloud"), "the top bar still registers a dead cloud button");
+}
+
+#[test]
 fn interface_settings_fit_small_windows_and_stack_theme_choices() {
     // Desktop windows have a 900×560 minimum; also stress a smaller headless viewport.
     for size in [[900.0, 560.0], [640.0, 480.0]] {
