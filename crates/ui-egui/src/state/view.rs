@@ -283,6 +283,7 @@ pub struct LayoutImage {
     /// How dark the photo is outside the graphic's box, 0..=1 (0: not darkened).
     pub matte: f32,
     /// The loupe grid over the photo (View ▸ Loupe Overlay ▸ Grid).
+    #[serde(skip_serializing_if = "LoupeGrid::is_default")]
     pub loupe_grid: LoupeGrid,
     /// Bumped by each Choose Layout Image…, so choosing the same file again reads it again (after
     /// it was edited elsewhere).
@@ -304,11 +305,42 @@ impl LayoutImage {
 
 /// View ▸ Loupe Overlay ▸ Grid: evenly spaced lines over the photo in the loupe, to judge
 /// alignment and straightness. The lines stay inside the photo and follow its zoom and pan.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
 pub struct LoupeGrid {
     /// Shown over the photo.
     pub show: bool,
+    /// Line spacing as divisions across the photo (2..=16); 4 by default.
+    pub size: u8,
+    /// Line opacity, 0..=1; opaque by default.
+    pub opacity: f32,
+}
+
+impl Default for LoupeGrid {
+    fn default() -> Self {
+        LoupeGrid { show: false, size: 4, opacity: 1.0 }
+    }
+}
+
+impl LoupeGrid {
+    /// The default size and opacity, when the grid is off.
+    pub const DEFAULT_SIZE: u8 = 4;
+    /// The default opacity, when the grid is off.
+    pub const DEFAULT_OPACITY: f32 = 1.0;
+
+    pub fn is_default(g: &LoupeGrid) -> bool {
+        !g.show && g.size == Self::DEFAULT_SIZE && g.opacity == Self::DEFAULT_OPACITY
+    }
+
+    /// `size` clamped to the offered range, the default when it isn't a number.
+    pub fn clamp_size(size: f32) -> u8 {
+        if size.is_finite() { size.round().clamp(2.0, 16.0) as u8 } else { Self::DEFAULT_SIZE }
+    }
+
+    /// `opacity` clamped to 0..=1, the default when it isn't a number.
+    pub fn clamp_opacity(opacity: f32) -> f32 {
+        if opacity.is_finite() { opacity.clamp(0.0, 1.0) } else { Self::DEFAULT_OPACITY }
+    }
 }
 
 /// Lights Out (View ▸ Lights Out, Shift+L cycles On → Dim → Off → On; Esc turns the lights back

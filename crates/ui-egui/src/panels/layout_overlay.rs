@@ -114,8 +114,11 @@ pub fn draw(app: &LightcraftApp, p: &egui::Painter, photo: Rect) {
     // View ▸ Loupe Overlay ▸ Grid: lines spanning the photo, nothing outside it.
     // Drawn independently of the layout image: the grid is its own overlay (View ▸ Loupe Overlay ▸ Grid).
     if li.loupe_grid.show {
-        let stroke = Stroke::new(1.0, Color32::WHITE);
-        let divisions = 4;
+        let o = li.loupe_grid.opacity;
+        let alpha = (if o.is_finite() { o.clamp(0.0, 1.0) } else { 1.0 } * 255.0).round() as u8;
+        let stroke = Stroke::new(1.0, Color32::from_white_alpha(alpha));
+        let s = li.loupe_grid.size as f32;
+        let divisions = if s.is_finite() { s.round().clamp(2.0, 16.0) as i32 } else { 4 };
         for i in 1..divisions {
             let fx = photo.left() + photo.width() * i as f32 / divisions as f32;
             p.line_segment([pos2(fx, photo.top()), pos2(fx, photo.bottom())], stroke);
@@ -124,7 +127,7 @@ pub fn draw(app: &LightcraftApp, p: &egui::Painter, photo: Rect) {
             let fy = photo.top() + photo.height() * i as f32 / divisions as f32;
             p.line_segment([pos2(photo.left(), fy), pos2(photo.right(), fy)], stroke);
         }
-        register_geometry(&ctx, "canvas:loupeGrid", photo);
+        register_geometry(&ctx, "canvas:loupeGrid", photo.intersect(p.clip_rect()));
     }
     let path = li.path.trim();
     if !li.show || path.is_empty() {

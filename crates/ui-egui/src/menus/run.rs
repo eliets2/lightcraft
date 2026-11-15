@@ -557,6 +557,19 @@ fn ui_commands_3(app: &mut LightcraftApp, ctx: &egui::Context, id: &str, p: &Val
             app.ui.layout_image.loupe_grid.show = show;
             Ok(json!({"ok": true, "show": show}))
         }
+        "view.loupeGridSize" | "view.loupeGridOpacity" => {
+            let key = if id == "view.loupeGridSize" { "size" } else { "opacity" };
+            let Some(v) = p.get(key).and_then(Value::as_f64).filter(|v| v.is_finite()) else {
+                return Some(Err(format!("{id}: {key} is required")));
+            };
+            let grid = &mut app.ui.layout_image.loupe_grid;
+            if key == "size" {
+                grid.size = if v.is_finite() { v.round().clamp(2.0, 16.0) as u8 } else { 4 };
+            } else {
+                grid.opacity = if v.is_finite() { v.clamp(0.0, 1.0) as f32 } else { 1.0 };
+            }
+            Ok(json!({"ok": true, "size": grid.size, "opacity": grid.opacity}))
+        }
         "view.navigator" => {
             app.ui.navigator = !app.ui.navigator;
             Ok(json!({"navigator": app.ui.navigator}))
