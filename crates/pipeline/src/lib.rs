@@ -890,7 +890,7 @@ fn plan_preserves_matching_box_size() {
     let info = SourceInfo { native_long: Some(240), ..SourceInfo::default() };
     let s = DevelopSettings::default();
     let fitted = plan(&src, &info, &s, &RenderRequest::fit(240, 160));
-    assert_eq!((fitted.w, fitted.h), (238, 160));
+    assert_eq!((fitted.w, fitted.h), (240, 160));
     let req = RenderRequest::exact(240, 160);
     let p = plan(&src, &info, &s, &req);
     assert_eq!((p.w, p.h), (240, 160));
