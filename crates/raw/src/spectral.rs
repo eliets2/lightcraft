@@ -149,6 +149,15 @@ mod tests {
     }
 
     #[test]
+    fn panasonic_dc_s5_finds_its_spectral_matrices() {
+        // The DC-S5 shares its sensor with the table's Panasonic DC-GX9, but
+        // SAME_SENSOR names no Panasonic sibling, so the body finds no row and
+        // every DC-S5 raw falls back to the muted neutral matrix instead of its
+        // measured sensor colour.
+        assert_eq!(find(Some("Panasonic"), "DC-S5").map(|c| c.model), Some("DC-GX9"), "Panasonic DC-S5");
+    }
+
+    #[test]
     fn aliases_reach_the_camera_they_name() {
         for (make, model, row) in [
             ("Canon", "Canon EOS 400D DIGITAL", "Digital Rebel XTi"),
