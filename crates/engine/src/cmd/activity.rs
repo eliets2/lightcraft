@@ -1,4 +1,4 @@
-//! `activity.list` / `activity.cancel`: the background tasks in flight (see [`crate::activity`]).
+//! `activity.list` / `activity.cancel` / `activity.pause` / `activity.resume`: the background tasks in flight (see [`crate::activity`]).
 
 use serde_json::{Value, json};
 
@@ -11,7 +11,7 @@ pub fn specs() -> Vec<CommandSpec> {
             "Background Tasks",
             [],
             None,
-            "{} → {tasks: [{id, kind, label, done, total, unit: count|bytes|percent, detail, cancellable, cancelling, ageMs}]} — the long-running tasks in flight (imports, exports, preview builds, downloads, the face scan…), oldest first; total 0 = not known yet",
+            "{} → {tasks: [{id, kind, label, done, total, unit: count|bytes|percent, detail, cancellable, cancelling, paused, ageMs}]} — the long-running tasks in flight (imports, exports, preview builds, downloads, the face scan…), oldest first; total 0 = not known yet",
             always,
             |s, _| Ok(json!({"tasks": s.activity.list()}))
         ),
@@ -30,6 +30,34 @@ pub fn specs() -> Vec<CommandSpec> {
                 let id = p.get("id").and_then(Value::as_u64).ok_or_else(|| bad(C, "id or all"))?;
                 s.activity.cancel(id).map_err(|e| bad(C, e))?;
                 Ok(json!({"cancelled": 1}))
+            }
+        ),
+        cmd!(
+            "activity.pause",
+            "Pause Background Task",
+            [],
+            None,
+            "{id} → {paused: 1} — ask a task to wait; it does not cancel it. An unknown id (it may have just finished) is an error",
+            always,
+            |s, p| {
+                const C: &str = "activity.pause";
+                let id = p.get("id").and_then(Value::as_u64).ok_or_else(|| bad(C, "id"))?;
+                s.activity.set_paused(id, true).map_err(|e| bad(C, e))?;
+                Ok(json!({"paused": 1}))
+            }
+        ),
+        cmd!(
+            "activity.resume",
+            "Resume Background Task",
+            [],
+            None,
+            "{id} → {resumed: 1} — ask a paused task to continue. An unknown id (it may have just finished) is an error",
+            always,
+            |s, p| {
+                const C: &str = "activity.resume";
+                let id = p.get("id").and_then(Value::as_u64).ok_or_else(|| bad(C, "id"))?;
+                s.activity.set_paused(id, false).map_err(|e| bad(C, e))?;
+                Ok(json!({"resumed": 1}))
             }
         ),
     ]
@@ -61,5 +89,28 @@ mod tests {
         assert_eq!(s.execute("activity.cancel", &json!({"all": true})).unwrap()["cancelled"], 1);
         assert!(s.execute("activity.cancel", &json!({"id": 999})).is_err());
         assert!(s.execute("activity.cancel", &json!({})).is_err());
+    }
+
+    #[test]
+    fn paused_task_reports_paused_then_resumes() {
+        let mut s = Session::new();
+        let g = s.activity.start("export", "Exporting", Cancel::Yes);
+
+        // a fresh task is not paused; pausing it must not cancel it, and the row must say so
+        let r = s.execute("activity.list", &json!({})).unwrap();
+        assert_eq!(r["tasks"][0]["paused"], false, "a fresh task is not paused: {:?}", r["tasks"][0]);
+
+        let r = s.execute("activity.pause", &json!({"id": g.id()})).unwrap();
+        assert_eq!(r["paused"], 1);
+        assert!(!g.is_cancelled(), "pausing must not cancel the task");
+
+        let r = s.execute("activity.list", &json!({})).unwrap();
+        assert_eq!(r["tasks"][0]["paused"], true, "the paused row says so: {:?}", r["tasks"][0]);
+
+        let r = s.execute("activity.resume", &json!({"id": g.id()})).unwrap();
+        assert_eq!(r["resumed"], 1);
+
+        let r = s.execute("activity.list", &json!({})).unwrap();
+        assert_eq!(r["tasks"][0]["paused"], false, "the resumed row says so: {:?}", r["tasks"][0]);
     }
 }

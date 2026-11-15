@@ -5,7 +5,9 @@
 //! A job holds a [`TaskGuard`] for as long as it runs; dropping it — when the job ends, fails or its thread unwinds
 //! from a panic — removes the row, so a dead worker never leaves a stuck bar. Jobs keep the cancel flag they already
 //! check between files or photos: the guard adopts it ([`Cancel::Flag`]), so the stack's ✕, `activity.cancel` and the
-//! job's own Cancel all set the same atomic. Numbers are worded by the frontend from `done`, `total` and [`Unit`]; a
+//! job's own Cancel all set the same atomic. A pausable job may also hold the pause flag from
+//! [`TaskGuard::pause_flag`]: `activity.pause` and `activity.resume` set it, and the job waits while it is set instead
+//! of doing more work. Numbers are worded by the frontend from `done`, `total` and [`Unit`]; a
 //! detail set here is a name (a file, a model), never a sentence, so the frontend can translate everything else.
 
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, Ordering};
@@ -68,7 +70,7 @@ impl Unit {
 }
 
 /// One task as the frontends see it (`activity.list`).
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TaskInfo {
     pub id: u64,
@@ -86,6 +88,8 @@ pub struct TaskInfo {
     pub cancellable: bool,
     /// Cancel was asked for; the job stops at its next check.
     pub cancelling: bool,
+    /// `activity.pause` was asked for; a pausable job waits while this is set.
+    pub paused: bool,
     pub age_ms: u64,
 }
 
@@ -99,6 +103,7 @@ struct Entry {
     unit: AtomicU8,
     detail: Mutex<String>,
     cancel: Option<Arc<AtomicBool>>,
+    pause: Arc<AtomicBool>,
     cancellable: AtomicBool,
     /// Held while a cancel is decided ([`Activity::cancel`], [`Activity::cancel_all`]) and while
     /// cancelling is switched ([`TaskGuard::set_cancellable`], [`TaskHandle::set_cancellable`]): a
@@ -142,6 +147,14 @@ impl Entry {
         self.cancel.as_ref().is_some_and(|c| c.load(Ordering::Relaxed))
     }
 
+    fn is_paused(&self) -> bool {
+        self.pause.load(Ordering::Relaxed)
+    }
+
+    fn set_paused(&self, yes: bool) {
+        self.pause.store(yes, Ordering::Relaxed);
+    }
+
     fn progress(&self, done: u64, total: u64) {
         self.total.store(total, Ordering::Relaxed);
         self.done.store(if total > 0 { done.min(total) } else { done }, Ordering::Relaxed);
@@ -162,6 +175,7 @@ impl Entry {
             detail: lock(&self.detail).clone(),
             cancellable: self.is_cancellable(),
             cancelling: self.is_cancelled(),
+            paused: self.is_paused(),
             age_ms: u64::try_from(self.started.elapsed().as_millis()).unwrap_or(u64::MAX),
         }
     }
@@ -186,6 +200,7 @@ impl Activity {
             total: AtomicU64::new(0),
             unit: AtomicU8::new(Unit::Count.to_u8()),
             detail: Mutex::new(String::new()),
+            pause: Arc::new(AtomicBool::new(false)),
             cancellable: AtomicBool::new(cancel.is_some()),
             cancel,
             gate: Mutex::new(()),
@@ -211,6 +226,14 @@ impl Activity {
     pub fn cancel_all(&self) -> usize {
         let tasks = lock(&self.inner.tasks);
         tasks.iter().filter(|e| e.try_cancel()).count()
+    }
+
+    /// Ask task `id` to wait and `activity.resume` to continue it (same unknown-id error as [`Self::cancel`]).
+    pub fn set_paused(&self, id: u64, yes: bool) -> Result<(), String> {
+        let tasks = lock(&self.inner.tasks);
+        let entry = tasks.iter().find(|e| e.id == id).ok_or_else(|| format!("no task {id}"))?;
+        entry.set_paused(yes);
+        Ok(())
     }
 
     /// Tasks that quitting would cut short: cancellable ones not already stopping.
@@ -253,8 +276,17 @@ impl TaskGuard {
         self.entry.cancel.clone()
     }
 
+    /// The flag `activity.pause` and `activity.resume` set; a pausable job waits while it is set.
+    pub fn pause_flag(&self) -> Arc<AtomicBool> {
+        self.entry.pause.clone()
+    }
+
     pub fn is_cancelled(&self) -> bool {
         self.entry.is_cancelled()
+    }
+
+    pub fn is_paused(&self) -> bool {
+        self.entry.is_paused()
     }
 
     /// For progress from another thread; it does not keep the row.
@@ -293,6 +325,10 @@ impl TaskHandle {
 
     pub fn is_cancelled(&self) -> bool {
         self.entry.is_cancelled()
+    }
+
+    pub fn is_paused(&self) -> bool {
+        self.entry.is_paused()
     }
 
     /// [`TaskGuard::set_cancellable`] from the worker, at the moment its step starts (an export

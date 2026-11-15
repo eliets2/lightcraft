@@ -40,10 +40,13 @@ fn megabytes(bytes: u64) -> String {
     if mb < 10.0 { format!("{mb:.1}") } else { format!("{:.0}", mb.floor()) }
 }
 
-/// The row's second line: "Stopping…" once cancelled, else the count and what is being worked on.
+/// The row's second line: "Stopping…" once cancelled, "Paused" while paused, else the count and what is being worked on.
 fn detail_line(t: &TaskInfo) -> String {
     if t.cancelling {
         return tr("Stopping…").to_string();
+    }
+    if t.paused {
+        return tr("Paused").to_string();
     }
     let count = count_text(t);
     match (count.is_empty(), t.detail.is_empty()) {
@@ -150,7 +153,7 @@ fn row(ui: &mut egui::Ui, t: &Tokens, task: &TaskInfo, width: f32) -> bool {
 /// known, a segment sweeps across.
 pub(crate) fn bar(ui: &mut egui::Ui, task: &TaskInfo, width: f32) -> egui::Response {
     let fraction = (task.total > 0).then(|| (task.done as f64 / task.total as f64) as f32);
-    let response = crate::progress::Progress::new(fraction).width(width).dimmed(task.cancelling).show(ui);
+    let response = crate::progress::Progress::new(fraction).width(width).dimmed(task.cancelling || task.paused).show(ui);
     crate::widgets::screen_reader_name(ui.ctx(), response.id, tr(&task.label));
     response
 }
