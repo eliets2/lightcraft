@@ -37,7 +37,19 @@ impl std::error::Error for NotFollowed {}
 /// or why it is not followed. A relative `document` is taken from the working directory, where it
 /// was opened from.
 pub fn resolve(stored: &str, document: Option<&Path>) -> Result<PathBuf, NotFollowed> {
-    let document = document.map(|d| if d.is_relative() { std::path::absolute(d).unwrap_or_else(|_| d.to_path_buf()) } else { d.to_path_buf() });
+    let document =
+        document.map(|d| if d.is_relative() && !d.has_root() { std::path::absolute(d).unwrap_or_else(|_| d.to_path_buf()) } else { d.to_path_buf() });
+    if let Some(d) = document.as_deref() {
+        if d.has_root() && !d.is_absolute() {
+            if let Some(parent) = d.parent() {
+                let docpath_unusable = craft_docpath::resolve_absolute(stored, document.as_deref());
+                if !matches!(docpath_unusable, Ok(_)) {
+                    return Ok(parent.join(stored));
+                }
+            }
+        }
+        let _ = document.as_ref();
+    }
     match craft_docpath::resolve_absolute(stored, document.as_deref()) {
         Ok(path) => Ok(path),
         // A usable path that is not absolute here: a Windows path on macOS or Linux, or a
@@ -66,6 +78,13 @@ mod tests {
         #[cfg(not(windows))]
         let gvfs = Path::new("/run/user/1000/gvfs/smb-share:server=tokyo,share=photos/catalog.lrcat");
         #[cfg(not(windows))]
+        assert_eq!(resolve("a.jpg", Some(gvfs)), Ok(gvfs.with_file_name("a.jpg")));
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn gvfs_catalog_resolves_relative_photo() {
+        let gvfs = Path::new("/run/user/1000/gvfs/smb-share:server=tokyo,share=photos/catalog.lrcat");
         assert_eq!(resolve("a.jpg", Some(gvfs)), Ok(gvfs.with_file_name("a.jpg")));
     }
 }
