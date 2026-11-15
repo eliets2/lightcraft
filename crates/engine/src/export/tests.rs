@@ -1525,3 +1525,30 @@ fn export_weights_follow_the_source_and_output_sizes() {
     assert_eq!(render_weight(0, 0, SourceLevel::Full, 0), 0);
     assert!(render_weight(usize::MAX, 1, SourceLevel::Full, usize::MAX) > 0, "no overflow");
 }
+
+#[test]
+fn export_plan_lists_paths_without_writing_files() {
+    use lightcraft_catalog::{Op, Photo, PhotoId, Source};
+    let mut s = crate::Session::with_demo();
+    for (id, name) in [(9001, "Photo.jpg"), (9002, "photo.jpg")] {
+        let photo = Photo::new(PhotoId(id), Source::Demo { scene: 0 }, name, "jpeg", 800, 600, "2026-01-01T00:00:00");
+        s.catalog.apply(Op::AddPhoto { photo: Box::new(photo) }).unwrap();
+    }
+    let ids = [PhotoId(9001), PhotoId(9002)];
+    let o = crate::export::ExportOptions::from_json(&json!({"format": "png", "width": 40, "naming": "{name}"}));
+    let to = crate::export::Destination { dir: "out".into(), exact: None };
+    let planned = crate::export::export_plan(&mut s, &ids, &o, &to, &|_| false).unwrap();
+    let mut planned_paths = Vec::new();
+    for f in &planned {
+        planned_paths.push(f["path"].as_str().unwrap_or_default().to_string());
+    }
+    for p in &planned_paths {
+        assert!(!std::path::Path::new(p).exists(), "plan must not write files: {p}");
+    }
+    let (_, written, _) = lanes_batch(&mut s, &ids, &o, 1, true, usize::MAX);
+    let mut written_paths = Vec::new();
+    for (p, _) in &written {
+        written_paths.push(p.clone());
+    }
+    assert_eq!(planned_paths, written_paths, "plan must list the paths a real export writes");
+}
