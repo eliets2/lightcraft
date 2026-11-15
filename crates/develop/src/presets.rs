@@ -580,6 +580,38 @@ mod tests {
         assert_eq!(p.apply_on(&current, &original, 0.6).crop.aspect, Some((16, 9)), "60 %: the preset's aspect applies");
     }
 
+    /// Amount 0 restores a null import baseline: when the photo was imported with no crop aspect
+    /// (null) and the preset names one, the import's null is the value below half amount rather
+    /// than the photo's own aspect; from half amount up the preset's aspect applies.
+    #[test]
+    fn amount_zero_restores_a_null_import_crop_aspect() {
+        let mut current = DevelopSettings::default();
+        current.crop.aspect = Some((3, 2));
+        let original = DevelopSettings::default(); // the import state has no aspect
+        let p = Preset {
+            id: "p".into(),
+            name: "P".into(),
+            group: "G".into(),
+            settings: json!({"crop": {"aspect": [16, 9]}}),
+            favorite: false,
+            builtin: false,
+        };
+        for amount in [0.0, 0.25, 0.4] {
+            assert_eq!(
+                p.apply_on(&current, &original, amount).crop.aspect,
+                None,
+                "amount {amount}: the null import baseline is restored"
+            );
+        }
+        for amount in [0.5, 0.75, 1.0] {
+            assert_eq!(
+                p.apply_on(&current, &original, amount).crop.aspect,
+                Some((16, 9)),
+                "amount {amount}: the preset's aspect applies"
+            );
+        }
+    }
+
     #[test]
     fn deep_merge_objects() {
         let mut a = json!({"x": {"a": 1, "b": 2}, "y": [1]});
