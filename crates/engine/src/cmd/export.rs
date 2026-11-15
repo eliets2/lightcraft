@@ -74,14 +74,10 @@ fn list(s: &Session) -> Value {
     Value::Array(s.all_export_presets().into_iter().map(|(p, builtin)| json!({"name": p.name, "builtin": builtin, "params": p.params})).collect())
 }
 
-/// `export.plan`: the paths `app.export` with these params would write, without writing anything.
 fn plan(s: &mut Session, p: &Value) -> Result<Value> {
     const ID: &str = "export.plan";
     let p = &s.export_params(p).map_err(|e| bad(ID, e))?;
-    let mut opts = crate::export::ExportOptions::from_params(p).map_err(|e| bad(ID, e.to_string()))?;
-    if !crate::export::ExportOptions::has_size_param(p) {
-        opts.resize = Some(crate::export::Resize::long_edge(3000));
-    }
+    let opts = crate::export::ExportOptions::from_params(p).map_err(|e| bad(ID, e.to_string()))?;
     let ids = crate::cmd::photo_ids(p, ID)?.unwrap_or_else(|| {
         // An explicit `id` takes precedence over the ambient selection, as in headless
         // `app.export`; without it, a multi-photo selection is planned as before.

@@ -1596,3 +1596,42 @@ fn export_plan_honors_explicit_id_over_selection() {
     let files = result["files"].as_array().unwrap();
     assert_eq!(files.len(), 1, "explicit id should plan one photo, got {result}");
 }
+
+/// The plan command handler in cmd/export.rs unconditionally injects a 3000px long-edge resize
+/// when has_size_param returns false, diverging from app.export's full-size default.
+/// This test verifies that export.plan uses 3000px long edge when no size param is given,
+/// while app.export (via export_batch) uses full size.
+#[test]
+fn export_plan_matches_app_export_full_size_default() {
+    let mut session = crate::Session::with_demo();
+    let ids: Vec<_> = session.visible_cloned().into_iter().take(1).collect();
+    let id = ids[0];
+
+    // export.plan with no size param: should use 3000px long edge (current behavior)
+    let plan_result = session.execute("export.plan", &json!({"id": id.0, "dir": "out", "format": "png"})).unwrap();
+    let plan_files = plan_result["files"].as_array().unwrap();
+    assert_eq!(plan_files.len(), 1);
+    let plan_width = plan_files[0]["width"].as_u64().unwrap();
+    let plan_height = plan_files[0]["height"].as_u64().unwrap();
+    // Demo photos are 6000x4000 (3:2 landscape), so 3000px long edge = 3000x2000
+    assert_eq!((plan_width, plan_height), (3000, 2000), "export.plan should use 3000px long edge");
+
+    // export_batch (what app.export uses) with no size param: should use full size
+    let opts = crate::export::ExportOptions::from_json(&json!({"format": "png"}));
+    let items = crate::export::prepare_batch(&mut session, &[id], &opts).unwrap();
+    let mut written = Vec::new();
+    let mut write = |p: &str, b: &[u8]| {
+        written.push((p.to_string(), b.to_vec()));
+        Ok(())
+    };
+    let to = crate::export::Destination { dir: "out".into(), exact: None };
+    let batch_result = crate::export::run_batch(items, &opts, &to, &mut write, &|_| false, false, &mut |_, _| true).unwrap();
+    assert_eq!(batch_result.len(), 1);
+    let batch_width = batch_result[0]["width"].as_u64().unwrap();
+    let batch_height = batch_result[0]["height"].as_u64().unwrap();
+    // Full size for 6000x4000 demo photo
+    assert_eq!((batch_width, batch_height), (6000, 4000), "export_batch should use full size");
+
+    // The two differ: plan uses 3000px, batch uses full size
+    assert_ne!((plan_width, plan_height), (batch_width, batch_height), "plan and batch should differ with current behavior");
+}
