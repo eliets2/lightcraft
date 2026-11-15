@@ -147,3 +147,22 @@ fn preview_tracks_reduced_save_with_strong_edits() {
 fn large_preview_save_stress() {
     measure(6400, 768, &[800, 1440], true);
 }
+
+#[test]
+fn inverted_uncomputed_prompt_stays_empty() {
+    let (w, h) = (30, 30);
+    let img = Rgb32f::new(w, h);
+    let frame = lightcraft_pipeline::frame_for(&img, &SourceInfo::default(), &DevelopSettings::default(), true);
+    let log_l = lightcraft_raster::Plane::new(w, h);
+    let mask = lightcraft_develop::Mask {
+        components: vec![lightcraft_develop::MaskComponent {
+            name: None,
+            op: lightcraft_develop::MaskOp::Add,
+            invert: true,
+            shape: lightcraft_develop::MaskShape::Prompt { text: "sky".into(), seg: None, detail: vec![], edge: 0.0 },
+        }],
+        ..Default::default()
+    };
+    let alpha = lightcraft_pipeline::masks::evaluate_one(&mask, &frame, w, h, &img, &log_l, 0.0, None);
+    assert!(alpha.data.iter().all(|v| *v == 0.0));
+}

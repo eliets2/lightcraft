@@ -148,6 +148,20 @@ pub fn evaluate(masks: &[Mask], frame: &Frame, w: usize, h: usize, img: &Rgb32f,
         .collect()
 }
 
+/// Whether `shape` is an AI selection with no usable segmentation yet: [`shape_alpha`] leaves
+/// its plane empty for it, and inverting that empty plane would turn a not-yet-segmented
+/// selection into a full-frame one.
+fn is_uncomputed_ai(shape: &MaskShape) -> bool {
+    let usable = |seg: &Option<SegMask>, detail: &[SegMask]| {
+        seg.as_ref().is_some_and(|s| SegGrid::new(s).is_some()) || detail.iter().any(|d| SegGrid::new(d).is_some())
+    };
+    match shape {
+        MaskShape::Prompt { seg, detail, .. } => !usable(seg, detail),
+        MaskShape::Object { hint, seg, detail, .. } => hint.is_empty() && !usable(seg, detail),
+        _ => false,
+    }
+}
+
 /// The alpha plane of mask `m` (whether visible or not): its components combined, inverted and
 /// scaled by its amount.
 #[allow(clippy::too_many_arguments)]
@@ -158,7 +172,7 @@ pub fn evaluate_one(m: &Mask, frame: &Frame, w: usize, h: usize, img: &Rgb32f, l
     let mut first = true;
     for comp in &m.components {
         let mut c = shape_alpha(&comp.shape, frame, w, h, img, log_l, ev, mattes);
-        if comp.invert {
+        if comp.invert && !is_uncomputed_ai(&comp.shape) {
             c.data.iter_mut().for_each(|v| *v = 1.0 - *v);
         }
         if first {
@@ -185,7 +199,9 @@ pub fn evaluate_one(m: &Mask, frame: &Frame, w: usize, h: usize, img: &Rgb32f, l
             *a += (r - *a) * k.sqrt();
         }
     }
-    if m.invert {
+    // a mask of only uncomputed AI selections stays empty when inverted, like its components
+    let all_uncomputed = !m.components.is_empty() && m.components.iter().all(|c| is_uncomputed_ai(&c.shape));
+    if m.invert && !all_uncomputed {
         alpha.data.iter_mut().for_each(|v| *v = 1.0 - *v);
     }
     let amt = (m.adjust.amount / 100.0) as f32;
