@@ -115,6 +115,39 @@ fn spots_are_added_and_moved_by_keyboard() {
 }
 
 #[test]
+fn brush_dab_by_keyboard_paints_at_the_arrowed_position() {
+    let mut h = detail("panel.masking");
+    exec(&mut h, "tool.brush", json!({}));
+    h.step();
+    h.step();
+    // the brush has a focusable stand-in like the spot's placement point
+    h.view.ctx.memory_mut(|m| m.request_focus(canvas_keys::id("brush:new")));
+    h.step();
+    h.step();
+    assert_eq!(h.view.ctx.memory(|m| m.focused()), Some(canvas_keys::id("brush:new")), "the brush takes the focus");
+    // the arrows move it (Shift: further), as with a spot's placement point
+    key(&mut h, "right", true);
+    key(&mut h, "down", false);
+    key(&mut h, "enter", false);
+    let d = develop(&h);
+    // without a keyboard stand-in no mask is created, so count the strokes instead of
+    // indexing into d.masks: the failure must be this assertion, not a panic in the test
+    let (stroke_count, first_point) = d
+        .masks
+        .iter()
+        .flat_map(|m| &m.components)
+        .find_map(|c| match &c.shape {
+            MaskShape::Brush { strokes } => Some((strokes.len(), strokes.first().and_then(|s| s.points.first().copied()))),
+            _ => None,
+        })
+        .unwrap_or((0, None));
+    assert_eq!(stroke_count, 1, "Return paints one dab: {:?}", d.masks);
+    let p = first_point.unwrap_or_default();
+    // from the centre, one big step right and one small step down
+    assert!((p.x - 0.55).abs() < 1e-6 && (p.y - 0.505).abs() < 1e-6, "{p:?}");
+}
+
+#[test]
 fn gradient_handles_and_pins_move_by_keyboard() {
     let mut h = detail("panel.masking");
     exec(&mut h, "mask.add", json!({"kind": "linear", "start": [0.5, 0.2], "end": [0.5, 0.7]}));

@@ -619,6 +619,31 @@ fn brush_tool(
     let map = &map.for_mask_id(d, active);
     let long = (map.rect.width().max(map.rect.height())) as f64;
     let r = (app.ui.brush_size as f64 * long) as f32;
+    // the keyboard stand-in for a brush dab: the photo's centre at first, then wherever the
+    // arrows took it; Return paints one dab there, like a spot's placement point
+    let key = egui::Id::new("lc-brush-placement");
+    let place: (f64, f64) = ui.data(|m| m.get_temp(key)).unwrap_or((0.5, 0.5));
+    let q = map.screen(Point::new(place.0, place.1));
+    let keys = crate::canvas_keys::handle(
+        ui,
+        "brush:new",
+        crate::i18n::tr("Brush"),
+        crate::canvas_keys::position_text(place.0, place.1),
+        q,
+    );
+    if let Some((dx, dy)) = keys.delta {
+        let moved = ((place.0 + dx).clamp(0.0, 1.0), (place.1 + dy).clamp(0.0, 1.0));
+        ui.data_mut(|m| m.insert_temp(key, moved));
+    }
+    if keys.activated {
+        let erase = app.ui.brush_erase != ui.input(|i| i.modifiers.alt);
+        let _ = app.run(
+            "mask.brushStroke",
+            json!({"points": [[place.0, place.1]], "size": app.ui.brush_size, "feather": app.ui.brush_feather, "flow": app.ui.brush_flow,
+                   "erase": erase, "autoMask": app.ui.brush_auto_mask, "pressure": [], "connect": false}),
+        );
+        ui.ctx().request_repaint();
+    }
     if let Some(h) = resp.hover_pos() {
         ui.ctx().set_cursor_icon(egui::CursorIcon::None);
         p.circle_stroke(h, r, Stroke::new(1.0, Color32::WHITE));
