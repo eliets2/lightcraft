@@ -229,7 +229,11 @@ pub fn show(app: &mut LightcraftApp, ui: &mut egui::Ui, id: PhotoId) {
                     field.response.request_focus();
                 }
                 if field.cancelled() {
+                    // Esc already restores the edited text in the field; restoring the
+                    // stored name here keeps a typed name from surviving into the next rename.
+                    *name = m.name.clone();
                     app.ui.renaming_mask = None;
+                    crate::widgets::take_escape(ui.ctx());
                 } else if field.committed() {
                     let name = name.trim().to_string();
                     app.ui.renaming_mask = None;
