@@ -181,4 +181,39 @@ mod inverted_uncomputed_prompt_tests {
         let alpha = lightcraft_pipeline::masks::evaluate_one(&mask_inverted, &frame, w, h, &img, &log_l, 0.0, None);
         assert!(alpha.data.iter().all(|v| *v == 0.0), "mask-inverted uncomputed Prompt must stay empty");
     }
+
+    #[test]
+    fn inverted_computed_prompt_selects_complement() {
+        let (w, h) = (30, 30);
+        let frame = lightcraft_pipeline::geometry::Frame::new(w, h, &lightcraft_develop::DevelopSettings::default(), true);
+        let img = lightcraft_raster::Rgb32f::new(w, h);
+        let log_l = lightcraft_raster::Plane::new(w, h);
+        // A computed Prompt: a valid 2x2 grid covering the whole frame, all logits
+        // strongly negative, so its alpha is (near) zero everywhere.
+        let seg = lightcraft_develop::SegMask { logits: vec![-16.0; 4], side: 2, bounds: [0.0, 0.0, 1.0, 1.0] };
+        let shape = lightcraft_develop::MaskShape::Prompt { text: "sky".into(), seg: Some(seg), detail: vec![], edge: 0.0 };
+        let component_inverted = lightcraft_develop::Mask {
+            components: vec![lightcraft_develop::MaskComponent {
+                name: None,
+                op: lightcraft_develop::MaskOp::Intersect,
+                invert: true,
+                shape: shape.clone(),
+            }],
+            ..Default::default()
+        };
+        let alpha = lightcraft_pipeline::masks::evaluate_one(&component_inverted, &frame, w, h, &img, &log_l, 0.0, None);
+        assert!(alpha.data.iter().all(|v| *v > 0.99), "inverted computed Prompt must select the complement");
+        let mask_inverted = lightcraft_develop::Mask {
+            invert: true,
+            components: vec![lightcraft_develop::MaskComponent {
+                name: None,
+                op: lightcraft_develop::MaskOp::Intersect,
+                invert: false,
+                shape,
+            }],
+            ..Default::default()
+        };
+        let alpha = lightcraft_pipeline::masks::evaluate_one(&mask_inverted, &frame, w, h, &img, &log_l, 0.0, None);
+        assert!(alpha.data.iter().all(|v| *v > 0.99), "mask-inverted computed Prompt must select the complement");
+    }
 }

@@ -43,13 +43,17 @@ a bug fix: the outline is output that isn't in the photo nor in the edit, not a 
 **A mask whose first component is Intersect** starts from that component, on the CPU and the GPU
 (issue #1889). It used to start from nothing, so alone it selected nothing, with a later Add it gave
 only what was added, and with the mask's Invert it gave the whole photo. Such masks now include the
-first component, on every process. It landed in place as a bug fix: intersecting with nothing is not
+first component, on every process. Masks that combined a first Intersect with a later Add, or with
+the mask's Invert, could already affect photos under the old behaviour, so those photos' renders
+change with this fix. It landed in place as a bug fix: intersecting with nothing is not
 a look anyone chose.
 
 **An inverted Describe selection whose segmentation has not been computed yet** stays empty, at
-both the component and the mask level. Inverting its zero alpha used to select the whole frame,
+both the component and the mask level, on the CPU path. Inverting its zero alpha used to select the whole frame,
 so its adjustments applied everywhere until the segmentation arrived. It now selects nothing
-until the segmentation exists, on every process. It landed in place as a bug fix: a selection
+until the segmentation exists on the CPU path; the GPU path's CPU fallback for Prompt shapes
+does not yet apply the same guard, so CPU and GPU renders of such a mask can still disagree.
+It landed in place as a bug fix: a selection
 that does not exist yet is not a look anyone chose.
 
 ## Adding a process
