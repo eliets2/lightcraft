@@ -1,0 +1,10 @@
+[
+  {
+    "id": "activity.list",
+    "params": {}
+  },
+  {
+    "id": "activity.cancel",
+    "params": {}
+  }
+]

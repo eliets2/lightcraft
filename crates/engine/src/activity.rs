@@ -11,7 +11,8 @@
 use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 /// The longest label or detail kept, in characters (a file name can be anything).
 const MAX_TEXT: usize = 200;
@@ -27,6 +28,38 @@ struct Inner {
     /// Oldest first.
     tasks: Mutex<Vec<Arc<Entry>>>,
     next: AtomicU64,
+    queue: Mutex<Vec<QueuedCommand>>,
+}
+
+/// One queued command (`activity.save` / `activity.load` / `activity.run`).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct QueuedCommand {
+    /// The command id the queue entry runs.
+    pub id: String,
+    /// The command's params.
+    pub params: Value,
+}
+
+impl Serialize for QueuedCommand {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serde::Serialize::serialize(&json_map(self), serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for QueuedCommand {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let v = Value::deserialize(deserializer)?;
+        if let Some(s) = v.as_str() {
+            return Ok(QueuedCommand { id: s.to_string(), params: Value::Object(Default::default()) });
+        }
+        let id = v.get("id").and_then(Value::as_str).unwrap_or("").to_string();
+        let params = v.get("params").cloned().unwrap_or_else(|| Value::Object(Default::default()));
+        Ok(QueuedCommand { id, params })
+    }
+}
+
+fn json_map(q: &QueuedCommand) -> Value {
+    serde_json::json!({"id": q.id, "params": q.params})
 }
 
 /// How a task can be cancelled.
@@ -216,6 +249,30 @@ impl Activity {
     /// Tasks that quitting would cut short: cancellable ones not already stopping.
     pub fn running_cancellable(&self) -> Vec<TaskInfo> {
         lock(&self.inner.tasks).iter().filter(|e| e.is_cancellable() && !e.is_cancelled()).map(|e| e.info()).collect()
+    }
+
+    /// The queued commands (`activity.save`, `activity.load`, `activity.run`), oldest first.
+    pub fn queue(&self) -> Vec<QueuedCommand> {
+        lock(&self.inner.queue).clone()
+    }
+
+    /// Set the queued commands (`activity.load`); returns how many were stored.
+    pub fn set_queue(&self, queue: Vec<QueuedCommand>) -> usize {
+        let mut guard = lock(&self.inner.queue);
+        *guard = queue;
+        guard.len()
+    }
+
+    /// Append one queued command (`activity.run`); returns how many are queued.
+    pub fn enqueue(&self, command: QueuedCommand) -> usize {
+        let mut guard = lock(&self.inner.queue);
+        guard.push(command);
+        guard.len()
+    }
+
+    /// Whether the queue holds a command with this id (a queue built from a default template).
+    pub fn queue_contains(&self, id: &str) -> bool {
+        lock(&self.inner.queue).iter().any(|q| q.id == id)
     }
 }
 
