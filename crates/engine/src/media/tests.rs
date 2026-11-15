@@ -644,3 +644,40 @@ fn an_export_develops_from_a_source_twice_its_size() {
     }
     assert_eq!(s.render_job(id, 1600, 1600, false, true).unwrap().level, SourceLevel::Preview, "a view keeps the preview");
 }
+
+#[test]
+fn loaded_camera_profile_parse_sets_nonzero_fingerprint() {
+    // A DCP is a TIFF. Try the smallest byte strings the existing parser can
+    // accept: empty IFDs in both byte orders, the same with a single inline
+    // ASCII tag, and a little-endian IFD carrying a DNG version and two
+    // identity colour matrices. At least one must parse, and every parsed
+    // profile must carry a nonzero fingerprint (0 means "no camera profile").
+    let mut candidates: Vec<Vec<u8>> = vec![
+        b"II*\x00\x08\x00\x00\x00\x00\x00\x00\x00\x00\x00".to_vec(),
+        b"MM\x00*\x00\x00\x00\x08\x00\x00\x00\x00\x00\x00".to_vec(),
+        b"II*\x00\x08\x00\x00\x00\x01\x00\x0f\x01\x02\x00\x01\x00\x00\x00X\x00\x00\x00\x00\x00\x00\x00".to_vec(),
+        b"MM\x00*\x00\x00\x00\x08\x00\x01\x01\x0f\x00\x02\x00\x00\x00\x01X\x00\x00\x00\x00\x00\x00".to_vec(),
+    ];
+    let mut dcp: Vec<u8> = vec![
+        0x49, 0x49, 0x2a, 0x00, 0x08, 0x00, 0x00, 0x00, 0x03, 0x00, 0x12, 0xc6, 0x01, 0x00, 0x04, 0x00,
+        0x00, 0x00, 0x01, 0x04, 0x00, 0x00, 0x21, 0xc6, 0x0a, 0x00, 0x09, 0x00, 0x00, 0x00, 0x32, 0x00,
+        0x00, 0x00, 0x22, 0xc6, 0x0a, 0x00, 0x09, 0x00, 0x00, 0x00, 0x7a, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00,
+    ];
+    for _ in 0..2 {
+        for i in 0..9 {
+            let v: i32 = if i % 4 == 0 { 1 } else { 0 };
+            dcp.extend_from_slice(&v.to_le_bytes());
+            dcp.extend_from_slice(&1i32.to_le_bytes());
+        }
+    }
+    candidates.push(dcp);
+    let mut parsed_any = false;
+    for bytes in &candidates {
+        if let Ok(parsed) = LoadedCameraProfile::parse(bytes) {
+            parsed_any = true;
+            assert_ne!(parsed.fingerprint, 0, "a parsed camera profile must carry a nonzero fingerprint");
+        }
+    }
+    assert!(parsed_any, "a minimal DCP byte string must parse");
+}
