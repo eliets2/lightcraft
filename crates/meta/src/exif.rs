@@ -277,6 +277,49 @@ pub(crate) mod tests {
         assert_eq!(crate::extract(&rw2).lens_model.as_deref(), Some("LUMIX S 85/F1.8"));
     }
 
+    /// Canon maker note tag holding the lens name as ASCII in a plain maker-note IFD (offsets relative to
+    /// the TIFF header, as Canon writes it).
+    const CANON_LENS_TAG: u16 = 0x0001;
+
+    /// An Exif block from a Canon EOS 5D: `Canon` / `Canon EOS 5D` in IFD0, no LensModel tag, and a maker
+    /// note whose plain IFD records the lens name at an offset relative to the TIFF header.
+    fn canon_exif(order: ByteOrder, lens: Option<&str>) -> Vec<u8> {
+        let name = lens.unwrap_or("Canon EF 50mm f/1.8 II");
+        let note = |at: u32| {
+            let mut v = Vec::new();
+            order.put_u16(&mut v, 1);
+            order.put_u16(&mut v, CANON_LENS_TAG);
+            order.put_u16(&mut v, 2); // ASCII
+            order.put_u32(&mut v, name.len() as u32);
+            order.put_u32(&mut v, at + 18);
+            order.put_u32(&mut v, 0);
+            v.extend_from_slice(name.as_bytes());
+            v
+        };
+        let build = |at: u32| {
+            let mut exif = IfdBuilder::new();
+            exif.set(t::MAKER_NOTE, Value::Undefined(note(at)));
+            exif.set(t::FOCAL_LENGTH, Value::Rational(vec![(50, 1)]));
+            let mut ifd0 = IfdBuilder::new();
+            ifd0.set(t::MAKE, Value::Ascii("Canon".into()));
+            ifd0.set(t::MODEL, Value::Ascii("Canon EOS 5D".into()));
+            ifd0.set_child(t::EXIF_IFD, exif);
+            TiffWriter::new(order, false).write(&[ifd0]).unwrap()
+        };
+        // the note's own offset is only known once it is laid out; its length doesn't change
+        let first = build(0);
+        let at = Tiff::parse(&first).unwrap().exif().unwrap().get(t::MAKER_NOTE).unwrap().offset as u32;
+        build(at)
+    }
+
+    #[test]
+    fn canon_maker_note_lens_fills_lens_model() {
+        for order in [ByteOrder::Little, ByteOrder::Big] {
+            let m = read_exif(&canon_exif(order, Some("Canon EF 50mm f/1.8 II")));
+            assert_eq!(m.lens_model.as_deref(), Some("Canon EF 50mm f/1.8 II"));
+        }
+    }
+
     /// An Exif block from a Nikon body whose maker note records the lens (tag 0x0084) and no LensModel or
     /// LensSpecification, as the D700, D750, D80 and D5300 write it.
     fn nikon_exif(make: &str, lens: Option<[(u32, u32); 4]>, spec: Option<[(u32, u32); 4]>) -> Vec<u8> {
