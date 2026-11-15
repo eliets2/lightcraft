@@ -800,4 +800,25 @@ mod tests_resync {
         line.extend_from_slice(record.as_bytes());
         assert_eq!(resync(&line, 4).map(|(at, (seq, _))| (at, seq)), Some((fragment, 5)));
     }
+
+    /// Header-shaped markers `{"seq":N,"crc":` without the trailing `,"op":` pass the candidate
+    /// filter, and each candidate re-validates the whole suffix as UTF-8 and runs `decode_record`:
+    /// one line of repeated markers is quadratic work with no per-line bound (CWE-407).
+    /// `resync` must decode only a bounded number of candidates per line.
+    #[test]
+    fn resync_bounds_candidate_decoding_per_line() {
+        RESYNC_CANDIDATES.set(0);
+        const MARKERS: usize = 4096;
+        let mut line = Vec::with_capacity(MARKERS * 20);
+        for i in 0..MARKERS {
+            line.extend_from_slice(format!("{{\"seq\":{},\"crc\":", i).as_bytes());
+        }
+        // no record follows the markers, so nothing can decode
+        assert!(resync(&line, 0).is_none());
+        let decoded = RESYNC_CANDIDATES.get();
+        assert!(
+            decoded <= 8,
+            "resync decoded {decoded} candidates from {MARKERS} header-shaped markers on one line; per-line candidate decoding is unbounded, so one hostile line is quadratic work (CWE-407). Candidate decoding needs a per-line byte budget.",
+        );
+    }
 }
