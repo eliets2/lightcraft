@@ -373,6 +373,38 @@ fn incremental_dab_buffers_share_the_stroke_budget() {
     assert!(!retained.contains(&points[3]));
 }
 
+/// Two incremental buffers that share one snapshot (one retained `emitted` count) share the
+/// stroke budget: what the first buffer emits is no longer available to the second, and the
+/// total never passes [`MAX_STROKE_DABS`]. Clearing a buffer must not refill the budget — the
+/// emitted count is retained with the snapshot.
+#[test]
+fn incremental_dab_buffers_share_the_stroke_budget_review_regression_1() {
+    let mut first = Vec::new();
+    let mut second = Vec::new();
+    let mut emitted = MAX_STROKE_DABS - 3;
+    let r = 10.0;
+    // the first buffer takes the three dabs that fit
+    assert!(push_dabs_counted(&mut first, &mut emitted, None, Point::new(0.0, 0.0), r));
+    assert!(push_dabs_counted(
+        &mut first,
+        &mut emitted,
+        Some(Point::new(0.0, 0.0)),
+        Point::new(3.0, 0.0),
+        r,
+    ));
+    assert_eq!(first.len(), 3);
+    assert_eq!(emitted, MAX_STROKE_DABS);
+    // the second buffer shares the same spent budget: nothing more fits, state untouched
+    assert!(!push_dabs_counted(&mut second, &mut emitted, None, Point::new(0.0, 0.0), r));
+    assert_eq!(second.len(), 0);
+    assert_eq!(emitted, MAX_STROKE_DABS);
+    // clearing the first buffer does not refill the shared budget
+    first.clear();
+    assert!(!push_dabs_counted(&mut first, &mut emitted, None, Point::new(0.0, 0.0), r));
+    assert_eq!(first.len(), 0);
+    assert_eq!(emitted, MAX_STROKE_DABS);
+}
+
 /// Pen pressure scales each dab's radius and flow; a stroke without pressure data paints as before, and hostile
 /// pressures (NaN, out of range, a short list) neither panic nor paint more than full pressure.
 #[test]
