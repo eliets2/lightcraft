@@ -26,10 +26,11 @@ const PROXY: usize = 96;
 /// Long edge of the proxies pooled for a camera profile: small objects (a shirt) get 4× the samples.
 pub(crate) const PROFILE_PROXY: usize = 192;
 
-/// Raw formats whose decoder supplies vendor white-balance multipliers but no camera colour matrix:
-/// their starting look is fitted to the file's own JPEG, and white balance is relative to the
-/// as-shot look (`docs/camera-preview-colour.md`). The catalog's `Photo::relative_wb` matches the
-/// same formats by file extension.
+/// Raw formats whose decoders supply vendor white-balance multipliers, and whose colour is either
+/// a decoder-derived camera matrix (CR3, from the file's own ColorData planes) or, when that fit
+/// is rejected, a look fitted to the file's own JPEG with white balance relative to the as-shot
+/// look (`docs/camera-preview-colour.md`). The catalog's `Photo::relative_wb` matches the same
+/// formats by file extension.
 pub(crate) fn file_local_look(format: RawFormat) -> bool {
     matches!(format, RawFormat::Arw | RawFormat::Nef | RawFormat::Nrw | RawFormat::Rw2 | RawFormat::Raf | RawFormat::Cr3)
 }
@@ -1053,7 +1054,7 @@ mod tests {
     /// The guarded fit is assessed on real sensor data, never on the JPEG fallback. A corpus
     /// download or an unfinished codec cannot make this test claim a successful RAW calibration.
     #[test]
-    fn corpus_cr3_gets_a_framing_aligned_camera_look() {
+    fn corpus_cr3_matrix_supersedes_the_camera_look() {
         let path = std::env::var_os("LIGHTCRAFT_CORPUS")
             .map(std::path::PathBuf::from)
             .unwrap_or_else(|| std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus"))
@@ -1072,14 +1073,49 @@ mod tests {
         };
         assert_eq!(raw.format, RawFormat::Cr3);
         assert_eq!(raw.info().developed_size(), (6000, 4000));
+        // The file's own ColorData planes produced a validated colour model: colour comes from
+        // the file (like DNG), so no look is fitted to its JPEG and white balance is absolute.
+        assert!(lightcraft_raw::color::has_matrix(&raw.color), "R100 corpus file derives a colour matrix");
         let transform = lightcraft_raw::color::camera_transform(&raw, lightcraft_raw::color::as_shot_white_xy(&raw));
-        let look = fit_preview(&raw, &bytes, &transform);
-        eprintln!("R100 guarded colour fit accepted: {}", look.is_some());
-        assert!(look.is_some(), "this R100 corpus photo has enough matching colour after camera-framing alignment");
+        assert!(!transform.matrix_is_fallback);
+        assert!(fit_preview(&raw, &bytes, &transform).is_none(), "a matrix-bearing CR3 is not JPEG-fitted");
         let (_, info) = crate::files::load_bytes(&bytes, 400).unwrap();
-        assert!(info.raw && info.relative_wb);
-        assert_eq!((info.as_shot_temp, info.as_shot_tint), (6500.0, 0.0));
-        assert_eq!(info.camera_tone.is_some(), look.is_some());
+        assert!(info.raw && !info.relative_wb);
+        let (t, i) = lightcraft_color::cct::xy_to_temp_tint(lightcraft_raw::color::as_shot_white_xy(&raw));
+        assert_eq!((info.as_shot_temp, info.as_shot_tint), (t.round(), i.round()));
+        assert!(info.camera_tone.is_none());
+    }
+
+    /// The guarded per-photo look fitted to the file's own JPEG (with relative white balance and
+    /// camera-framing alignment) stays available for files without a colour model: a body whose
+    /// ColorData planes were rejected, an unknown ColorData version, or a missing block. The EOS R
+    /// corpus file does derive a matrix, so the fallback is exercised by clearing it.
+    #[test]
+    fn corpus_cr3_without_a_matrix_keeps_a_framing_aligned_camera_look() {
+        let path = std::env::var_os("LIGHTCRAFT_CORPUS")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../corpus"))
+            .join("raw/cr3-eos-r-canon-eos-r-craw-iso-100.cr3");
+        let Ok(bytes) = std::fs::read(&path) else {
+            eprintln!("skip: {} absent", path.display());
+            return;
+        };
+        let mut raw = match lightcraft_raw::decode(&bytes) {
+            Ok(raw) => raw,
+            Err(lightcraft_raw::RawError::Unsupported(why)) => {
+                eprintln!("skip CR3 sensor decoder: {why}");
+                return;
+            }
+            Err(error) => panic!("CR3 corpus failed to decode: {error}"),
+        };
+        assert!(lightcraft_raw::color::has_matrix(&raw.color));
+        raw.color = lightcraft_raw::ColorData::default();
+        let transform = lightcraft_raw::color::camera_transform(&raw, lightcraft_raw::color::as_shot_white_xy(&raw));
+        assert!(transform.matrix_is_fallback);
+        let look = fit_preview(&raw, &bytes, &transform);
+        assert!(look.is_some(), "this EOS R corpus photo has enough matching colour after camera-framing alignment");
+        let (_, info) = crate::files::load_bytes(&bytes, 400).unwrap();
+        assert!(info.raw);
     }
 
     /// A public D7500 NEF (skipped without the corpus): its look is fitted to its own JPEG and white
