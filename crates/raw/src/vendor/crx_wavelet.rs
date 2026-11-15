@@ -44,28 +44,65 @@ fn inverse_line(low: &[i32], high: &[i32], out: &mut [i32], before: bool, after:
         *out.first_mut().ok_or_else(corrupt)? = value;
         return Ok(());
     }
+    let n = out.len();
+    let (evens, odds) = (n.div_ceil(2), n / 2);
+    let neighbour = usize::from(before);
     // The high-pass storage starts at -1 when there is a preceding tile.
     // Only absent external neighbours are reflected at the image boundary.
     let high_at = |index: usize| -> Result<i32> { high.get(index.min(high.len().saturating_sub(1))).copied().ok_or_else(corrupt) };
     let even = |i: usize| -> Result<i32> {
-        let left = high_at((i + usize::from(before)).saturating_sub(1))?;
-        let right = high_at(i + usize::from(before))?;
+        let left = high_at((i + neighbour).saturating_sub(1))?;
+        let right = high_at(i + neighbour)?;
         let update = (i64::from(left) + i64::from(right) + 2).div_euclid(4);
         checked_sample(i64::from(*low.get(i).ok_or_else(corrupt)?) - update)
     };
-    for i in 0..out.len().div_ceil(2) {
-        *out.get_mut(i * 2).ok_or_else(corrupt)? = even(i)?;
+    // Even synthesis first, into a scratch of its own: the odd pass then reads
+    // neighbouring evens as two sequential streams while interleaving both
+    // parities back into `out`. The clamped-neighbourhood helper above is used
+    // only where a neighbour can actually reflect or clamp (even index 0 and
+    // the last even); for every interior index `i` the neighbours
+    // `i + neighbour - 1` and `i + neighbour` provably lie inside `high`, so
+    // the interior runs as plain iterator windows. All arithmetic is the
+    // lifting equations verbatim, evaluated in ascending index order as before.
+    let mut synthesis = zeroed(evens)?;
+    *synthesis.first_mut().ok_or_else(corrupt)? = even(0)?;
+    let interior = evens.saturating_sub(2);
+    let values = low.get(1..1 + interior).ok_or_else(corrupt)?;
+    let lefts = high.get(neighbour..neighbour + interior).ok_or_else(corrupt)?;
+    let rights = high.get(neighbour + 1..neighbour + 1 + interior).ok_or_else(corrupt)?;
+    for (((slot, &value), &left), &right) in synthesis.iter_mut().skip(1).zip(values).zip(lefts).zip(rights) {
+        let update = (i64::from(left) + i64::from(right) + 2).div_euclid(4);
+        *slot = checked_sample(i64::from(value) - update)?;
     }
-    for i in 0..out.len() / 2 {
-        let left = out.get(i * 2).copied().ok_or_else(corrupt)?;
-        let right = match out.get(i * 2 + 2).copied() {
-            Some(value) => value,
-            None if after => even(i + 1)?,
-            None => left,
-        };
+    if evens > 1 {
+        let slot = synthesis.get_mut(evens - 1).ok_or_else(corrupt)?;
+        *slot = even(evens - 1)?;
+    }
+    // Odd synthesis. Interior odd indices read `high` directly (`i + neighbour`
+    // is provably in range) and consecutive evens from the scratch; an even
+    // output length leaves the last odd with a reflected/absent right
+    // neighbour, handled through the same helper expressions as before.
+    let odds_interior = odds - usize::from(n.is_multiple_of(2));
+    let highs = high.get(neighbour..neighbour + odds_interior).ok_or_else(corrupt)?;
+    let followers = synthesis.get(1..).ok_or_else(corrupt)?;
+    let (pairs, _) = out.as_chunks_mut::<2>();
+    for (((pair, &even_value), &next_even), &high_value) in
+        pairs.iter_mut().zip(synthesis.iter()).zip(followers.iter()).zip(highs)
+    {
+        let prediction = (i64::from(even_value) + i64::from(next_even)).div_euclid(2);
+        pair[0] = even_value;
+        pair[1] = checked_sample(i64::from(high_value) + prediction)?;
+    }
+    if n.is_multiple_of(2) {
+        let pair = pairs.last_mut().ok_or_else(corrupt)?;
+        let left = *synthesis.get(odds - 1).ok_or_else(corrupt)?;
+        *pair.first_mut().ok_or_else(corrupt)? = left;
+        let right = if after { even(odds)? } else { left };
         let prediction = (i64::from(left) + i64::from(right)).div_euclid(2);
-        let value = high_at(i + usize::from(before))?;
-        *out.get_mut(i * 2 + 1).ok_or_else(corrupt)? = checked_sample(i64::from(value) + prediction)?;
+        let value = high_at(odds - 1 + neighbour)?;
+        *pair.get_mut(1).ok_or_else(corrupt)? = checked_sample(i64::from(value) + prediction)?;
+    } else {
+        *out.last_mut().ok_or_else(corrupt)? = *synthesis.get(odds).ok_or_else(corrupt)?;
     }
     Ok(())
 }
@@ -108,19 +145,49 @@ pub(crate) fn inverse_level(ll: &Band, hl: &Band, lh: &Band, hh: &Band, width: u
         )?;
     }
     let mut data = zeroed(count)?;
-    let mut low = zeroed(lhgt)?;
-    let mut high = zeroed(hhgt)?;
-    let mut column = zeroed(height)?;
-    for x in 0..width {
-        for (y, value) in low.iter_mut().enumerate() {
-            *value = temporary.get(y * width + x).copied().ok_or_else(corrupt)?;
+    // The vertical lifting walks columns of the row-major intermediate. One
+    // column at a time strides `width` elements between rows, using one cache
+    // line (and page) per row for a single element. Instead, lift
+    // COLUMN_GROUP neighbouring columns together: every gather and scatter
+    // moves one contiguous run per row, so line (and page) touches shrink by
+    // the group width. Groups are gathered, lifted and scattered one at a
+    // time, so the scratch always holds exactly one group. The arithmetic per
+    // column, and the column order, are unchanged.
+    const COLUMN_GROUP: usize = 32;
+    // Narrow planes cap the group, so the scratch never exceeds a small
+    // multiple of the old per-column buffers regardless of the plane shape.
+    let group = COLUMN_GROUP.min(width);
+    let mut low = zeroed(group * lhgt)?;
+    let mut high = zeroed(group * hhgt)?;
+    let mut column = zeroed(group * height)?;
+    for left in (0..width).step_by(COLUMN_GROUP) {
+        let span = group.min(width - left);
+        for (y, row) in temporary.chunks_exact(width).enumerate() {
+            let values = row.get(left..left + span).ok_or_else(corrupt)?;
+            if y < lhgt {
+                for (c, &value) in values.iter().enumerate() {
+                    *low.get_mut(c * lhgt + y).ok_or_else(corrupt)? = value;
+                }
+            } else {
+                for (c, &value) in values.iter().enumerate() {
+                    *high.get_mut(c * hhgt + y - lhgt).ok_or_else(corrupt)? = value;
+                }
+            }
         }
-        for (y, value) in high.iter_mut().enumerate() {
-            *value = temporary.get((y + lhgt) * width + x).copied().ok_or_else(corrupt)?;
+        for c in 0..span {
+            inverse_line(
+                low.get(c * lhgt..(c + 1) * lhgt).ok_or_else(corrupt)?,
+                high.get(c * hhgt..(c + 1) * hhgt).ok_or_else(corrupt)?,
+                column.get_mut(c * height..(c + 1) * height).ok_or_else(corrupt)?,
+                edges.top,
+                edges.bottom,
+            )?;
         }
-        inverse_line(&low, &high, &mut column, edges.top, edges.bottom)?;
-        for (y, &value) in column.iter().enumerate() {
-            *data.get_mut(y * width + x).ok_or_else(corrupt)? = value;
+        for (y, row) in data.chunks_exact_mut(width).enumerate() {
+            let values = row.get_mut(left..left + span).ok_or_else(corrupt)?;
+            for (c, slot) in values.iter_mut().enumerate() {
+                *slot = *column.get(c * height + y).ok_or_else(corrupt)?;
+            }
         }
     }
     Ok(Band { width, height, data })
@@ -333,6 +400,73 @@ mod tests {
                 (0..9).flat_map(|y| (tile * 20..tile * 20 + 20).map(move |x| ((x * 23 + y * 37 + x * y * 7) % 101) - 50)).collect();
             assert_eq!(reconstruct(&bands, 20, 9, 3, edges).unwrap(), expected);
             assert!(reconstruct(&bands, 20, 9, 3, TileEdges::default()).is_err());
+        }
+    }
+
+    /// Shape-correct subbands in CRX order (LLn, HLn, LHn, HHn, …) filled with a
+    /// deterministic pseudo-random pattern in ±30000, small enough that no lifting
+    /// step can overflow. Values do not affect timing; shapes must satisfy every
+    /// geometry check so the whole reconstruct path runs.
+    fn pseudo_bands(width: usize, height: usize, levels: u8, edges: TileEdges, seed: u64) -> Vec<Band> {
+        let mut state = seed | 1;
+        let mut next = move || {
+            state = state.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+            ((state >> 33) % 60001) as i32 - 30000
+        };
+        let band =
+            |width: usize, height: usize, next: &mut dyn FnMut() -> i32| Band { width, height, data: (0..width * height).map(|_| next()).collect() };
+        let mut dimensions = vec![(width, height)];
+        for _ in 0..levels {
+            let &(w, h) = dimensions.last().expect("dimensions seeded with one entry");
+            dimensions.push((sizes(w, edges.left, edges.right).0, sizes(h, edges.top, edges.bottom).0));
+        }
+        let mut bands = Vec::with_capacity(1 + usize::from(levels) * 3);
+        let &(low_width, low_height) = dimensions.last().expect("levels > 0 pushed");
+        bands.push(band(low_width, low_height, &mut next));
+        for step in 0..usize::from(levels) {
+            let &(w, h) = dimensions.get(usize::from(levels) - step - 1).expect("dimension per level");
+            let (lw, hw) = sizes(w, edges.left, edges.right);
+            let (lhgt, hhgt) = sizes(h, edges.top, edges.bottom);
+            bands.push(band(hw, lhgt, &mut next));
+            bands.push(band(lw, hhgt, &mut next));
+            bands.push(band(hw, hhgt, &mut next));
+        }
+        bands
+    }
+
+    /// Ms per full 3-level reconstruct over representative plane sizes:
+    /// full-frame, both odd parities, and single-tile halves with internal halos.
+    /// Run with: cargo test -p lightcraft-raw --release wavelet_timing -- --ignored --nocapture
+    #[test]
+    #[ignore]
+    fn wavelet_timing_representative_planes() {
+        let cases = [
+            ("4000x3000 frame", 4000, 3000, TileEdges::default()),
+            ("3999x2999 odd", 3999, 2999, TileEdges::default()),
+            ("4001x3001 odd", 4001, 3001, TileEdges::default()),
+            ("2000x3000 left halo", 2000, 3000, TileEdges { left: true, ..Default::default() }),
+            ("2000x3000 right halo", 2000, 3000, TileEdges { right: true, ..Default::default() }),
+            ("2000x3000 middle halo", 2000, 3000, TileEdges { left: true, right: true, ..Default::default() }),
+        ];
+        for (label, width, height, edges) in cases {
+            let bands = pseudo_bands(width, height, 3, edges, 0x5eed_c0de_1234_5678);
+            let mut samples = [0f64; 3];
+            for attempt in 0..3 {
+                let start = std::time::Instant::now();
+                let out = reconstruct(&bands, width, height, 3, edges).expect("pseudo bands are shape-valid");
+                std::hint::black_box(&out);
+                samples[attempt] = start.elapsed().as_secs_f64() * 1e3;
+            }
+            samples.sort_by(|a, b| a.total_cmp(b));
+            let median = samples[1];
+            let mp = (width * height) as f64 / 1e6;
+            println!(
+                "{label:24} median {median:7.2} ms ({:5.1} MP/s)  runs {:.2}/{:.2}/{:.2}",
+                mp / (median / 1e3),
+                samples[0],
+                samples[1],
+                samples[2]
+            );
         }
     }
 }
