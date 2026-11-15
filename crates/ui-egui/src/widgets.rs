@@ -1198,6 +1198,43 @@ mod tests {
             assert_eq!(typed_value(contrast, bad), None, "{bad:?}");
         }
     }
+
+    /// A focused slider paints the accent focus ring around its track, as `Button::show_at` does,
+    /// so keyboard focus is visible on a custom widget.
+    #[test]
+    fn focused_slider_paints_accent_focus_ring() {
+        use egui::epaint::Shape;
+        let ctx = egui::Context::default();
+        crate::theme::install_fonts(&ctx);
+        let spec = lightcraft_develop::controls::find("light.exposure").unwrap();
+        let screen = Rect::from_min_size(pos2(0.0, 0.0), vec2(320.0, 120.0));
+        let frame = |events: Vec<egui::Event>| {
+            let input = egui::RawInput { screen_rect: Some(screen), events, ..Default::default() };
+            let mut output = ctx.run_ui(input, |ui| {
+                let _ = slider(ui, spec, 0.0, true, None);
+            });
+            output.textures_delta.clear();
+            output
+        };
+        frame(vec![]);
+        let track = take_registry(&ctx).into_iter().find(|(id, _)| id == "slider:light.exposure").unwrap().1;
+        let tab =
+            egui::Event::Key { key: egui::Key::Tab, physical_key: Some(egui::Key::Tab), pressed: true, repeat: false, modifiers: Default::default() };
+        let output = frame(vec![tab]);
+        assert!(slider_has_focus(&ctx), "Tab focused the slider");
+        fn ringed(shape: &Shape, track: Rect, accent: egui::Color32) -> bool {
+            match shape {
+                Shape::Rect(r) => r.stroke.width == 2.0 && r.stroke.color == accent && r.rect.intersects(track),
+                Shape::Vec(shapes) => shapes.iter().any(|s| ringed(s, track, accent)),
+                _ => false,
+            }
+        }
+        let accent = Tokens::get(&ctx).accent;
+        assert!(
+            output.shapes.iter().any(|s| ringed(&s.shape, track, accent)),
+            "a focused slider paints a 2 pt accent-colour stroke around its track"
+        );
+    }
 }
 
 #[cfg(test)]
