@@ -46,7 +46,48 @@ pub mod settings;
 pub mod slideshow_export;
 pub mod updates_ui;
 
-/// About dialog tabs: (widget id suffix, label). The credits come from `crate::credits`.
+/// The Print dialog's Page-panel Watermark section, wired to `PageStyle.watermark` through
+/// `print.set` (no new user-visible strings: existing labels are reused).
+pub(crate) fn print_watermark_row(app: &mut LightcraftApp, ui: &mut egui::Ui, t: &Tokens) {
+    fn set(app: &mut LightcraftApp, ctx: &egui::Context, watermark: serde_json::Value) {
+        let _ = app.run("print.set", json!({ "page": { "watermark": watermark } }));
+        ctx.request_repaint();
+    }
+
+    let ctx = ui.ctx().clone();
+    let mut on = app.session.print.page.watermark.is_some();
+    if ui.checkbox(&mut on, crate::i18n::tr("Watermark")).changed() {
+        set(app, &ctx, on.then(|| json!(lightcraft_engine::export::Watermark::default())).unwrap_or(Value::Null));
+    }
+    let Some(wm) = app.session.print.page.watermark.clone() else { return };
+    let _ = t;
+
+    let graphic = !wm.image.is_empty();
+    if let Some(v) = crate::print_view::choice(ui, "printWmStyle", &[(false, "Text"), (true, "Graphic")], graphic) {
+        set(app, &ctx, json!({ "image": if v { wm.image.clone() } else { String::new() } }));
+    }
+    if graphic {
+        field(ui, "Image", |ui| {
+            crate::widgets::named(
+                ui.add(egui::TextEdit::singleline(&mut wm.image.clone()).hint_text("logo.png").desired_width(ui.available_width())),
+                crate::i18n::tr("Image"),
+            );
+        });
+        let mut width = wm.image_width as f64 * 100.0;
+        if crate::widgets::slider(ui, &WM_IMAGE_WIDTH, width, true, None).changed() {
+            width = crate::widgets::slider(ui, &WM_IMAGE_WIDTH, width, true, None).value.unwrap_or(width);
+            set(app, &ctx, json!({ "imageWidth": width / 100.0 }));
+        }
+    } else {
+        field(ui, "Text", |ui| {
+            crate::widgets::named(
+                ui.add(egui::TextEdit::singleline(&mut wm.text.clone()).hint_text("© Your Name").desired_width(ui.available_width())),
+                crate::i18n::tr("Text"),
+            );
+        });
+    }
+}
+
 pub const ABOUT_TABS: &[(&str, &str)] = &[("about", "About"), ("contributors", "Contributors"), ("models", "Models")];
 
 /// Help ▸ What's New (docs/whats-new.md).

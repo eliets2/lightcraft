@@ -1,5 +1,13 @@
 use super::encoding::srgb8_in;
 use super::{DeepImage, DeepSamples, Deserialize, OutputSpace, Rgba8, Serialize};
+use serde::Serializer;
+
+/// Serialize an `f32` with the shortest decimal that reads back to the same value
+/// (so `0.08` stays `0.08`, not its widened `f64` spelling).
+fn ser_f32<S: Serializer>(v: &f32, s: S) -> Result<S::Ok, S::Error> {
+    let f: f64 = v.to_string().parse().map_err(serde::ser::Error::custom)?;
+    s.serialize_f64(f)
+}
 
 /// Where a watermark sits.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -25,15 +33,19 @@ pub struct Watermark {
     /// Basic Japanese vertical lettering: upright glyphs in columns from right to left.
     pub vertical: bool,
     /// Text height as a fraction of the image's short edge.
+    #[serde(serialize_with = "ser_f32")]
     pub size: f32,
     /// 0..1.
+    #[serde(serialize_with = "ser_f32")]
     pub opacity: f32,
     pub anchor: Anchor,
     /// Margin from the left or right edge, as a fraction of the short edge (unused when the anchor
     /// is centred across: top, center, bottom).
+    #[serde(serialize_with = "ser_f32")]
     pub inset_x: f32,
     /// Margin from the top or bottom edge, as a fraction of the short edge (unused when the anchor
     /// is centred down: left, center, right).
+    #[serde(serialize_with = "ser_f32")]
     pub inset_y: f32,
     /// Degrees clockwise: 0, 90, 180 or 270 (anything else draws unrotated). The watermark is
     /// sized before it is turned, and the insets are measured to the turned watermark.
@@ -45,6 +57,7 @@ pub struct Watermark {
     /// A graphic (PNG with transparency, JPEG, …) drawn instead of the text (empty = text).
     pub image: String,
     /// The graphic's width as a fraction of the photo's width.
+    #[serde(serialize_with = "ser_f32")]
     pub image_width: f32,
     /// The colour space the photo is in (set by the encoder; the graphic is converted into it).
     #[serde(skip)]
@@ -160,7 +173,7 @@ pub fn draw_watermark_deep(img: &mut DeepImage, wm: &Watermark) {
 /// every covered pixel (shadow pass first). `craft` is [`crate::fonts::CRAFT_FONTS`] (a parameter
 /// so tests can render without it). `floor_scale` is this image's size over the exported file's
 /// (1 when drawing the file itself): the 6 px minimum text size is a minimum in the file.
-pub(super) fn watermark_coverage(
+pub fn watermark_coverage(
     width: usize,
     height: usize,
     wm: &Watermark,

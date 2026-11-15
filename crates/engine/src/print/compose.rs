@@ -13,7 +13,7 @@ use super::layout::{Layout, Rect, Style};
 use super::template::PrintSettings;
 use super::{MAX_JOB_PAGES, MAX_JOB_PIXELS, MAX_PAGE_PIXELS, PageRaster};
 use crate::Session;
-use crate::export::{ExportOptions, output_size};
+use crate::export::{ExportOptions, Watermark, output_size};
 use crate::media::RenderJob;
 use lightcraft_catalog::PhotoId;
 use lightcraft_color::transfer::srgb_to_linear;
@@ -100,11 +100,51 @@ pub struct PageStyle {
     pub page_info: bool,
     /// Marks at the corners of each photo to cut along.
     pub crop_marks: bool,
+    /// A text or graphic watermark drawn over the printable area of every page.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub watermark: Option<Watermark>,
+}
+
+pub const MAX_WM_TEXT_CHARS: usize = 1000;
+
+impl PageStyle {
+    pub fn validate(&self) -> Result<(), String> {
+        if let Some(wm) = &self.watermark {
+            let in_range = |v: f32, lo: f32, hi: f32| v.is_finite() && (lo..=hi).contains(&v);
+            if !in_range(wm.size, 0.005, 0.5) {
+                return Err("watermark size must be 0.005 to 0.5".into());
+            }
+            if !in_range(wm.opacity, 0.0, 1.0) {
+                return Err("watermark opacity must be 0 to 1".into());
+            }
+            if !in_range(wm.inset_x, 0.0, 0.4) || !in_range(wm.inset_y, 0.0, 0.4) {
+                return Err("watermark inset must be 0 to 0.4".into());
+            }
+            if !in_range(wm.image_width, 0.01, 1.0) {
+                return Err("watermark image width must be 0.01 to 1".into());
+            }
+            if !matches!(wm.rotation, 0 | 90 | 180 | 270) {
+                return Err("watermark rotation must be 0, 90, 180 or 270".into());
+            }
+            if wm.text.chars().count() > MAX_WM_TEXT_CHARS {
+                return Err(format!("watermark text must be at most {MAX_WM_TEXT_CHARS} characters"));
+            }
+            let image = wm.image.trim();
+            if !image.is_empty() {
+                let meta = std::fs::metadata(image).map_err(|_| format!("watermark image not readable: {image}"))?;
+                if !meta.is_file() {
+                    return Err(format!("watermark image not readable: {image}"));
+                }
+                crate::export::read_graphic(image).map_err(|e| format!("watermark image: {e}"))?;
+            }
+        }
+        Ok(())
+    }
 }
 
 impl Default for PageStyle {
     fn default() -> Self {
-        Self { background: [255; 3], page_numbers: false, page_info: false, crop_marks: false }
+        Self { background: [255; 3], page_numbers: false, page_info: false, crop_marks: false, watermark: None }
     }
 }
 
@@ -562,6 +602,7 @@ pub struct Prepared {
     background: [u16; 3],
     style: CellStyle,
     marks: Marks,
+    watermark: Option<Watermark>,
     /// Print sharpening, applied to each photo once it's rendered at its print size.
     color: crate::print_color::PrintColorSettings,
 }
@@ -612,6 +653,24 @@ impl Prepared {
                 placed.push(draw_cell(&mut page, photo, item.cell, &self.style).map_err(|e| format!("{}: {e}", item.name))?);
             }
             self.marks.draw(&mut page, &placed, index + 1);
+            if let Some(wm) = &self.watermark {
+                let area = self.marks.area.unwrap_or(PxRect { x: 0, y: 0, w: page.w, h: page.h });
+                let (pw0, ph0) = (page.w, page.h);
+                crate::export::watermark_coverage(area.w, area.h, wm, crate::fonts::CRAFT_FONTS, 1.0, |x, y, k, col| {
+                    let (px, py) = (area.x.saturating_add(x), area.y.saturating_add(y));
+                    if px >= pw0 || py >= ph0 {
+                        return;
+                    }
+                    let i = (py * pw0 + px) * 3;
+                    if let Some(px) = page.rgb.get_mut(i..i + 3) {
+                        let target = rec2020_from_srgb8(col);
+                        let k = k.clamp(0.0, 1.0);
+                        for (p, c) in px.iter_mut().zip(target) {
+                            *p = (f32::from(*p) + (f32::from(c) - f32::from(*p)) * k).round().clamp(0.0, 65535.0) as u16;
+                        }
+                    }
+                });
+            }
             out.push(PageRaster { width: w as u32, height: h as u32, ppi: self.ppi, rgb: page.rgb });
         }
         if !progress(done, "") {
@@ -671,8 +730,33 @@ pub fn prepare(session: &mut Session, settings: &PrintSettings, photos: &[PhotoI
         background: rec2020_from_srgb8(settings.page.background),
         style,
         marks: Marks::of(&settings, ppi, pw, ph),
+        watermark: settings.page.watermark.clone(),
         color: settings.job.color.clone(),
     })
+}
+
+/// Rejects bad watermark settings before anything renders or is saved.
+pub fn validate_print_settings(settings: &mut PrintSettings) -> Result<(), String> {
+    settings.validate()?;
+    settings.page.validate()
+}
+
+#[cfg(test)]
+mod validation_tests {
+    use super::*;
+    use crate::print::layout::Style;
+
+    #[test]
+    fn an_out_of_range_or_unreadable_watermark_is_rejected_before_prepare() {
+        let mut settings = PrintSettings::default();
+        settings.layout.style = Style::SingleImage;
+        settings.page.watermark = Some(Watermark { size: 0.0, ..Default::default() });
+        assert!(validate_print_settings(&mut settings).is_err(), "size below range");
+        settings.page.watermark = Some(Watermark { opacity: 1.5, ..Default::default() });
+        assert!(validate_print_settings(&mut settings).is_err(), "opacity above range");
+        settings.page.watermark = Some(Watermark { image: "/nonexistent/print-watermark.png".into(), ..Default::default() });
+        assert!(validate_print_settings(&mut settings).is_err(), "unreadable graphic");
+    }
 }
 
 #[cfg(test)]

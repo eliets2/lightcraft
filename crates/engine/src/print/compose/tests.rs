@@ -425,3 +425,33 @@ fn caps_and_hostile_settings_are_refused() {
     big.job.ppi = 720.0;
     assert!(prepare(&mut s, &big, &vec![ids[0]; 60]).is_err());
 }
+
+#[test]
+fn the_print_module_can_print_a_text_or_graphic_watermark_ident() {
+    // A page-level watermark is part of the print page style, like the export watermark:
+    // a text or graphic overlay drawn over the printable area of every page.
+    let text = serde_json::json!({"text": "© Everywhere", "size": 0.08, "opacity": 1.0, "anchor": "center", "color": [255, 0, 0], "shadow": false, "image": "", "imageWidth": 0.2});
+    let page_json =
+        serde_json::json!({"background": [255, 255, 255], "pageNumbers": false, "pageInfo": false, "cropMarks": false, "watermark": text});
+    let parsed = serde_json::from_value::<PageStyle>(page_json);
+    assert!(parsed.is_ok(), "the page style accepts a text watermark");
+    let page = parsed.unwrap_or_default();
+    let serialized = serde_json::to_value(&page).unwrap_or(serde_json::Value::Null);
+    assert_eq!(serialized["watermark"]["text"], "© Everywhere");
+    assert_eq!(serialized["watermark"]["size"], 0.08);
+    // Unset, the watermark stays out of the stored JSON, so old templates are unchanged.
+    assert!(serde_json::to_value(PageStyle::default()).unwrap()["watermark"].is_null());
+    // The settings as a whole accept the same `page: {watermark}` form.
+    let mut s = settings(Style::SingleImage);
+    s.page = page;
+    assert!(s.validate().is_ok());
+
+    // A graphic watermark (an image path instead of text) is accepted too.
+    let graphic = serde_json::json!({"text": "", "size": 0.08, "opacity": 1.0, "anchor": "center", "color": [255, 255, 255], "shadow": false, "image": "/tmp/mark.png", "imageWidth": 0.2});
+    let page_json =
+        serde_json::json!({"background": [255, 255, 255], "pageNumbers": false, "pageInfo": false, "cropMarks": false, "watermark": graphic});
+    let parsed = serde_json::from_value::<PageStyle>(page_json);
+    assert!(parsed.is_ok(), "the page style accepts a graphic watermark");
+    let serialized = serde_json::to_value(parsed.unwrap_or_default()).unwrap_or(serde_json::Value::Null);
+    assert_eq!(serialized["watermark"]["image"], "/tmp/mark.png");
+}

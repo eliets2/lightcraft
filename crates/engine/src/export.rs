@@ -45,10 +45,10 @@ pub use prepare::{
 };
 #[cfg(test)]
 use prepare::{render_weight, too_big_for_memory};
-#[cfg(test)]
-use watermark::watermark_coverage;
 pub(crate) use watermark::watermark_logo;
-pub use watermark::{Anchor, Watermark, draw_watermark, draw_watermark_deep, draw_watermark_in, draw_watermark_preview, read_graphic};
+pub use watermark::{
+    Anchor, Watermark, draw_watermark, draw_watermark_deep, draw_watermark_in, draw_watermark_preview, read_graphic, watermark_coverage,
+};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
