@@ -60,3 +60,24 @@ unsupported = {name.lower() for name in declared} & {
 assert not unsupported, f"Info.plist declares types LightCraft cannot open: {sorted(unsupported)}"
 print("LightCraft macOS bundle types ok")
 PYEOF
+
+# Flatpak manifests must declare a cursor theme path so that winit/egui can restore the
+# pointer after hiding it with CursorIcon::None (Wayland wl_pointer.set_cursor(nil)).
+# Without XCURSOR_THEME or XCURSOR_PATH the pointer stays invisible on Wayland.
+python3 - <<'PYEOF'
+import yaml
+def flatpak_manifests_declare_cursor_theme_path():
+    for name in ("ai.storyteller.lightcraft.yml", "ai.storyteller.lightcraft.bundle.yml"):
+        with open("packaging/linux/flatpak/" + name) as source:
+            manifest = yaml.safe_load(source)
+        finish_args = manifest.get("finish-args", [])
+        has_cursor_theme = any(arg.startswith("--env=XCURSOR_THEME=") for arg in finish_args)
+        has_cursor_path = any(arg.startswith("--env=XCURSOR_PATH=") for arg in finish_args)
+        assert has_cursor_theme or has_cursor_path, (
+            f"{name} missing XCURSOR_THEME/XCURSOR_PATH in finish-args; "
+            "pointer cannot be restored on Wayland after CursorIcon::None"
+        )
+    print("flatpak_manifests_declare_cursor_theme_path: ok")
+flatpak_manifests_declare_cursor_theme_path()
+PYEOF
+
