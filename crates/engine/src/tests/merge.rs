@@ -227,6 +227,79 @@ fn panorama_size_is_held_to_memory() {
     assert_eq!(fit_in_memory(&full, 1e6, None), fit_in_memory(&full, 1e6, gb(8)), "memory unknown: taken as 8 GB");
 }
 
+/// An HDR merge of raws without their own colour matrices (CR2, NEF, ARW…) uses the fitted starting
+/// transform from the camera JPEG, not the generic fallback. The callback in MergeJob::load must pass
+/// the fitted matrix through to the DNG colour tags (issue #965 follow-up).
+#[test]
+fn merge_uses_fitted_starting_transform() {
+    use lightcraft_raw::{decode, RawFormat};
+    use lightcraft_raw::color::{as_shot_white_xy, camera_transform_of, has_matrix};
+
+    // Locate a CR2 corpus file with an embedded JPEG preview. The CR2 format triggers
+    // file-local look fitting (camera_preview::file_local_look).
+    let corpus = match std::env::var_os("LIGHTCRAFT_CORPUS") {
+        Some(p) => std::path::PathBuf::from(p).join("raw"),
+        None => {
+            lightcraft_testkit::skip!(Corpus, "LIGHTCRAFT_CORPUS not set");
+            return;
+        }
+    };
+    let cr2_path = corpus.join("cr2-canon-5d3.cr2");
+    let bytes = match std::fs::read(&cr2_path) {
+        Ok(b) => b,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            lightcraft_testkit::skip!(Corpus, "cr2-canon-5d3.cr2 absent");
+            return;
+        }
+        Err(e) => panic!("{cr2_path:?}: {e}"),
+    };
+
+    // Decode once to verify it has no colour matrices of its own (so fitting applies)
+    // and that a look is actually fitted (camera_tone is Some).
+    let raw = decode(&bytes).unwrap();
+    assert_eq!(raw.format, RawFormat::Cr2);
+    assert!(!has_matrix(&raw.color), "corpus CR2 must have no colour matrices");
+    let (_, info) = crate::files::load_bytes(&bytes, 400).unwrap();
+    if info.camera_tone.is_none() {
+        lightcraft_testkit::skip!(Corpus, "corpus CR2 did not yield a fitted look");
+        return;
+    }
+    // The generic sRGB fallback matrix the merge would write if it discarded the fitted
+    // transform: the source has no colour matrix of its own, so starting_colour falls back.
+    let fallback_xy = as_shot_white_xy(&raw);
+    let fallback_t = camera_transform_of(&raw.color, fallback_xy);
+
+    // Three frames from copies of the same CR2: the merge loads each file as a raw and fits
+    // its look from the embedded JPEG (equal exposures still merge).
+    let dir = temp_dir("hdr-fitted-transform");
+    let mut paths = Vec::new();
+    for i in 0..3usize {
+        let p = dir.join(format!("IMG_{i}.cr2"));
+        std::fs::copy(&cr2_path, &p).unwrap();
+        paths.push(p.to_string_lossy().to_string());
+    }
+
+    let mut s = Session::new().with_fs();
+    let ids = import(&mut s, paths);
+    let r = s.execute("merge.hdr", &json!({"ids": ids, "autoSettings": false})).unwrap();
+    let merged = lightcraft_raw::decode(&std::fs::read(r["path"].as_str().unwrap()).unwrap()).unwrap();
+
+    // The merged DNG must carry colour matrices (not be matrix-free).
+    assert!(has_matrix(&merged.color), "merged DNG has no colour matrices: {:?}", merged.color);
+
+    // The merged DNG must carry the fitted starting transform, not the generic fallback.
+    // If the bug is present, the callback discards the fitted transform and rebuilds from
+    // raw.color (which has no matrix), so the merged DNG gets the generic sRGB fallback.
+    // The DNG writer serialises matrices as SRational rounded to six decimals, so the
+    // write/read round trip changes each entry by up to 5e-7: compare approximately, with a
+    // tolerance far above that noise but far below the gap between a fitted camera matrix
+    // and the sRGB fallback model.
+    let got = merged.color.color_matrix[0].expect("merged DNG has a colour matrix");
+    let same = (0..3).all(|i| (0..3).all(|j| (got.0[i][j] - fallback_t.matrix.0[i][j]).abs() < 1e-3));
+    assert!(!same, "merged DNG used fallback matrix instead of fitted transform");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// A photo named twice is merged once (issue #1947): `[a, a, a]` is one photo, too few to merge, and `[a, b, a, b]`
 /// merges two frames rather than holding four in memory.
 #[test]
