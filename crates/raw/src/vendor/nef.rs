@@ -819,4 +819,19 @@ mod tests {
         let short = nef(34713, 14, vec![vec![0xff, 0x10]], 1, 1, 1);
         assert!(matches!(crate::decode(&short), Err(RawError::Unsupported(w)) if w.contains("linearization table")));
     }
+
+    /// A lossless NEF (compression 34713 with a valid `0x0096` table) whose first strip happens to begin
+    /// with the JPEG XS bytes `FF 10 FF 50` is decoded as Huffman data instead of being reported as High
+    /// Efficiency: the `0x0096` table is checked before the magic, and no camera-model string is consulted.
+    #[test]
+    fn lossless_nef_starting_with_jpeg_xs_magic_is_not_he() {
+        let mut strip = JPEG_XS_START.to_vec();
+        strip.extend_from_slice(&[0x00, 0x22]);
+        strip.resize(64, 0);
+        let mut mn = IfdBuilder::new();
+        mn.set(LINEARIZATION_TABLE, Value::Undefined(vec![0x46, 0x00, 0, 0, 0, 0, 0, 0, 0, 0]));
+        let bytes = nef_with_note(34713, 14, vec![strip], 8, 8, 8, Some(mn));
+        assert!(crate::decode(&bytes).is_ok());
+        assert!(crate::probe_info(&bytes).is_ok());
+    }
 }
