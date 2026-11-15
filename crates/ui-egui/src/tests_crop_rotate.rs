@@ -482,3 +482,23 @@ fn auto_straighten_says_when_it_finds_nothing() {
     assert_eq!(angle(&h), 0.0);
     let _ = std::fs::remove_dir_all(dir);
 }
+
+/// Straightening turns the photo in the crop view: at a nonzero angle the pixel under the
+/// pointer is the turned photo (as on export and in the filmstrip), not the straight photo
+/// under a rotated box.
+#[test]
+fn straightening_rotates_the_image_in_the_crop_view() {
+    let mut h = crop_tool();
+    let img = h.app.image_rect.expect("the photo on screen");
+    let plain = h.paint();
+    let r = h.request("engine.execute", json!({"command": "crop.straighten", "params": {"angle": 15.0}}), T);
+    assert_eq!(r["ok"], true, "{r}");
+    h.settle(SETTLE);
+    assert!((angle(&h) - 15.0).abs() < 1e-9, "straighten to 15°, got {}", angle(&h));
+    let turned = h.paint();
+    // off the centre so the content moves, yet inside the crop box at any angle up to 45°
+    let c = img.center();
+    let p = c - egui::vec2(img.width() * 0.1_f32, img.height() * 0.05_f32);
+    let pixel = |im: &egui::ColorImage, p: egui::Pos2| im.pixels[p.y.round() as usize * im.size[0] + p.x.round() as usize];
+    assert_ne!(pixel(&turned, p), pixel(&plain, p), "at {p:?} the view still shows the straight photo under the rotated box");
+}
