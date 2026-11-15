@@ -529,3 +529,55 @@ fn survey_command_click_on_the_active_photo_activates_the_last_one() {
     let sel: Vec<u64> = h.app.session.selection.ids.iter().map(|p| p.0).collect();
     assert_eq!((sel, h.app.session.selection.active.map(|p| p.0)), (vec![b, c], Some(c)));
 }
+
+/// When the Survey tile's texture aspect differs from its frame, the painted photo is the
+/// rectangle fitted to the texture, not the frame rectangle. The × is anchored to the rect
+/// `photo_tile` returns, so that rect must be the painted one, or the × moves off the photo.
+#[test]
+fn survey_x_stays_on_painted_photo_when_texture_aspect_differs() {
+    use crate::render::Slot;
+    let mut h = demo();
+    let [_a, b, _c] = survey_of_three(&mut h);
+    let photo = h.app.session.catalog.photo(lightcraft_catalog::PhotoId(b)).cloned().expect("photo");
+    let frame = lightcraft_pipeline::geometry::Frame::with_lens(
+        photo.width.max(1) as usize,
+        photo.height.max(1) as usize,
+        &photo.develop,
+        true,
+        photo.embedded_lens.as_ref(),
+    );
+    let aspect = frame.aspect() as f32;
+    // the active photo is the second survey tile, in Slot::Compare(1)
+    let (texture_size, tex_id) = {
+        let whole = h.app.renderer.textures.get_mut(&Slot::Compare(1)).expect("survey texture");
+        assert_eq!(whole.photo, lightcraft_catalog::PhotoId(b));
+        let target_aspect = aspect * 1.019;
+        whole.size[1] = (whole.size[0] as f32 / target_aspect).round().max(8.0) as usize;
+        (whole.size, whole.tex.id())
+    };
+    let texture_aspect = texture_size[0].max(1) as f32 / texture_size[1].max(1) as f32;
+    assert!(crate::region::same_aspect(texture_aspect, aspect), "the texture stays a trace off the frame's aspect");
+    // hold the replacement render so the resized texture is the one painted
+    let open = std::rc::Rc::new(std::cell::Cell::new(false));
+    h.app.renderer.set_offload(Box::new(crate::headless::RenderGate::new(open.clone())));
+    h.step();
+    h.step();
+    // the painted photo is the mesh drawn with this texture, at the rect the texture is fitted to
+    let painted = h
+        .view
+        .shapes
+        .iter()
+        .filter_map(|c| match &c.shape {
+            egui::epaint::Shape::Mesh(m) if m.texture_id == tex_id => Some(m.calc_bounds()),
+            _ => None,
+        })
+        .next()
+        .expect("the survey texture is painted");
+    let frame_rect = h.app.image_rect.expect("the active tile's rect");
+    assert!(
+        (painted.min - frame_rect.min).abs().max_elem() > 1.0 || (painted.max - frame_rect.max).abs().max_elem() > 1.0,
+        "the painted rect {painted:?} and the frame rect {frame_rect:?} must differ for this check"
+    );
+    // the × is placed from the rect photo_tile returns; it must be the painted photo's rect
+    assert_eq!(frame_rect, painted, "the survey rect must be the painted photo rect, or the × leaves the photo");
+}
