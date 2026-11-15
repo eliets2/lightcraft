@@ -84,11 +84,14 @@ pub struct ImportDialog {
     pub on_deleted: String,
     /// The scan's folder walk stopped at a depth or entry limit: there may be more photos than the
     /// review lists ([`ScanOutput::truncated`]; `scanLimited` in the `library.importPreview` reply).
+    #[serde(skip)]
     pub scan_limited: bool,
     /// Folders the scan couldn't list ([`ScanOutput::unreadable`]).
+    #[serde(skip)]
     pub unreadable: usize,
     /// Files in the scanned folders that are not a supported photo type, XMP sidecars not counted
     /// ([`ScanOutput::unsupported`]).
+    #[serde(skip)]
     pub unsupported: usize,
     /// The candidate clicked last: where a Shift-click range starts ([`ImportDialog::click`]).
     #[serde(skip)]
