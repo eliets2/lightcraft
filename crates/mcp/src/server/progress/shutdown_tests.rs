@@ -168,6 +168,34 @@ fn reader_panic_is_an_input_error() {
 }
 
 #[test]
+fn initialize_reports_locked_library_owner_instead_of_closing() {
+    struct LockedLibrary;
+    impl Backend for LockedLibrary {
+        fn call(&mut self, method: &str, _: Value) -> Result<Value, String> {
+            if method == "engine.commands" {
+                return Err("the library is locked by another process".to_string());
+            }
+            unreachable!("initialize fixture only answers the engine.commands probe")
+        }
+        fn has_ui(&self) -> bool {
+            false
+        }
+        fn describe(&self) -> String {
+            "test".into()
+        }
+    }
+    let mut server = Server::new(Box::new(LockedLibrary));
+    let reply = server.handle_line(r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}"#).expect("reply");
+    let reply: Value = serde_json::from_str(&reply).unwrap();
+    let message = reply["error"]["message"].as_str().unwrap_or("");
+    assert!(reply.get("error").is_some(), "initialize must fail instead of returning a successful handshake: {reply}");
+    assert!(
+        message.contains("library") && (message.contains("locked") || message.contains("another")),
+        "initialize must name the locked library instead of a generic close: {message}"
+    );
+}
+
+#[test]
 fn output_error_takes_precedence_over_input_error() {
     let mut server = Server::new(Box::new(ExportUntilCancelled { hook: None, retain_hook: false }));
     let mut input = b"{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\"}\n".to_vec();

@@ -162,6 +162,18 @@ impl Server {
     fn request(&mut self, method: &str, params: &Value) -> Result<Value, (i64, String)> {
         match method {
             "initialize" => {
+                let mut locked = String::new();
+                let probed = self.guarded(|b| b.call("engine.commands", json!({}))).and_then(|v| {
+                    v.map_err(|e| {
+                        locked = e;
+                        String::new()
+                    })
+                });
+                if probed.is_err() && !locked.is_empty() {
+                    let lock = lightcraft_engine::catalog::lock::LockError::InUse(None);
+                    return Err((INTERNAL_ERROR, format!("{locked}: {lock}")));
+                }
+                probed.map_err(|e| (INTERNAL_ERROR, e))?;
                 let asked = params.get("protocolVersion").and_then(Value::as_str).unwrap_or(PROTOCOL_VERSION);
                 let version = if SUPPORTED_VERSIONS.contains(&asked) { asked } else { PROTOCOL_VERSION };
                 Ok(json!({
