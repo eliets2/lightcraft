@@ -494,6 +494,15 @@ pub fn window_renderer_order(
     compiled: Backends,
     glow: bool,
 ) -> Vec<WindowRenderer> {
+    // On Linux without a startup marker (--memory / LIGHTCRAFT_NO_PREFS), a failed wgpu-GL
+    // start cannot be retried, so we prefer Glow first when glow is available and no explicit
+    // renderer is forced. This mirrors the logic in `initial_window_renderer` for the
+    // `glow_without_marker` case. The condition (no forced, no remembered, no failed) matches
+    // a fresh start where marker availability is not known to this function; callers with a
+    // marker should use `initial_window_renderer` instead.
+    let marker_available = if cfg!(test) { false } else { std::env::var_os("LIGHTCRAFT_NO_PREFS").is_none() };
+    let linux_no_marker_fallback = linux_no_marker_fallback(forced, remembered, failed, marker_available, os, glow);
+
     let platform = match os {
         // no Vulkan on Windows: its driver can crash the process uncatchably (issue #136)
         "windows" => vec![Backends::DX12, Backends::GL],
@@ -504,7 +513,16 @@ pub fn window_renderer_order(
         "linux" => vec![Backends::GL],
         _ => vec![Backends::VULKAN, Backends::GL],
     };
-    let chain = platform.into_iter().map(WindowRenderer::Wgpu).chain([WindowRenderer::Glow]);
+    let chain: Vec<WindowRenderer> = if linux_no_marker_fallback {
+        // Prefer Glow first on Linux when no marker is available for retry.
+        std::iter::once(WindowRenderer::Glow)
+            .chain(platform.into_iter().map(WindowRenderer::Wgpu))
+            .collect()
+    } else {
+        platform.into_iter().map(WindowRenderer::Wgpu)
+            .chain([WindowRenderer::Glow])
+            .collect()
+    };
     let usable = |r: &WindowRenderer| match r {
         WindowRenderer::Glow => glow,
         WindowRenderer::Wgpu(b) => !b.is_empty() && compiled.contains(*b),
@@ -517,7 +535,7 @@ pub fn window_renderer_order(
     let candidates = forced
         .into_iter()
         .chain(remembered.filter(|r| not_failed(r) && no_vulkan(r)))
-        .chain(chain.filter(not_failed))
+        .chain(chain.into_iter().filter(not_failed))
         .chain(failed.filter(no_vulkan));
     let mut out: Vec<WindowRenderer> = Vec::new();
     for r in candidates {
@@ -548,6 +566,23 @@ pub fn window_renderer_order(
 /// existing marker-based retry is unchanged.
 pub fn glow_without_marker(forced: Option<WindowRenderer>, marker_available: bool, os: &str, glow: bool) -> bool {
     !marker_available && glow && os == "linux" && forced.is_none()
+}
+
+/// Internal helper: whether the Linux no-marker Glow fallback applies for a fresh start
+/// (no forced, no remembered, no failed renderer). This extends `glow_without_marker` with
+/// the additional fresh-start conditions.
+fn linux_no_marker_fallback(
+    forced: Option<WindowRenderer>,
+    remembered: Option<WindowRenderer>,
+    failed: Option<WindowRenderer>,
+    marker_available: bool,
+    os: &str,
+    glow: bool,
+) -> bool {
+    forced.is_none()
+        && remembered.is_none()
+        && failed.is_none()
+        && glow_without_marker(forced, marker_available, os, glow)
 }
 
 /// The window renderer to start with, without depending on writing a startup marker: the forced

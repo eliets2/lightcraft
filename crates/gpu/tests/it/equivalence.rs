@@ -1512,3 +1512,51 @@ fn device_histogram_is_exact() {
     assert_eq!((r.image.width, r.image.height), (500, 400));
     assert_eq!(r.histogram, lightcraft_raster::Histogram::of_srgb8(&r.image), "window");
 }
+
+/// Production renderer selection in `choose()` lacks `glow_without_marker` check for Linux,
+/// preventing Glow fallback when marker unavailable. This test verifies the expected behavior
+/// of `initial_window_renderer` from the GPU backend, and exposes the defect in the production
+/// `choose()` which uses `window_renderer_order` directly.
+#[test]
+fn linux_without_a_marker_starts_with_glow() {
+    let all = lightcraft_gpu::backend::Backends::DX12
+        | lightcraft_gpu::backend::Backends::VULKAN
+        | lightcraft_gpu::backend::Backends::GL
+        | lightcraft_gpu::backend::Backends::METAL;
+    let gl = lightcraft_gpu::backend::WindowRenderer::Wgpu(lightcraft_gpu::backend::Backends::GL);
+    let vk = lightcraft_gpu::backend::WindowRenderer::Wgpu(lightcraft_gpu::backend::Backends::VULKAN);
+
+    // `glow_without_marker` returns true only for Linux without a marker and glow available
+    assert!(lightcraft_gpu::backend::glow_without_marker(None, false, "linux", true));
+    assert!(!lightcraft_gpu::backend::glow_without_marker(None, true, "linux", true));
+    assert!(!lightcraft_gpu::backend::glow_without_marker(Some(vk), false, "linux", true));
+    assert!(!lightcraft_gpu::backend::glow_without_marker(None, false, "linux", false));
+    assert!(!lightcraft_gpu::backend::glow_without_marker(None, false, "windows", true));
+
+    // `initial_window_renderer` should select Glow on Linux when no marker is available
+    assert_eq!(
+        lightcraft_gpu::backend::initial_window_renderer(None, None, None, false, "linux", all, true),
+        Some(lightcraft_gpu::backend::WindowRenderer::Glow)
+    );
+    // With a marker, the platform default (GL) is used
+    assert_eq!(
+        lightcraft_gpu::backend::initial_window_renderer(None, None, None, true, "linux", all, true),
+        Some(gl)
+    );
+    // A forced renderer always wins
+    assert_eq!(
+        lightcraft_gpu::backend::initial_window_renderer(Some(vk), None, None, false, "linux", all, true),
+        Some(vk)
+    );
+    // Without glow, falls back to GL
+    assert_eq!(
+        lightcraft_gpu::backend::initial_window_renderer(None, None, None, false, "linux", all, false),
+        Some(gl)
+    );
+
+    // The production `choose()` uses `window_renderer_order` directly without the
+    // `glow_without_marker` check, so it returns GL instead of Glow for Linux
+    // without a marker. This assertion fails, exposing the defect.
+    let order = lightcraft_gpu::backend::window_renderer_order(None, None, None, "linux", all, true);
+    assert_eq!(order.first().copied(), Some(lightcraft_gpu::backend::WindowRenderer::Glow));
+}
