@@ -390,3 +390,58 @@ fn omitted_shared_grid_table_clears_dangling_references() {
     let MaskShape::Object { seg: Some(seg), .. } = &p.history[0].settings.masks[0].components[0].shape else { panic!("an Object mask") };
     assert_eq!(seg.data, blob, "the history step's inline grid is untouched");
 }
+
+/// Repeated history steps over the same mask store the grid once: the snapshot's
+/// shared grid table holds each distinct grid a single time no matter how many
+/// history steps repeat the mask, and every step resolves back to the same inline
+/// grid on load. If grids were written once per step the grid blob would appear
+/// more than once in the snapshot body.
+#[test]
+fn snapshot_deduplicates_repeated_mask_across_history_steps() {
+    let steps = 12;
+    let (live, ops, id, blob) = masked_catalog(steps);
+    let m = MemStore::new();
+    let (mut j, _, report) = open(&m);
+    assert!(report.created);
+    j.append(&ops).unwrap();
+    j.snapshot(&live).unwrap();
+    drop(j);
+
+    let snap_bytes = m.get(SNAPSHOT).unwrap();
+    let body = std::str::from_utf8(&snap_bytes).unwrap();
+    assert_eq!(snapshot_version(&m), u64::from(VERSION));
+    assert_eq!(
+        body.match_indices(&blob).count(),
+        1,
+        "the grid is stored once no matter how many history steps repeat the mask"
+    );
+    let v: serde_json::Value = serde_json::from_str(body).unwrap();
+    assert_eq!(
+        v["catalog"]["grids"].as_array().unwrap().len(),
+        1,
+        "one shared table entry for the repeated mask"
+    );
+
+    let (_, loaded, report) = open(&m);
+    assert_eq!((report.replayed, report.upgraded_from, report.repaired.len()), (0, None, 0));
+    assert_eq!(loaded.to_snapshot(), live.to_snapshot());
+    let p = loaded.photo(id).unwrap();
+    assert_eq!(p.history.len(), steps);
+    for h in &p.history {
+        let MaskShape::Object { seg: Some(seg), .. } = &h.settings.masks[0].components[0].shape else {
+            panic!("an Object mask")
+        };
+        assert_eq!(
+            (seg.data.as_str(), seg.grid),
+            (blob.as_str(), None),
+            "every step's grid is back inline"
+        );
+    }
+    // The live catalog's own snapshot repeats each mask's grid inline instead of
+    // sharing it through the snapshot's grid table.
+    assert_eq!(
+        live.to_snapshot().match_indices(&blob).count(),
+        1,
+        "the live catalog snapshot deduplicates repeated masks across history steps"
+    );
+}
