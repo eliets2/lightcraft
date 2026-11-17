@@ -73,7 +73,7 @@ pub fn resolve_dir(path: &Path) -> Result<PathBuf> {
 /// `prefs.json`), in any letter case. Such a path only names a library when the folder that
 /// holds it already is one.
 fn is_settings_file(path: &Path) -> bool {
-    path.file_name().and_then(|n| n.to_str()).is_some_and(|name| {
+    path.is_file() && path.file_name().and_then(|n| n.to_str()).is_some_and(|name| {
         let name = name.to_ascii_lowercase();
         name == "presets.json" || name == "view.json" || name == "prefs.json"
     })
@@ -1239,6 +1239,26 @@ mod resolve_tests {
         let mut s = Session::new().with_fs();
         let res = s.open_library(&file, false);
         assert!(res.is_err(), "a standalone settings file must not be adopted as a library: {res:?}");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// A directory whose basename is a settings file (`prefs.json`, `view.json`, `presets.json`)
+    /// is still a folder: opening it creates a library there instead of refusing it as a
+    /// standalone settings file.
+    #[test]
+    fn a_directory_named_like_a_settings_file_opens_as_a_folder() {
+        let dir = std::env::temp_dir().join(format!("lc-dir-settings-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let folder = dir.join("prefs.json");
+        std::fs::create_dir_all(&folder).unwrap();
+        let mut s = Session::new().with_fs();
+        let res = s.open_library(&folder, false);
+        assert!(res.is_ok(), "a directory named like a settings file must open as a library: {res:?}");
+        assert_eq!(s.library.as_ref().map(|l| l.dir.clone()), Some(folder.clone()));
+        assert!(is_library(&folder));
+        s.close_library().unwrap();
+        drop(s);
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
