@@ -117,14 +117,18 @@ pub fn compute_backends() -> Option<Backends> {
 }
 
 /// The backends for the desktop window's renderer (eframe/egui-wgpu). The window always needs
-/// one: `off` keeps the platform default.
+/// one: `off` keeps the platform default. Backends this build does not compile in are never
+/// returned: when the platform default is not compiled, a compiled backend is used instead.
 pub fn window_backends() -> Backends {
     let default = default_window_backends(std::env::consts::OS);
+    let compiled = wgpu::Instance::enabled_backend_features();
     let choice = match env_choice() {
         BackendChoice::Off => BackendChoice::Auto,
         c => c,
     };
-    resolve(choice, default, wgpu::Instance::enabled_backend_features()).unwrap_or(default)
+    let backends = resolve(choice, default, compiled).unwrap_or(default);
+    let usable = backends & compiled;
+    if usable.is_empty() { compiled } else { usable }
 }
 
 /// The DX12 shader compiler: FXC (`d3dcompiler_47.dll`, part of Windows) unless
@@ -477,11 +481,11 @@ pub fn forced_window_renderer(app: Option<&str>, wgpu: Option<&str>) -> Option<W
 
 /// The order in which the window's renderers are tried on `os`: the forced one (environment)
 /// first, then the one remembered from the last good start, then the platform chain — on Windows
-/// DX12, GL, then glow; on Linux GL, then glow; on other platforms (e.g. FreeBSD) Vulkan, GL,
-/// then glow. On Windows and Linux Vulkan is used only when the
-/// environment asks for it: with Vulkan loaded, a broken Vulkan driver can crash the process
-/// uncatchably (issue #136), so it is never in the automatic chain, and the renderer remembered
-/// from the last run cannot put it first either.
+/// DX12, GL, then glow; on Linux GL, then Vulkan as the fallback, then glow; on other platforms
+/// (e.g. FreeBSD) Vulkan, GL, then glow. On Windows Vulkan is used only when the environment
+/// asks for it: with Vulkan loaded, a broken Vulkan driver can crash the process uncatchably
+/// (issue #136), so it is never in the automatic chain there, and the renderer remembered from
+/// the last run cannot put it first either. On Linux Vulkan is the automatic fallback after GL.
 /// `failed` (the renderer the last start died in) goes last, as a last resort only. Backends not
 /// in `compiled`, and glow without `glow`, are left out. The list is never empty: when no usable
 /// renderer exists and glow is unavailable it falls back to the platform default, so callers
@@ -532,9 +536,10 @@ pub fn window_renderer_order(
             out.push(WindowRenderer::Wgpu(fallback));
         } else {
             // No compiled backend is usable and glow is unavailable: keep the
-            // never-empty contract with the platform default, which on
-            // Windows and Linux names no Vulkan (issue #136). The caller
-            // probes it and falls back when it cannot build a device.
+            // never-empty contract with the platform default. That default names
+            // no Vulkan on Windows or Linux (issue #136); Vulkan on Linux is only
+            // the automatic fallback after GL, not the default. The caller probes
+            // it and falls back when it cannot build a device.
             out.push(WindowRenderer::Wgpu(default_window_backends(os)));
         }
     }
@@ -575,7 +580,7 @@ pub fn initial_window_renderer(
     // excluded the same way, including a remembered glow.
     let remembered_vulkan = matches!(remembered, Some(WindowRenderer::Wgpu(b)) if b.contains(Backends::VULKAN));
     if glow_without_marker(forced, marker_available, os, glow)
-        && failed != Some(WindowRenderer::Glow)
+        && failed.is_none()
         && (remembered.is_none() || remembered != failed)
         && (remembered_vulkan || !matches!(remembered, Some(WindowRenderer::Wgpu(_))))
     {
@@ -859,11 +864,11 @@ mod tests {
         assert_eq!(automatic, [gl, vk, WindowRenderer::Glow], "GL first, Vulkan as the fallback: {automatic:?}");
     }
 
-    /// FreeBSD keeps the previous PRIMARY|GL window default (not Linux's GL-only), and on
-    /// Linux a remembered or failed Vulkan renderer is not tried automatically, while a
-    /// forced one still is.
+    /// On Linux a remembered Vulkan renderer is tried first and a failed Vulkan renderer is
+    /// the last resort, while a forced Vulkan renderer is used; the FreeBSD default keeps
+    /// Vulkan (PRIMARY | GL) unlike Linux's GL-only default.
     #[test]
-    fn freebsd_window_backends_keep_vulkan_default() {
+    fn linux_window_renderer_order_remembers_vulkan() {
         let all = Backends::DX12 | Backends::VULKAN | Backends::GL | Backends::METAL;
         let vk = WindowRenderer::Wgpu(Backends::VULKAN);
         let gl = WindowRenderer::Wgpu(Backends::GL);
