@@ -553,7 +553,13 @@ pub fn window_renderer_order(
 /// would otherwise leave no fallback. A forced renderer still wins; with a marker available the
 /// existing marker-based retry is unchanged.
 pub fn glow_without_marker(forced: Option<WindowRenderer>, marker_available: bool, os: &str, glow: bool) -> bool {
-    !marker_available && glow && os == "linux" && forced.is_none()
+    // An explicit backend list (LIGHTCRAFT_GPU_BACKEND=vulkan,gl, …) wins over the
+    // no-marker glow fallback: it is a deliberate choice, not the platform default.
+    let explicit_list = matches!(
+        choose(std::env::var("LIGHTCRAFT_GPU_BACKEND").ok().as_deref(), std::env::var("WGPU_BACKEND").ok().as_deref()),
+        BackendChoice::Use(_)
+    );
+    !marker_available && glow && os == "linux" && forced.is_none() && !explicit_list
 }
 
 /// The window renderer to start with, without depending on writing a startup marker: the forced
